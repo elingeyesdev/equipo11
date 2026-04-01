@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import './Navbar.css'
 
 const pageTitles = {
@@ -10,7 +10,13 @@ const pageTitles = {
 
 function Navbar() {
   const location = useLocation()
+  const navigate  = useNavigate()
   const current = pageTitles[location.pathname] || { title: 'EnviroSense', desc: '' }
+
+  const handleLogout = () => {
+    localStorage.removeItem('usuario')
+    navigate('/login')
+  }
 
   return (
     <header className="navbar">
@@ -37,6 +43,13 @@ function Navbar() {
         </div>
         <div className="navbar-user">
           <div className="navbar-avatar">AD</div>
+          <button className="navbar-logout" onClick={handleLogout} title="Cerrar sesión">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
