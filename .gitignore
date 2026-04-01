@@ -1,0 +1,24 @@
+# Ignorar las carpetas de dependencias
+node_modules/
+Backend/node_modules/
+Frontend/node_modules/
+
+# Ignorar archivos de entorno (variables de bases de datos/passwords)
+.env
+.env.*
+!.env.example
+
+# Ignorar archivos locales generados por diferentes herramientas
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.DS_Store
+
+# Archivos de la configuración de IDEs y del OS que no se deberían subir
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
