@@ -1,0 +1,196 @@
+/* Contenedor general que ocupa todo el espacio disponible en el Layout */
+.mapa-page-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px); /* Ajustar según sea la altura real de tu navbar/header general */
+  width: 100%;
+  position: relative;
+  overflow: hidden; /* Evitar scroll en toda la pantalla para hacer feel como app nativa */
+}
+
+/* Banner de error cuando falta el token */
+.missing-token-banner {
+  background: #ffecb3;
+  color: #d84315;
+  padding: 1rem;
+  text-align: center;
+  font-weight: bold;
+  z-index: 10;
+}
+
+/* Contenedor específico del React-Map-GL */
+.map-container {
+  flex-grow: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Marcador personalizado del mapa */
+.custom-marker {
+  font-size: 2rem;
+  cursor: pointer;
+  filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.25));
+  transition: transform 0.2s ease;
+}
+.custom-marker:hover {
+  transform: scale(1.2);
+}
+
+/* ========================================================
+   Panel de Información (Esquina Superior Izquierda)
+   ======================================================== */
+.city-info-panel {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.85); /* Formato claro / Glassmorphism */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Animación bonita al abrir el panel */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.close-panel-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-panel-btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.panel-header h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  color: #1a1a1a;
+}
+
+.panel-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.panel-body {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.75rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.data-icon {
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  background: #f0f4f8;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.data-label {
+  font-size: 0.75rem;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.2rem;
+}
+
+.data-value {
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+/* ========================================================
+   Responsividad y Adaptación para Móviles / PWA
+   ======================================================== */
+@media screen and (max-width: 600px) {
+  .mapa-page-container {
+    height: calc(100vh - 56px); /* Navbar típica en móviles suele ser de 56px, adaptar de ser necesario */
+  }
+  
+  /* En móviles forzamos a que el recuadro flote bien en pantallas pequeñas.
+     En lugar de top-left, en UX móvil funciona mejor como un bottom-sheet o ocupando todo el ancho arriba */
+  .city-info-panel {
+    top: auto;
+    bottom: 2rem; /* Separado del botón de geolocalizar */
+    left: 4vw;
+    width: 92vw;
+    padding: 1.25rem;
+    border-radius: 20px;
+    box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.15);
+    /* Animación subiendo desde abajo en móvil */
+    animation: slideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideUpMobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .data-item {
+    padding: 0.5rem;
+  }
+  
+  .data-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+  }
+}

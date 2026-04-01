@@ -7,10 +7,10 @@ import Usuarios from './pages/Usuarios'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
-// Protege las rutas que requieren sesión activa
+// Protege las rutas que requieren sesión activa (Desactivado para MVP)
 function ProtectedRoute({ children }) {
-  const usuario = localStorage.getItem('usuario')
-  if (!usuario) return <Navigate to="/login" replace />
+  // const usuario = localStorage.getItem('usuario')
+  // if (!usuario) return <Navigate to="/login" replace />
   return children
 }
 
@@ -21,7 +21,7 @@ function App() {
       <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Rutas protegidas (con layout principal) */}
+      {/* Rutas con layout principal (Ahora sin bloqueo de auth obligatoria) */}
       <Route
         path="/"
         element={
@@ -37,8 +37,8 @@ function App() {
         <Route path="usuarios"   element={<Usuarios />} />
       </Route>
 
-      {/* Ruta fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Ruta fallback: Si la url no existe, o entramos en localhost directamente, vamos al mapa */}
+      <Route path="*" element={<Navigate to="/mapa" replace />} />
     </Routes>
   )
 }
