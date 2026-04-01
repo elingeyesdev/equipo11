@@ -1,0 +1,59 @@
+services:
+  # ─── Base de datos PostgreSQL ───
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sistema_ambiental
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      # Script que crea las tablas automáticamente
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Volumen persistente para no perder datos al reiniciar
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d sistema_ambiental"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Backend (API Node.js + Express) ───
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: sistema_ambiental
+      DB_USER: admin
+      DB_PASSWORD: admin123
+    depends_on:
+      db:
+        condition: service_healthy
+    # Sincroniza tu código local con el contenedor (hot-reload)
+    volumes:
+      - ./Backend:/app
+      - /app/node_modules
+
+  # ─── Frontend (React + Vite) ───
+  frontend:
+    build: ./Frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    # Sincroniza tu código local con el contenedor (hot-reload)
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
+
+# Volumen nombrado para persistir los datos de PostgreSQL
+volumes:
+  pgdata:
