@@ -1,0 +1,101 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--border);
+}
+
+.page-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.page-tag {
+  background: var(--primary-extra-light);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(234,88,12,0.25);
+}
+
+/* Placeholder card */
+.placeholder-card {
+  background-color: var(--bg-panel);
+  border: 2px dashed var(--border-strong);
+  border-radius: 16px;
+  padding: 64px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s;
+}
+
+.placeholder-card:hover {
+  border-color: var(--primary-light);
+}
+
+.placeholder-icon {
+  font-size: 60px;
+  line-height: 1;
+}
+
+.placeholder-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.placeholder-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.7;
+}
+
+.placeholder-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.chip--air     { background: rgba(22,163,74,0.08);   color: var(--air);     border: 1px solid rgba(22,163,74,0.25); }
+.chip--water   { background: rgba(2,132,199,0.08);   color: var(--water);   border: 1px solid rgba(2,132,199,0.25); }
+.chip--noise   { background: rgba(217,119,6,0.08);   color: var(--noise);   border: 1px solid rgba(217,119,6,0.25); }
+.chip--climate { background: rgba(124,58,237,0.08);  color: var(--climate); border: 1px solid rgba(124,58,237,0.25); }
+
+.placeholder-pending {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}

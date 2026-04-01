@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Naranja profesional */
+  --primary:        #ea580c;
+  --primary-light:  #fb923c;
+  --primary-extra-light: #fff7ed;
+  --primary-dark:   #c2410c;
+
+  /* Fondos claros */
+  --bg-app:         #f8fafc;
+  --bg-panel:       #ffffff;
+  --bg-card:        #f1f5f9;
+  --bg-hover:       #fef3ec;
+
+  /* Bordes */
+  --border:         #e2e8f0;
+  --border-strong:  #cbd5e1;
+
+  /* Textos */
+  --text-primary:   #0f172a;
+  --text-secondary: #64748b;
+  --text-muted:     #94a3b8;
+
+  /* Layout */
+  --sidebar-width:  240px;
+  --navbar-height:  60px;
+
+  /* Semáforos de calidad */
+  --air:     #16a34a;
+  --water:   #0284c7;
+  --noise:   #d97706;
+  --climate: #7c3aed;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-card); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
