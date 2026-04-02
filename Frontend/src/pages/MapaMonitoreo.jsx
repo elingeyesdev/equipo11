@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl } from 'react-map-gl/mapbox';
+import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 
@@ -45,6 +45,74 @@ const CITIES_DATA = [
 
 function MapaMonitoreo() {
   const [selectedCity, setSelectedCity] = useState(null);
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false);
+  const [heatmapMetric, setHeatmapMetric] = useState('aqi');
+
+  // Valores máximos para normalizar el heatmap de 0 a 1
+  const MAX_METRICS = {
+    temperature: 40,
+    aqi: 200,
+    noise: 100,
+    humidity: 100
+  };
+
+  // Generamos el GeoJSON en tiempo real cuando la métrica o los datos cambian
+  const heatmapData = useMemo(() => {
+    return {
+      type: 'FeatureCollection',
+      features: CITIES_DATA.map((city) => {
+        let rawValue = city.data[heatmapMetric] || 0;
+        let maxVal = MAX_METRICS[heatmapMetric];
+        
+        // Calculamos intensidad de 0 a 1
+        let intensityWeight = Math.min(rawValue / maxVal, 1);
+        
+        // Si la métrica es humedad, podríamos invertir el color o dejarlo normal. Dejamos que más alto = más "caliente" (rojo).
+        return {
+          type: 'Feature',
+          geometry: { 
+            type: 'Point', 
+            coordinates: [city.longitude, city.latitude] 
+          },
+          properties: {
+            intensityWeight: intensityWeight
+          }
+        };
+      })
+    };
+  }, [heatmapMetric]);
+
+  const heatmapLayer = useMemo(() => ({
+    id: 'heatmap-layer',
+    type: 'heatmap',
+    paint: {
+      'heatmap-weight': [
+        'interpolate', ['linear'], ['get', 'intensityWeight'],
+        0, 0,
+        1, 1
+      ],
+      'heatmap-intensity': [
+        'interpolate', ['linear'], ['zoom'],
+        0, 1,
+        9, 3
+      ],
+      'heatmap-color': [
+        'interpolate', ['linear'], ['heatmap-density'],
+        0, 'rgba(33,102,172,0)',
+        0.2, 'rgb(103,169,207)',
+        0.4, 'rgb(209,229,240)',
+        0.6, 'rgb(253,219,199)',
+        0.8, 'rgb(239,138,98)',
+        1, 'rgb(178,24,43)'
+      ],
+      'heatmap-radius': [
+        'interpolate', ['linear'], ['zoom'],
+        0, 30,
+        9, 70
+      ],
+      'heatmap-opacity': 0.8
+    }
+  }), []);
 
   // Configuramos el mapa para mostrar a Bolivia de forma centrada por defecto
   const [viewState, setViewState] = useState({
@@ -107,11 +175,19 @@ function MapaMonitoreo() {
           <FullscreenControl position="bottom-right" />
           <NavigationControl position="bottom-right" />
           
-          {pins}
+          {/* Capa de Mapa de Calor */}
+          {isHeatmapActive && (
+            <Source id="heatmap-data" type="geojson" data={heatmapData}>
+              <Layer {...heatmapLayer} />
+            </Source>
+          )}
+
+          {/* Marcadores Estáticos - Se ocultan en modo heatmap */}
+          {!isHeatmapActive && pins}
         </Map>
 
         {/* Panel Flotante de Información de la Ciudad */}
-        {selectedCity && (
+        {(!isHeatmapActive && selectedCity) && (
           <div className="city-info-panel">
             <button 
               className="close-panel-btn"
@@ -162,6 +238,39 @@ function MapaMonitoreo() {
             </div>
           </div>
         )}
+
+        {/* Panel de Control Flotante del Mapa de Calor (Heatmap) */}
+        <div className="heatmap-control-panel">
+          <div className="heatmap-toggle-wrapper">
+            <label className="ios-switch">
+              <input 
+                type="checkbox" 
+                checked={isHeatmapActive}
+                onChange={(e) => {
+                  setIsHeatmapActive(e.target.checked);
+                  if (e.target.checked) setSelectedCity(null); // Ocultar ciudad al activar
+                }}
+              />
+              <span className="slider round"></span>
+            </label>
+            <span className="heatmap-label">{isHeatmapActive ? 'Heatmap: ON' : 'Heatmap: OFF'}</span>
+          </div>
+
+          {isHeatmapActive && (
+            <div className="heatmap-metric-selector">
+              <label>Métrica a evaluar:</label>
+              <select 
+                value={heatmapMetric} 
+                onChange={(e) => setHeatmapMetric(e.target.value)}
+              >
+                <option value="aqi">Calidad de Aire (AQI)</option>
+                <option value="temperature">Temperatura</option>
+                <option value="noise">Ruido</option>
+                <option value="humidity">Humedad</option>
+              </select>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
