@@ -1,8 +1,34 @@
+/**
+ * Punto de entrada del servidor.
+ * 
+ * Integra Express (HTTP) y Socket.IO (WebSocket) en un solo servidor.
+ * SRP: index.js solo se encarga de arrancar/configurar el servidor,
+ *      no contiene lógica de negocio.
+ */
 require('dotenv').config()
+const http = require('http')
+const { Server } = require('socket.io')
 const app = require('./src/app')
+const { registerSocketEvents } = require('./src/modules/simulacion/simulacion.socket')
 
 const PORT = process.env.PORT || 3000
 
-app.listen(PORT, () => {
+// Crear servidor HTTP a partir de Express
+const server = http.createServer(app)
+
+// Crear instancia de Socket.IO sobre el mismo servidor HTTP
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST']
+  }
+})
+
+// Registrar los eventos de simulación
+registerSocketEvents(io)
+
+// Iniciar el servidor
+server.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
+  console.log(`🔌 WebSocket activo en el mismo puerto`)
 })
