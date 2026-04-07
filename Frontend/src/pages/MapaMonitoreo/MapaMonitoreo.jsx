@@ -32,8 +32,8 @@ function MapaMonitoreo() {
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
 
-  // Usar datos simulados si la simulación está activa, sino fallback
-  const citiesData = (isRunning && simulatedCities.length > 0) ? simulatedCities : FALLBACK_DATA;
+  // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
+  const citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
 
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos
   const activeCity = selectedCity

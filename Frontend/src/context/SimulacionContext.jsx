@@ -68,6 +68,10 @@ export function SimulacionProvider({ children }) {
     socketRef.current?.emit('simulacion:detener')
   }, [])
 
+  const inyectar = useCallback((cityId, data) => {
+    socketRef.current?.emit('simulacion:inyectar', { cityId, data })
+  }, [])
+
   const value = {
     isConnected,
     isRunning,
@@ -76,7 +80,8 @@ export function SimulacionProvider({ children }) {
     lastUpdate,
     interval,
     iniciar,
-    detener
+    detener,
+    inyectar
   }
 
   return (

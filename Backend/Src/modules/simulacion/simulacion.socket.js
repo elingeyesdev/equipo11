@@ -49,6 +49,18 @@ function registerSocketEvents(io) {
       }
     })
 
+    // --- Inyección manual de datos ---
+    socket.on('simulacion:inyectar', ({ cityId, data } = {}) => {
+      if (!cityId || !data || typeof data !== 'object') return
+
+      const ok = simulacionService.injectData(cityId, data)
+      if (ok) {
+        const snapshot = simulacionService.getCurrentState()
+        io.emit('simulacion:datos', snapshot)
+        console.log(`💉 Datos inyectados en "${cityId}":`, data)
+      }
+    })
+
     // --- Desconexión ---
     socket.on('disconnect', () => {
       console.log(`❌ Cliente desconectado: ${socket.id}`)

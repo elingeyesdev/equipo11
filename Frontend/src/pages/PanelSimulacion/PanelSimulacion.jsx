@@ -7,6 +7,7 @@
  * - KISS: Estructura plana y legible, sin abstracciones innecesarias.
  * - YAGNI: Solo muestra lo que el MVP necesita, sin features extras.
  */
+import { useState } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
 import './PanelSimulacion.css'
 
@@ -47,8 +48,38 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('es-BO')
 }
 
+const EMPTY_INJECT = { temperature: '', aqi: '', waterQuality: '', noise: '', humidity: '' }
+
 function PanelSimulacion() {
-  const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener } = useSimulacion()
+  const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener, inyectar } = useSimulacion()
+
+  const [injectCity, setInjectCity]       = useState('')
+  const [injectValues, setInjectValues]   = useState(EMPTY_INJECT)
+  const [injectFeedback, setInjectFeedback] = useState(null) // 'success' | null
+
+  function handleCitySelect(cityId) {
+    setInjectCity(cityId)
+    const city = cities.find(c => c.id === cityId)
+    setInjectValues(city
+      ? { temperature: city.data.temperature, aqi: city.data.aqi, waterQuality: city.data.waterQuality, noise: city.data.noise, humidity: city.data.humidity }
+      : EMPTY_INJECT
+    )
+  }
+
+  function handleInjectSubmit(e) {
+    e.preventDefault()
+    if (!injectCity) return
+
+    const data = {}
+    Object.entries(injectValues).forEach(([key, val]) => {
+      if (val !== '') data[key] = Number(val)
+    })
+    if (Object.keys(data).length === 0) return
+
+    inyectar(injectCity, data)
+    setInjectFeedback('success')
+    setTimeout(() => setInjectFeedback(null), 3000)
+  }
 
   return (
     <div className="panel-sim">
@@ -179,6 +210,78 @@ function PanelSimulacion() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Inyección manual de datos */}
+      <div className="inject-card">
+        <div className="inject-card-header">
+          <div>
+            <h3 className="inject-title">Inyección Manual de Datos</h3>
+            <p className="inject-subtitle">Escribe los valores que quieras y envíalos directamente al mapa para pruebas</p>
+          </div>
+          {injectFeedback === 'success' && (
+            <span className="inject-badge inject-badge--ok">Datos enviados al mapa</span>
+          )}
+        </div>
+
+        <form className="inject-form" onSubmit={handleInjectSubmit}>
+          {/* Selector de departamento */}
+          <div className="inject-field inject-field--full">
+            <label className="inject-label">Departamento</label>
+            <select
+              className="inject-select"
+              value={injectCity}
+              onChange={(e) => handleCitySelect(e.target.value)}
+              required
+              disabled={!isConnected}
+            >
+              <option value="">-- Selecciona un departamento --</option>
+              {(cities.length > 0 ? cities : [
+                { id: 'lapaz', name: 'La Paz' }, { id: 'cochabamba', name: 'Cochabamba' },
+                { id: 'santacruz', name: 'Santa Cruz' }, { id: 'oruro', name: 'Oruro' },
+                { id: 'potosi', name: 'Potosí' }, { id: 'sucre', name: 'Sucre' },
+                { id: 'tarija', name: 'Tarija' }, { id: 'beni', name: 'Trinidad' },
+                { id: 'pando', name: 'Cobija' }
+              ]).map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Inputs de métricas */}
+          <div className="inject-metrics-grid">
+            {METRICS.map(m => (
+              <div key={m.key} className="inject-field">
+                <label className="inject-label">{m.icon} {m.label} <span className="inject-unit">({m.unit})</span></label>
+                <input
+                  type="number"
+                  className="inject-input"
+                  value={injectValues[m.key]}
+                  onChange={(e) => setInjectValues(prev => ({ ...prev, [m.key]: e.target.value }))}
+                  placeholder="—"
+                  disabled={!injectCity || !isConnected}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="inject-actions">
+            <button
+              type="submit"
+              className="sim-btn inject-btn-send"
+              disabled={!injectCity || !isConnected}
+            >
+              Enviar al mapa
+            </button>
+            <button
+              type="button"
+              className="inject-btn-reset"
+              onClick={() => { setInjectCity(''); setInjectValues(EMPTY_INJECT); setInjectFeedback(null) }}
+            >
+              Limpiar
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Footer informativo */}

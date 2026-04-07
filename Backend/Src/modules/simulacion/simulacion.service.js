@@ -139,4 +139,29 @@ function getCurrentState() {
   }
 }
 
-module.exports = { start, stop, isRunning, getCurrentState }
+/**
+ * Inyecta datos manuales para una ciudad específica.
+ * Los valores reemplazan el estado actual y la simulación continúa desde ahí.
+ * No clampea: el usuario puede probar valores extremos a propósito.
+ */
+function injectData(cityId, partialData) {
+  const cityIndex = currentState.findIndex(c => c.id === cityId)
+  if (cityIndex === -1) return false
+
+  const sanitized = {}
+  Object.entries(partialData).forEach(([metric, value]) => {
+    if (METRIC_KEYS.includes(metric) && typeof value === 'number' && !isNaN(value)) {
+      sanitized[metric] = Math.round(value)
+    }
+  })
+
+  if (Object.keys(sanitized).length === 0) return false
+
+  currentState[cityIndex] = {
+    ...currentState[cityIndex],
+    data: { ...currentState[cityIndex].data, ...sanitized }
+  }
+  return true
+}
+
+module.exports = { start, stop, isRunning, getCurrentState, injectData }
