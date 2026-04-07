@@ -217,7 +217,7 @@ function MapaMonitoreo() {
               />
               <span className="slider round"></span>
             </label>
-            <span className="heatmap-label">{isHeatmapActive ? 'Heatmap: ON' : 'Heatmap: OFF'}</span>
+            <span className="heatmap-label">{isHeatmapActive ? 'Mapa de calor: ON' : 'Mapa de calor: OFF'}</span>
           </div>
 
           {isHeatmapActive && (
