@@ -7,7 +7,7 @@
  * - KISS: Estructura plana y legible, sin abstracciones innecesarias.
  * - YAGNI: Solo muestra lo que el MVP necesita, sin features extras.
  */
-import { useSimulacion } from '../context/SimulacionContext'
+import { useSimulacion } from '../../context/SimulacionContext'
 import './PanelSimulacion.css'
 
 // Configuración de métricas para renderizar cards (OCP: agregar una métrica = agregar un objeto)

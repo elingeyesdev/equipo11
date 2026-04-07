@@ -1,4 +1,4 @@
-import './PagePlaceholder.css'
+import '../PagePlaceholder.css'
 
 function Reportes() {
   return (

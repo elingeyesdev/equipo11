@@ -11,7 +11,7 @@ import { useState, useMemo } from 'react';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
-import { useSimulacion } from '../context/SimulacionContext';
+import { useSimulacion } from '../../context/SimulacionContext';
 
 // Datos fallback cuando la simulación NO está activa (9 departamentos)
 const FALLBACK_DATA = [

@@ -1,9 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
-import MapaMonitoreo from './pages/MapaMonitoreo'
-import PanelSimulacion from './pages/PanelSimulacion'
-import Reportes from './pages/Reportes'
-import Usuarios from './pages/Usuarios'
+import MapaMonitoreo from './pages/MapaMonitoreo/MapaMonitoreo'
+import PanelSimulacion from './pages/PanelSimulacion/PanelSimulacion'
+import Reportes from './pages/Reportes/Reportes'
+import Usuarios from './pages/Usuarios/Usuarios'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
