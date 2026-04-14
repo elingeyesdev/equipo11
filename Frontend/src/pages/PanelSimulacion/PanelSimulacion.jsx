@@ -8,6 +8,7 @@
  * - YAGNI: Solo muestra lo que el MVP necesita, sin features extras.
  */
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSimulacion } from '../../context/SimulacionContext'
 import './PanelSimulacion.css'
 
@@ -51,6 +52,7 @@ function formatTime(isoString) {
 const EMPTY_INJECT = { temperature: '', aqi: '', waterQuality: '', noise: '', humidity: '' }
 
 function PanelSimulacion() {
+  const navigate = useNavigate()
   const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener, inyectar } = useSimulacion()
 
   const [injectCity, setInjectCity]       = useState('')
@@ -120,7 +122,10 @@ function PanelSimulacion() {
         <div className="sim-controls-actions">
           <button
             className="sim-btn sim-btn--start"
-            onClick={() => iniciar()}
+            onClick={() => {
+              iniciar()
+              navigate('/mapa', { state: { openModal: true } })
+            }}
             disabled={isRunning || !isConnected}
           >
             ▶ Iniciar

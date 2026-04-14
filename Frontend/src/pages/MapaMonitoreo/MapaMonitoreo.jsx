@@ -7,11 +7,13 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
+import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 
 // Datos fallback cuando la simulación NO está activa (9 departamentos)
 const FALLBACK_DATA = [
@@ -27,10 +29,21 @@ const FALLBACK_DATA = [
 ];
 
 function MapaMonitoreo() {
+  const location = useLocation();
   const { isRunning, cities: simulatedCities } = useSimulacion();
   const [selectedCity, setSelectedCity]       = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
+  const [isModalOpen, setIsModalOpen]         = useState(false);
+
+  // Abrir modal automáticamente si se navegó desde PanelSimulacion con el flag
+  useEffect(() => {
+    if (location.state?.openModal) {
+      setIsModalOpen(true)
+      // Limpiar el flag del historial para que no reaparezca en recargas
+      window.history.replaceState({}, '')
+    }
+  }, [location.state]);
 
   // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
   const citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
@@ -99,6 +112,7 @@ function MapaMonitoreo() {
 
   return (
     <div className="mapa-page-container">
+      <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -110,6 +124,12 @@ function MapaMonitoreo() {
         <div className="sim-active-banner">
           <span className="sim-active-dot"></span>
           Simulación en tiempo real activa — los datos se actualizan automáticamente
+          <button
+            className="sim-active-modal-btn"
+            onClick={() => setIsModalOpen(true)}
+          >
+            Ver estado
+          </button>
         </div>
       )}
 
