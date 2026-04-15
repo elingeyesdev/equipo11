@@ -55,9 +55,8 @@ function PanelSimulacion() {
   const navigate = useNavigate()
   const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener, inyectar } = useSimulacion()
 
-  const [injectCity, setInjectCity]       = useState('')
-  const [injectValues, setInjectValues]   = useState(EMPTY_INJECT)
-  const [injectFeedback, setInjectFeedback] = useState(null) // 'success' | null
+  const [injectCity, setInjectCity]     = useState('')
+  const [injectValues, setInjectValues] = useState(EMPTY_INJECT)
 
   function handleCitySelect(cityId) {
     setInjectCity(cityId)
@@ -79,8 +78,7 @@ function PanelSimulacion() {
     if (Object.keys(data).length === 0) return
 
     inyectar(injectCity, data)
-    setInjectFeedback('success')
-    setTimeout(() => setInjectFeedback(null), 3000)
+    navigate('/mapa', { state: { ciudad: injectCity, abrirPanel: true } })
   }
 
   return (
@@ -224,9 +222,6 @@ function PanelSimulacion() {
             <h3 className="inject-title">Inyección Manual de Datos</h3>
             <p className="inject-subtitle">Escribe los valores que quieras y envíalos directamente al mapa para pruebas</p>
           </div>
-          {injectFeedback === 'success' && (
-            <span className="inject-badge inject-badge--ok">Datos enviados al mapa</span>
-          )}
         </div>
 
         <form className="inject-form" onSubmit={handleInjectSubmit}>
@@ -281,7 +276,7 @@ function PanelSimulacion() {
             <button
               type="button"
               className="inject-btn-reset"
-              onClick={() => { setInjectCity(''); setInjectValues(EMPTY_INJECT); setInjectFeedback(null) }}
+              onClick={() => { setInjectCity(''); setInjectValues(EMPTY_INJECT) }}
             >
               Limpiar
             </button>

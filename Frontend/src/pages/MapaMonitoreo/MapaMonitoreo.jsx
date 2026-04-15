@@ -7,7 +7,7 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -35,12 +35,35 @@ function MapaMonitoreo() {
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
   const [isModalOpen, setIsModalOpen]         = useState(false);
+  const [injectedCityId, setInjectedCityId]   = useState(null);
 
-  // Abrir modal automáticamente si se navegó desde PanelSimulacion con el flag
+  const mapRef      = useRef(null);
+  const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
+
+  // Abrir modal o centrar en ciudad inyectada según el estado de navegación
   useEffect(() => {
     if (location.state?.openModal) {
       setIsModalOpen(true)
-      // Limpiar el flag del historial para que no reaparezca en recargas
+      window.history.replaceState({}, '')
+      return
+    }
+
+    if (location.state?.abrirPanel && location.state?.ciudad) {
+      const cityId = location.state.ciudad
+      // Usar FALLBACK_DATA para coordenadas (siempre disponible, independiente de la simulación)
+      const city = FALLBACK_DATA.find(c => c.id === cityId)
+      if (city) {
+        setSelectedCity(city)
+        setInjectedCityId(cityId)
+        setTimeout(() => setInjectedCityId(null), 4000)
+
+        const flyToParams = { center: [city.longitude, city.latitude], zoom: 8, duration: 1200 }
+        if (mapRef.current) {
+          mapRef.current.flyTo(flyToParams)
+        } else {
+          pendingFlyTo.current = flyToParams
+        }
+      }
       window.history.replaceState({}, '')
     }
   }, [location.state]);
@@ -135,8 +158,15 @@ function MapaMonitoreo() {
 
       <div className="map-container">
         <Map
+          ref={mapRef}
           {...viewState}
           onMove={evt => setViewState(evt.viewState)}
+          onLoad={() => {
+            if (pendingFlyTo.current) {
+              mapRef.current.flyTo(pendingFlyTo.current)
+              pendingFlyTo.current = null
+            }
+          }}
           mapStyle="mapbox://styles/mapbox/light-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={() => setSelectedCity(null)}
@@ -164,7 +194,7 @@ function MapaMonitoreo() {
                 setSelectedCity(city);
               }}
             >
-              <div className="custom-marker">
+              <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
                 <span role="img" aria-label="pin">📍</span>
               </div>
             </Marker>
