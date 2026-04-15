@@ -14,6 +14,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
+import { useUnidades } from '../../hooks/useUnidades';
+import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 
 // Datos fallback cuando la simulación NO está activa (9 departamentos)
 const FALLBACK_DATA = [
@@ -31,6 +33,7 @@ const FALLBACK_DATA = [
 function MapaMonitoreo() {
   const location = useLocation();
   const { isRunning, cities: simulatedCities } = useSimulacion();
+  const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity]       = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
@@ -216,42 +219,65 @@ function MapaMonitoreo() {
                 <div className="data-icon">🌡️</div>
                 <div className="data-content">
                   <span className="data-label">Temperatura</span>
-                  <span className="data-value">{activeCity.data.temperature}°C</span>
+                  <span className="data-value">{formatearValor('temperature', activeCity.data.temperature, unidades.temperature)}</span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">🌫️</div>
                 <div className="data-content">
-                  <span className="data-label">Calidad del Aire (AQI)</span>
+                  <span className="data-label">Calidad del Aire</span>
                   <span className="data-value" style={{ color: getAqiColor(activeCity.data.aqi), fontWeight: 'bold' }}>
-                    {activeCity.data.aqi}
+                    {formatearValor('aqi', activeCity.data.aqi, unidades.aqi)}
                   </span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">💧</div>
                 <div className="data-content">
-                  <span className="data-label">Calidad del Agua (ICA)</span>
-                  <span className="data-value">{activeCity.data.waterQuality}</span>
+                  <span className="data-label">Calidad del Agua</span>
+                  <span className="data-value">{formatearValor('waterQuality', activeCity.data.waterQuality, unidades.waterQuality)}</span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">🔊</div>
                 <div className="data-content">
                   <span className="data-label">Nivel de Ruido</span>
-                  <span className="data-value">{activeCity.data.noise} dB</span>
+                  <span className="data-value">{formatearValor('noise', activeCity.data.noise, unidades.noise)}</span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">💦</div>
                 <div className="data-content">
                   <span className="data-label">Humedad</span>
-                  <span className="data-value">{activeCity.data.humidity}%</span>
+                  <span className="data-value">{formatearValor('humidity', activeCity.data.humidity, unidades.humidity)}</span>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* Panel de Unidades de Medida */}
+        <div className="units-control-panel">
+          <p className="units-panel-title">Unidades</p>
+          {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
+            <div key={key} className="units-row">
+              <span className="units-row-icon">{cfg.icon}</span>
+              {cfg.unidades.length > 1 ? (
+                <select
+                  className="units-select"
+                  value={unidades[key]}
+                  onChange={e => cambiarUnidad(key, e.target.value)}
+                >
+                  {cfg.unidades.map(u => (
+                    <option key={u.key} value={u.key}>{u.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="units-fixed-label">{cfg.unidades[0].label}</span>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Panel de Control del Heatmap */}
         <div className="heatmap-control-panel">

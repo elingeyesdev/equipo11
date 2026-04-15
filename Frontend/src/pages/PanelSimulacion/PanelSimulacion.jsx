@@ -10,6 +10,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSimulacion } from '../../context/SimulacionContext'
+import { useUnidades } from '../../hooks/useUnidades'
+import { formatearValor, invertirValor, METRICAS_UNIDADES } from '../../utils/unidades'
 import './PanelSimulacion.css'
 
 // Configuración de métricas para renderizar cards (OCP: agregar una métrica = agregar un objeto)
@@ -36,6 +38,14 @@ function getStatusClass(value, thresholds) {
   return 'status--danger'
 }
 
+/** Etiqueta legible del estado */
+function getStatusLabel(value, thresholds) {
+  if (value <= thresholds[0]) return 'Bueno'
+  if (value <= thresholds[1]) return 'Moderado'
+  if (value <= thresholds[2]) return 'Alerta'
+  return 'Crítico'
+}
+
 /** Calcula el promedio de una métrica entre todas las ciudades */
 function calculateAverage(cities, metricKey) {
   if (!cities.length) return 0
@@ -54,7 +64,10 @@ const EMPTY_INJECT = { temperature: '', aqi: '', waterQuality: '', noise: '', hu
 function PanelSimulacion() {
   const navigate = useNavigate()
   const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener, inyectar } = useSimulacion()
+  const { unidades, cambiarUnidad } = useUnidades()
 
+  // injectValues almacena los valores en UNIDAD BASE internamente.
+  // Los inputs los muestran convertidos según la unidad activa y convierten de vuelta al cambiar.
   const [injectCity, setInjectCity]     = useState('')
   const [injectValues, setInjectValues] = useState(EMPTY_INJECT)
 
@@ -71,14 +84,34 @@ function PanelSimulacion() {
     e.preventDefault()
     if (!injectCity) return
 
+    // injectValues ya está en unidades base; enviar directamente
     const data = {}
     Object.entries(injectValues).forEach(([key, val]) => {
-      if (val !== '') data[key] = Number(val)
+      if (val !== '') data[key] = parseFloat(Number(val).toFixed(2))
     })
     if (Object.keys(data).length === 0) return
 
     inyectar(injectCity, data)
     navigate('/mapa', { state: { ciudad: injectCity, abrirPanel: true } })
+  }
+
+  /** Devuelve el valor a mostrar en el input (unidad activa, redondeado) */
+  function injectDisplayValue(metricKey) {
+    const base = injectValues[metricKey]
+    if (base === '') return ''
+    const cfg = METRICAS_UNIDADES[metricKey]
+    const unit = cfg?.unidades.find(u => u.key === unidades[metricKey]) ?? cfg?.unidades[0]
+    return parseFloat(unit.convertir(Number(base)).toFixed(unit.precision))
+  }
+
+  /** Guarda en unidad base al escribir en el input */
+  function handleInjectChange(metricKey, displayVal) {
+    if (displayVal === '') {
+      setInjectValues(prev => ({ ...prev, [metricKey]: '' }))
+      return
+    }
+    const base = invertirValor(metricKey, Number(displayVal), unidades[metricKey])
+    setInjectValues(prev => ({ ...prev, [metricKey]: base }))
   }
 
   return (
@@ -157,18 +190,68 @@ function PanelSimulacion() {
         </div>
       </div>
 
+      {/* Selector de Unidades de Medida */}
+      <div className="sim-units-card">
+        <div className="sim-units-header">
+          <p className="sim-units-title">Unidades de medida</p>
+          <p className="sim-units-hint">Los cambios aplican en todo el panel y el mapa</p>
+        </div>
+        <div className="sim-units-body">
+          {/* Métricas con múltiples unidades: pills interactivos */}
+          {Object.entries(METRICAS_UNIDADES)
+            .filter(([, cfg]) => cfg.unidades.length > 1)
+            .map(([key, cfg]) => (
+              <div key={key} className="sim-unit-group">
+                <span className="sim-unit-group-label">{cfg.icon} {cfg.label}</span>
+                <div className="sim-unit-pills">
+                  {cfg.unidades.map(u => (
+                    <button
+                      key={u.key}
+                      type="button"
+                      className={`sim-unit-pill ${unidades[key] === u.key ? 'sim-unit-pill--active' : ''}`}
+                      onClick={() => cambiarUnidad(key, u.key)}
+                    >
+                      {u.sufijo.trim() || u.key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          }
+          {/* Métricas con unidad única: informativo */}
+          <div className="sim-unit-fixed-row">
+            <span className="sim-unit-fixed-label">Unidad fija:</span>
+            {Object.entries(METRICAS_UNIDADES)
+              .filter(([, cfg]) => cfg.unidades.length === 1)
+              .map(([key, cfg]) => (
+                <span key={key} className="sim-unit-fixed-badge">
+                  {cfg.icon} {cfg.unidades[0].sufijo.trim()}
+                </span>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
       {/* Resumen de promedios */}
       <div className="sim-summary-grid">
         {METRICS.map(metric => {
           const avg = calculateAverage(cities, metric.key)
+          const statusClass = getStatusClass(avg, metric.thresholds)
+          const statusLabel = getStatusLabel(avg, metric.thresholds)
           return (
-            <div key={metric.key} className={`sim-summary-card ${getStatusClass(avg, metric.thresholds)}`}>
-              <span className="sim-summary-icon">{metric.icon}</span>
-              <div className="sim-summary-info">
+            <div key={metric.key} className={`sim-summary-card ${statusClass}`}>
+              <div className="sim-summary-header">
+                <span className="sim-summary-icon">{metric.icon}</span>
                 <span className="sim-summary-label">{metric.label}</span>
-                <span className="sim-summary-value">{avg} {metric.unit}</span>
+                {cities.length > 0 && (
+                  <span className={`sim-summary-status ${statusClass}`}>{statusLabel}</span>
+                )}
               </div>
-              <span className="sim-summary-tag">Promedio</span>
+              <span className="sim-summary-value">
+                {cities.length > 0 ? formatearValor(metric.key, avg, unidades[metric.key]) : '—'}
+              </span>
+              <span className="sim-summary-tag">Promedio · {cities.length} departamentos</span>
             </div>
           )
         })}
@@ -182,7 +265,16 @@ function PanelSimulacion() {
             <thead>
               <tr>
                 <th>Departamento</th>
-                {METRICS.map(m => <th key={m.key}>{m.icon} {m.unit}</th>)}
+                {METRICS.map(m => {
+                  const unitCfg = METRICAS_UNIDADES[m.key]
+                  const unitActiva = unitCfg?.unidades.find(u => u.key === unidades[m.key]) ?? unitCfg?.unidades[0]
+                  return (
+                    <th key={m.key}>
+                      <span className="th-icon">{m.icon}</span>
+                      <span className="th-unit">{unitActiva?.sufijo.trim() || m.unit}</span>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
@@ -196,17 +288,25 @@ function PanelSimulacion() {
                 cities.map(city => (
                   <tr key={city.id}>
                     <td className="sim-city-name">
-                      <span className="sim-city-dot"></span>
-                      {city.name}
+                      <span className="sim-city-name-inner">
+                        <span className="sim-city-dot"></span>
+                        {city.name}
+                      </span>
                     </td>
-                    {METRICS.map(metric => (
-                      <td
-                        key={metric.key}
-                        className={`sim-cell ${getStatusClass(city.data[metric.key], metric.thresholds)}`}
-                      >
-                        {city.data[metric.key]}
-                      </td>
-                    ))}
+                    {METRICS.map(metric => {
+                      const rawVal = city.data[metric.key]
+                      const unitCfg = METRICAS_UNIDADES[metric.key]
+                      const unitActiva = unitCfg?.unidades.find(u => u.key === unidades[metric.key]) ?? unitCfg?.unidades[0]
+                      const displayVal = unitActiva ? unitActiva.convertir(rawVal).toFixed(unitActiva.precision) : rawVal
+                      return (
+                        <td
+                          key={metric.key}
+                          className={`sim-cell ${getStatusClass(rawVal, metric.thresholds)}`}
+                        >
+                          {displayVal}
+                        </td>
+                      )
+                    })}
                   </tr>
                 ))
               )}
@@ -250,19 +350,27 @@ function PanelSimulacion() {
 
           {/* Inputs de métricas */}
           <div className="inject-metrics-grid">
-            {METRICS.map(m => (
-              <div key={m.key} className="inject-field">
-                <label className="inject-label">{m.icon} {m.label} <span className="inject-unit">({m.unit})</span></label>
-                <input
-                  type="number"
-                  className="inject-input"
-                  value={injectValues[m.key]}
-                  onChange={(e) => setInjectValues(prev => ({ ...prev, [m.key]: e.target.value }))}
-                  placeholder="—"
-                  disabled={!injectCity || !isConnected}
-                />
-              </div>
-            ))}
+            {METRICS.map(m => {
+              const unitCfg = METRICAS_UNIDADES[m.key]
+              const unitActiva = unitCfg?.unidades.find(u => u.key === unidades[m.key]) ?? unitCfg?.unidades[0]
+              const step = unitActiva ? Math.pow(10, -unitActiva.precision) : 1
+              return (
+                <div key={m.key} className="inject-field">
+                  <label className="inject-label">
+                    {m.icon} {m.label} <span className="inject-unit">({unitActiva?.sufijo.trim() || m.unit})</span>
+                  </label>
+                  <input
+                    type="number"
+                    step={step}
+                    className="inject-input"
+                    value={injectDisplayValue(m.key)}
+                    onChange={(e) => handleInjectChange(m.key, e.target.value)}
+                    placeholder="—"
+                    disabled={!injectCity || !isConnected}
+                  />
+                </div>
+              )
+            })}
           </div>
 
           <div className="inject-actions">
