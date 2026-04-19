@@ -1,8 +1,9 @@
 /* ========================================================
-   ModalSimulacion — Estilos
+   ModalSimulacion — Estilos (Expandido + Mini escalado draggable)
    Hereda variables de index.css
    ======================================================== */
 
+/* ─── Overlay (modal expandido) ─── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -16,11 +17,22 @@
   animation: modal-fade-in 0.18s ease;
 }
 
+.modal-overlay--fading {
+  animation: modal-overlay-fade-out 0.5s ease forwards;
+  pointer-events: none;
+}
+
 @keyframes modal-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
+@keyframes modal-overlay-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ─── Caja principal del modal ─── */
 .modal-box {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -32,9 +44,57 @@
   animation: modal-slide-up 0.2s ease;
 }
 
+.modal-box--shrinking {
+  animation: shrinkToCorner 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 @keyframes modal-slide-up {
   from { transform: translateY(12px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes shrinkToCorner {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(50vw - 180px), calc(50vh - 100px)) scale(0.55);
+    opacity: 0.3;
+  }
+}
+
+/* ─── Modo Mini (mismo modal escalado + draggable) ─── */
+.modal-box--mini {
+  position: absolute;
+  z-index: 8;
+  transform-origin: top left;
+  animation: miniAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s;
+}
+
+.modal-box--mini:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.modal-box--dragging {
+  cursor: grabbing;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+  opacity: 0.92;
+  transition: none;
+}
+
+@keyframes miniAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: scale(0.55);
+  }
 }
 
 /* ─── Cabecera ─── */
@@ -43,6 +103,29 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
+}
+
+.modal-header--draggable {
+  cursor: grab;
+  user-select: none;
+  border-radius: 12px;
+  padding: 4px 4px 4px 0;
+  margin: -4px -4px 16px 0;
+  transition: background 0.15s;
+}
+
+.modal-header--draggable:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.modal-header--draggable:active {
+  cursor: grabbing;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .modal-title-group {
@@ -97,12 +180,32 @@
   color: var(--primary);
 }
 
+.modal-expand-btn {
+  background: var(--primary-extra-light);
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.modal-expand-btn:hover {
+  background: #fed7aa;
+}
+
 /* ─── Stats generales ─── */
 .modal-stats-row {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .modal-stat {
@@ -133,6 +236,48 @@
 
 .modal-stat--active  { color: #16a34a; }
 .modal-stat--stopped { color: var(--text-secondary); }
+
+/* ─── Controles de simulación ─── */
+.modal-controls-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.modal-ctrl-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.modal-ctrl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.modal-ctrl-btn--start {
+  background: #16a34a;
+  color: #fff;
+}
+
+.modal-ctrl-btn--start:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.modal-ctrl-btn--stop {
+  background: #ef4444;
+  color: #fff;
+}
+
+.modal-ctrl-btn--stop:hover:not(:disabled) {
+  background: #dc2626;
+}
 
 /* ─── Sección métricas ─── */
 .modal-section-title {

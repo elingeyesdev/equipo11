@@ -220,7 +220,6 @@ function MapaMonitoreo() {
 
   return (
     <div className="mapa-page-container">
-      <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -242,6 +241,8 @@ function MapaMonitoreo() {
       )}
 
       <div className="map-container">
+        {/* Modal / Mini-panel de simulación (dentro del mapa para posicionamiento correcto) */}
+        <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         {/* ========== Buscador Geocoder Global ========== */}
         <div className="geocoder-search-container" ref={searchRef}>
           <div className="geocoder-input-wrapper">
