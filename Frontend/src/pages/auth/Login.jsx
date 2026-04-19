@@ -47,6 +47,7 @@ function Login() {
       const data = await res.json()
       if (!data.ok) throw new Error(data.mensaje)
 
+      localStorage.setItem('token', data.usuario.token)
       localStorage.setItem('usuario', JSON.stringify(data.usuario))
       navigate('/mapa')
     } catch (err) {

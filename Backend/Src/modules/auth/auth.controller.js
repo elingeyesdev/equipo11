@@ -1,9 +1,20 @@
 const { register, login } = require('./auth.service')
+const { registerSchema, loginSchema } = require('./auth.schema')
 
 const registerController = async (req, res) => {
+  // Paso 1: Validar datos con Zod
+  const parsed = registerSchema.safeParse(req.body)
+  if (!parsed.success) {
+    const errores = parsed.error.errors.map(e => ({
+      campo: e.path[0],
+      mensaje: e.message
+    }))
+    return res.status(400).json({ ok: false, mensaje: errores[0].mensaje, errores })
+  }
+
+  // Paso 2: Procesar registro con datos validados
   try {
-    const { nombre, apellido, email, password } = req.body
-    const usuario = await register({ nombre, apellido, email, password })
+    const usuario = await register(parsed.data)
     res.status(201).json({ ok: true, mensaje: 'Usuario registrado correctamente', usuario })
   } catch (error) {
     res.status(400).json({ ok: false, mensaje: error.message })
@@ -11,9 +22,19 @@ const registerController = async (req, res) => {
 }
 
 const loginController = async (req, res) => {
+  // Paso 1: Validar datos con Zod
+  const parsed = loginSchema.safeParse(req.body)
+  if (!parsed.success) {
+    const errores = parsed.error.errors.map(e => ({
+      campo: e.path[0],
+      mensaje: e.message
+    }))
+    return res.status(400).json({ ok: false, mensaje: errores[0].mensaje, errores })
+  }
+
+  // Paso 2: Procesar login con datos validados
   try {
-    const { email, password } = req.body
-    const usuario = await login({ email, password })
+    const usuario = await login(parsed.data)
     res.status(200).json({ ok: true, mensaje: 'Sesión iniciada', usuario })
   } catch (error) {
     res.status(401).json({ ok: false, mensaje: error.message })

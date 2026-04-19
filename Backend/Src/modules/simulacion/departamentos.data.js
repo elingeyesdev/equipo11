@@ -9,7 +9,7 @@ const DEPARTAMENTOS = [
     name: 'La Paz',
     latitude: -16.4897,
     longitude: -68.1193,
-    ranges: { temperature: [5, 18], aqi: [30, 120], waterQuality: [60, 95], noise: [40, 80], humidity: [25, 60] }
+    ranges: { temperature: [-5, 18], aqi: [30, 120], waterQuality: [60, 95], noise: [40, 80], humidity: [25, 60] }
   },
   {
     id: 'cochabamba',
@@ -30,14 +30,14 @@ const DEPARTAMENTOS = [
     name: 'Oruro',
     latitude: -17.9624,
     longitude: -67.1061,
-    ranges: { temperature: [2, 15], aqi: [20, 90], waterQuality: [65, 98], noise: [30, 60], humidity: [15, 45] }
+    ranges: { temperature: [-8, 15], aqi: [20, 90], waterQuality: [65, 98], noise: [30, 60], humidity: [15, 45] }
   },
   {
     id: 'potosi',
     name: 'Potosí',
     latitude: -19.5836,
     longitude: -65.7531,
-    ranges: { temperature: [0, 14], aqi: [15, 80], waterQuality: [70, 98], noise: [25, 55], humidity: [10, 40] }
+    ranges: { temperature: [-12, 14], aqi: [15, 80], waterQuality: [70, 98], noise: [25, 55], humidity: [10, 40] }
   },
   {
     id: 'sucre',

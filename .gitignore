@@ -29,3 +29,4 @@ docker-compose.override.yml
 #Archivos innecesarios
 ANALISIS_MEJORAS.md
 CLAUDE.md
+implementation_plan.md

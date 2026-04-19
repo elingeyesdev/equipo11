@@ -33,6 +33,8 @@ services:
       DB_NAME: sistema_ambiental
       DB_USER: admin
       DB_PASSWORD: admin123
+      JWT_SECRET: enviro_sense_jwt_secret_2026
+      JWT_EXPIRES_IN: 24h
     depends_on:
       db:
         condition: service_healthy

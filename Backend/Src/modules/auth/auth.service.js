@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 const { findByEmail, createUser } = require('./auth.model')
 
 // Registrar usuario
@@ -31,9 +32,16 @@ const login = async ({ email, password }) => {
     throw new Error('Email o contraseña incorrectos')
   }
 
-  // Retornar datos del usuario (sin el hash)
+  // Retornar datos del usuario (sin el hash) + token JWT
   const { password_hash, ...usuarioSeguro } = usuario
-  return usuarioSeguro
+
+  const token = jwt.sign(
+    { id: usuario.id, email: usuario.email },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+  )
+
+  return { ...usuarioSeguro, token }
 }
 
 module.exports = { register, login }

@@ -18,6 +18,15 @@ const METRIC_CONFIG = {
   humidity:     { delta: 4 }
 }
 
+// Rangos válidos absolutos por métrica (para validar inyección manual)
+const METRIC_LIMITS = {
+  temperature:  { min: -40, max: 60 },   // Permite negativos (frío intenso)
+  aqi:          { min: 0,   max: 500 },
+  waterQuality: { min: 0,   max: 100 },
+  noise:        { min: 0,   max: 140 },
+  humidity:     { min: 0,   max: 100 },
+}
+
 const METRIC_KEYS = Object.keys(METRIC_CONFIG)
 
 /**
@@ -151,7 +160,8 @@ function injectData(cityId, partialData) {
   const sanitized = {}
   Object.entries(partialData).forEach(([metric, value]) => {
     if (METRIC_KEYS.includes(metric) && typeof value === 'number' && !isNaN(value)) {
-      sanitized[metric] = Math.round(value)
+      const limits = METRIC_LIMITS[metric]
+      sanitized[metric] = clamp(Math.round(value), limits.min, limits.max)
     }
   })
 

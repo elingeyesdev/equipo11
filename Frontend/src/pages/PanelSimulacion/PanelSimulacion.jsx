@@ -23,6 +23,15 @@ const METRICS = [
   { key: 'humidity',     label: 'Humedad',           icon: '💦', unit: '%',   thresholds: [30, 60, 80] },
 ]
 
+// Rangos válidos para inyección manual (espejo del backend)
+const METRIC_LIMITS = {
+  temperature:  { min: -40, max: 60 },
+  aqi:          { min: 0,   max: 500 },
+  waterQuality: { min: 0,   max: 100 },
+  noise:        { min: 0,   max: 140 },
+  humidity:     { min: 0,   max: 100 },
+}
+
 const INTERVAL_OPTIONS = [
   { value: 1000,  label: '1s' },
   { value: 3000,  label: '3s' },
@@ -362,6 +371,8 @@ function PanelSimulacion() {
                   <input
                     type="number"
                     step={step}
+                    min={METRIC_LIMITS[m.key]?.min ?? 0}
+                    max={METRIC_LIMITS[m.key]?.max ?? 100}
                     className="inject-input"
                     value={injectDisplayValue(m.key)}
                     onChange={(e) => handleInjectChange(m.key, e.target.value)}
