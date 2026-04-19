@@ -7,7 +7,7 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -40,6 +40,14 @@ function MapaMonitoreo() {
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [injectedCityId, setInjectedCityId]   = useState(null);
 
+  // --- Estado del buscador geocoder ---
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching]     = useState(false);
+  const [showResults, setShowResults]     = useState(false);
+  const searchRef    = useRef(null);
+  const debounceRef  = useRef(null);
+
   const mapRef      = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
 
@@ -70,6 +78,82 @@ function MapaMonitoreo() {
       window.history.replaceState({}, '')
     }
   }, [location.state]);
+
+  // --- Cerrar dropdown al hacer clic fuera ---
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // --- Búsqueda con Mapbox Geocoding API (debounced) ---
+  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=6&language=es`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setSearchResults(data.features || []);
+        setShowResults(true);
+      } catch (err) {
+        console.error('Error en geocoding:', err);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+  }, [MAPBOX_TOKEN]);
+
+  const handleSelectResult = (result) => {
+    const [lng, lat] = result.center;
+    // Determinar zoom según tipo de lugar
+    const placeType = result.place_type?.[0] || '';
+    let zoom = 10;
+    if (placeType === 'country') zoom = 4;
+    else if (placeType === 'region') zoom = 6;
+    else if (placeType === 'district' || placeType === 'locality') zoom = 8;
+    else if (placeType === 'place') zoom = 10;
+    else if (placeType === 'address' || placeType === 'poi') zoom = 14;
+
+    mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1500 });
+
+    // Verificar si coincide con uno de los departamentos locales
+    const matchedCity = citiesData.find(c =>
+      c.name.toLowerCase() === result.text?.toLowerCase() ||
+      result.place_name?.toLowerCase().includes(c.name.toLowerCase())
+    );
+    if (matchedCity) {
+      setSelectedCity(matchedCity);
+    } else {
+      setSelectedCity(null);
+    }
+
+    setSearchQuery(result.place_name || result.text);
+    setShowResults(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+  };
 
   // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
   const citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
@@ -127,8 +211,6 @@ function MapaMonitoreo() {
     zoom: 5
   });
 
-  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return '#00e400';
     if (aqi <= 100) return '#ffff00';
@@ -160,6 +242,73 @@ function MapaMonitoreo() {
       )}
 
       <div className="map-container">
+        {/* ========== Buscador Geocoder Global ========== */}
+        <div className="geocoder-search-container" ref={searchRef}>
+          <div className="geocoder-input-wrapper">
+            <span className="geocoder-icon">🔍</span>
+            <input
+              id="geocoder-search-input"
+              type="text"
+              className="geocoder-input"
+              placeholder="Buscar país, ciudad o lugar…"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  handleClearSearch();
+                  e.target.blur();
+                }
+              }}
+              autoComplete="off"
+            />
+            {searchQuery && (
+              <button className="geocoder-clear-btn" onClick={handleClearSearch} aria-label="Limpiar búsqueda">
+                ×
+              </button>
+            )}
+          </div>
+
+          {showResults && (
+            <ul className="geocoder-results-list">
+              {isSearching && (
+                <li className="geocoder-result-item geocoder-loading">Buscando…</li>
+              )}
+              {!isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2 && (
+                <li className="geocoder-result-item geocoder-no-results">Sin resultados</li>
+              )}
+              {!isSearching && searchResults.map((result) => {
+                const typeIcon = {
+                  country: '🌍',
+                  region: '🏔️',
+                  place: '🏙️',
+                  locality: '📍',
+                  district: '🏘️',
+                  address: '📫',
+                  poi: '⭐',
+                };
+                const icon = typeIcon[result.place_type?.[0]] || '📍';
+                return (
+                  <li
+                    key={result.id}
+                    className="geocoder-result-item"
+                    onClick={() => handleSelectResult(result)}
+                  >
+                    <span className="geocoder-result-icon">{icon}</span>
+                    <div className="geocoder-result-text">
+                      <span className="geocoder-result-name">{result.text}</span>
+                      {result.place_name !== result.text && (
+                        <span className="geocoder-result-context">
+                          {result.place_name?.replace(`${result.text}, `, '')}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <Map
           ref={mapRef}
           {...viewState}
