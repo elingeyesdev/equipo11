@@ -14,6 +14,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
+import WeatherParticles from '../../components/WeatherParticles/WeatherParticles';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 
@@ -39,6 +41,8 @@ function MapaMonitoreo() {
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [injectedCityId, setInjectedCityId]   = useState(null);
+  const [isParticlesActive, setIsParticlesActive] = useState(false);
+  const [weatherCode, setWeatherCode]         = useState(null);
 
   const mapRef      = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
@@ -193,6 +197,60 @@ function MapaMonitoreo() {
     return '#ff0000';
   };
 
+  const handleMapClick = async (evt) => {
+    if (isHeatmapActive) {
+        setSelectedCity(null);
+        return;
+    }
+
+    const { lng, lat } = evt.lngLat;
+    
+    const clickCity = {
+      id: `click_${Date.now()}`,
+      name: `Buscando zona...`,
+      subtitle: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+      latitude: lat,
+      longitude: lng,
+      data: { temperature: null, aqi: null, waterQuality: null, noise: null, humidity: null },
+      isLoading: true
+    };
+    setSelectedCity(clickCity);
+    setWeatherCode(null); // Reseteamos clima mientras carga
+
+    try {
+      const [weather, aqiData, placeName] = await Promise.all([
+        getWeatherAtLocation(lat, lng),
+        getAqiAtLocation(lat, lng),
+        getPlaceName(lat, lng, MAPBOX_TOKEN)
+      ]);
+
+      let wCode = null;
+      let newCityData = { ...clickCity.data };
+      
+      if (weather && weather.current) {
+          newCityData.temperature = weather.current.temperature_2m;
+          newCityData.humidity = weather.current.relative_humidity_2m;
+          wCode = weather.current.weather_code;
+      }
+      if (aqiData && aqiData.current) {
+          newCityData.aqi = aqiData.current.european_aqi;
+      }
+
+      setWeatherCode(wCode);
+
+      setSelectedCity({
+        ...clickCity,
+        name: placeName ? placeName : 'Ubicación Desconocida',
+        subtitle: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+        data: newCityData,
+        isLoading: false
+      });
+    } catch (e) {
+      console.error("Error al obtener datos:", e);
+      setSelectedCity({ ...clickCity, name: 'Error en conexión' });
+    }
+  };
+
   return (
     <div className="mapa-page-container">
       <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
@@ -229,7 +287,7 @@ function MapaMonitoreo() {
           }}
           mapStyle="mapbox://styles/mapbox/light-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
-          onClick={() => setSelectedCity(null)}
+          onClick={handleMapClick}
         >
           <GeolocateControl position="bottom-right" />
           <FullscreenControl position="bottom-right" />
@@ -268,7 +326,9 @@ function MapaMonitoreo() {
             <div className="panel-header">
               <h3>{activeCity.name}</h3>
               <p className="panel-subtitle">
-                {isRunning ? 'Datos en tiempo real (simulados)' : 'Datos estáticos'}
+                {activeCity.subtitle 
+                  ? activeCity.subtitle 
+                  : (isRunning ? 'Datos en tiempo real (simulados)' : 'Datos estáticos')}
               </p>
             </div>
             <div className="panel-body">
@@ -336,6 +396,21 @@ function MapaMonitoreo() {
           ))}
         </div>
 
+        {/* Panel de Control de Partículas */}
+        <div className="particles-control-panel">
+          <div className="heatmap-toggle-wrapper">
+            <label className="ios-switch">
+              <input
+                type="checkbox"
+                checked={isParticlesActive}
+                onChange={(e) => setIsParticlesActive(e.target.checked)}
+              />
+              <span className="slider round"></span>
+            </label>
+            <span className="heatmap-label">{isParticlesActive ? 'Clima 3D: ON' : 'Clima 3D: OFF'}</span>
+          </div>
+        </div>
+
         {/* Panel de Control del Heatmap */}
         <div className="heatmap-control-panel">
           <div className="heatmap-toggle-wrapper">
@@ -367,6 +442,7 @@ function MapaMonitoreo() {
           )}
         </div>
       </div>
+      <WeatherParticles isEnabled={isParticlesActive} weatherCode={weatherCode} />
     </div>
   );
 }

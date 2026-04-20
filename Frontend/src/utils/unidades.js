@@ -84,7 +84,7 @@ function resolverUnidad(metricKey, unitKey) {
 /** Devuelve el valor con unidad formateado (ej: "25.0°C") */
 export function formatearValor(metricKey, rawValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
-  if (!unit || rawValue == null) return '—'
+  if (!unit || rawValue == null || typeof rawValue !== 'number' || isNaN(rawValue)) return '—'
   return `${unit.convertir(rawValue).toFixed(unit.precision)}${unit.sufijo}`
 }
 

@@ -365,6 +365,23 @@
   min-width: 220px;
 }
 
+.particles-control-panel {
+  position: absolute;
+  top: 1rem;
+  right: 16rem; /* A lado del panel de heatmap */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .heatmap-toggle-wrapper {
   display: flex;
   align-items: center;
@@ -471,6 +488,10 @@ input:checked + .slider:before {
 @media screen and (max-width: 600px) {
   .heatmap-control-panel {
     top: 5rem; /* Asegurar que no tape controles base de mapbox si estuvieran arriba */
+    right: 4vw;
+  }
+  .particles-control-panel {
+    top: 9rem;
     right: 4vw;
   }
 }

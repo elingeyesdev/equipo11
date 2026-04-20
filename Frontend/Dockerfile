@@ -7,8 +7,8 @@ WORKDIR /app
 # Copiar archivos de dependencias primero (para cache eficiente)
 COPY package.json package-lock.json ./
 
-# Instalar dependencias
-RUN npm install
+# Borrar package-lock.json para evitar el bug de npm con dependencias opcionales (bindings de rolldown) y luego instalar
+RUN rm -f package-lock.json && npm install
 
 # Copiar el resto del código fuente
 COPY . .
