@@ -13,3 +13,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
   activo        BOOLEAN DEFAULT TRUE,
   created_at    TIMESTAMP DEFAULT NOW()
 );
+
+-- Tabla de métricas ambientales (histórico)
+CREATE TABLE IF NOT EXISTS metricas_ambientales (
+  id                  SERIAL PRIMARY KEY,
+  latitud             DECIMAL(9,6) NOT NULL,
+  longitud            DECIMAL(9,6) NOT NULL,
+  ciudad              VARCHAR(150) NOT NULL,
+  temperatura         DECIMAL(5,2),
+  aqi                 INTEGER,
+  condicion_climatica VARCHAR(50),
+  detalles            JSONB,
+  fecha_registro      TIMESTAMP DEFAULT NOW()
+);
