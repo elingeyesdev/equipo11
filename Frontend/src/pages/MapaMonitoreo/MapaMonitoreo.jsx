@@ -15,7 +15,7 @@ import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import WeatherParticles from '../../components/WeatherParticles/WeatherParticles';
-import { getWeatherAtLocation, getAqiAtLocation, getPlaceName } from '../../utils/weatherApi';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getBulkWeatherForLocations } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 
@@ -43,6 +43,27 @@ function MapaMonitoreo() {
   const [injectedCityId, setInjectedCityId]   = useState(null);
   const [isParticlesActive, setIsParticlesActive] = useState(false);
   const [weatherCode, setWeatherCode]         = useState(null);
+  const [isLegendOpen, setIsLegendOpen]       = useState(true);
+  const [activeLegendTab, setActiveLegendTab] = useState('unidades');
+  const [localWeathers, setLocalWeathers]     = useState({});
+
+  // Carga paralela masiva de climas locales para todas las ciudades si se activa la vista 3D
+  useEffect(() => {
+    if (!isParticlesActive) return;
+    
+    let mounted = true;
+    const fetchLocalWeathers = async () => {
+      try {
+        const results = await getBulkWeatherForLocations(citiesData);
+        if (mounted) {
+          setLocalWeathers(prev => ({...prev, ...results}));
+        }
+      } catch (e) { console.error("Error bulk weather", e); }
+    };
+
+    fetchLocalWeathers();
+    return () => { mounted = false; };
+  }, [isParticlesActive]);
 
   const mapRef      = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
@@ -197,6 +218,30 @@ function MapaMonitoreo() {
     return '#ff0000';
   };
 
+  // Disparo inicial de clima al encender el Switch
+  useEffect(() => {
+    if (isParticlesActive) {
+      getWeatherAtLocation(viewState.latitude, viewState.longitude).then(w => {
+         if (w && w.current) setWeatherCode(w.current.weather_code);
+      }).catch(() => {});
+    }
+  }, [isParticlesActive]);
+
+  // Actualización automática del clima basado en el centro del mapa 
+  // ¡Se ejecuta cuando el usuario suelta el mouse después de arrastrar!
+  const handleMapMoveEnd = async (evt) => {
+    if (!isParticlesActive) return;
+    const { longitude, latitude } = evt.viewState;
+    try {
+      const weather = await getWeatherAtLocation(latitude, longitude);
+      if (weather && weather.current) {
+        setWeatherCode(weather.current.weather_code);
+      }
+    } catch(err) {
+      console.error("Error auto-fetching weather map center", err);
+    }
+  };
+
   const handleMapClick = async (evt) => {
     if (isHeatmapActive) {
         setSelectedCity(null);
@@ -279,6 +324,7 @@ function MapaMonitoreo() {
           ref={mapRef}
           {...viewState}
           onMove={evt => setViewState(evt.viewState)}
+          onMoveEnd={handleMapMoveEnd}
           onLoad={() => {
             if (pendingFlyTo.current) {
               mapRef.current.flyTo(pendingFlyTo.current)
@@ -293,12 +339,14 @@ function MapaMonitoreo() {
           <FullscreenControl position="bottom-right" />
           <NavigationControl position="bottom-right" />
           
-          {/* Capa de Mapa de Calor */}
+          {/* Capa de Mapa de Calor de Calidad del Aire */}
           {isHeatmapActive && (
             <Source id="heatmap-data" type="geojson" data={heatmapData}>
               <Layer {...heatmapLayer} />
             </Source>
           )}
+
+
 
           {/* Marcadores — se muestran siempre fuera del modo heatmap */}
           {!isHeatmapActive && citiesData.map((city) => (
@@ -307,9 +355,17 @@ function MapaMonitoreo() {
               longitude={city.longitude}
               latitude={city.latitude}
               anchor="bottom"
-              onClick={e => {
+              onClick={async (e) => {
                 e.originalEvent.stopPropagation();
                 setSelectedCity(city);
+                try {
+                  const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                  let finalCode = weather.current.weather_code;
+                  
+                  setWeatherCode(finalCode);
+                } catch(err) {
+                  console.error("Error obteniendo clima para el marcador", err);
+                }
               }}
             >
               <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
@@ -373,27 +429,76 @@ function MapaMonitoreo() {
           </div>
         )}
 
-        {/* Panel de Unidades de Medida */}
-        <div className="units-control-panel">
-          <p className="units-panel-title">Unidades</p>
-          {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
-            <div key={key} className="units-row">
-              <span className="units-row-icon">{cfg.icon}</span>
-              {cfg.unidades.length > 1 ? (
-                <select
-                  className="units-select"
-                  value={unidades[key]}
-                  onChange={e => cambiarUnidad(key, e.target.value)}
-                >
-                  {cfg.unidades.map(u => (
-                    <option key={u.key} value={u.key}>{u.label}</option>
+        {/* Panel Unificado de Leyendas y Unidades */}
+        <div className={`unified-legend-panel ${!isLegendOpen ? 'collapsed' : ''}`}>
+          <div className="unified-legend-header">
+            <div className="unified-legend-tabs">
+              <button 
+                className={`legend-tab ${activeLegendTab === 'unidades' ? 'active' : ''}`}
+                onClick={() => setActiveLegendTab('unidades')}
+              >
+                Unidades
+              </button>
+              <button 
+                className={`legend-tab ${activeLegendTab === 'clima' ? 'active' : ''}`}
+                onClick={() => setActiveLegendTab('clima')}
+              >
+                Clima 3D
+              </button>
+            </div>
+            <button 
+              className="legend-toggle-btn" 
+              onClick={() => setIsLegendOpen(!isLegendOpen)}
+              title={isLegendOpen ? "Ocultar panel" : "Mostrar panel"}
+            >
+              {isLegendOpen ? '▼' : '▲'}
+            </button>
+          </div>
+          
+          {isLegendOpen && (
+            <div className="unified-legend-body">
+              {activeLegendTab === 'unidades' && (
+                <div className="units-content">
+                  {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
+                    <div key={key} className="units-row">
+                      <span className="units-row-icon">{cfg.icon}</span>
+                      {cfg.unidades.length > 1 ? (
+                        <select
+                          className="units-select"
+                          value={unidades[key]}
+                          onChange={e => cambiarUnidad(key, e.target.value)}
+                        >
+                          {cfg.unidades.map(u => (
+                            <option key={u.key} value={u.key}>{u.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="units-fixed-label">{cfg.unidades[0].label}</span>
+                      )}
+                    </div>
                   ))}
-                </select>
-              ) : (
-                <span className="units-fixed-label">{cfg.unidades[0].label}</span>
+                </div>
+              )}
+              
+              {activeLegendTab === 'clima' && (
+                <div className="clima-legend-content">
+                  <div className="clima-legend-item">
+                    <span className="clima-dot" style={{ background: '#0984e3', border: '1px solid #74b9ff' }}></span> Lluvia
+                  </div>
+                  <div className="clima-legend-item">
+                    <span className="clima-dot" style={{ background: '#ffffff', border: '1px solid #74b9ff' }}></span> Nieve
+                  </div>
+                  <div className="clima-legend-item">
+                    <span className="clima-dot" style={{ background: '#b2bec3', border: '1px solid #636e72' }}></span> Niebla
+                  </div>
+                  <div className="clima-legend-item">
+                    <span className="clima-dot" style={{ background: '#ffeaa7', border: '1px solid #e17055' }}></span> Despejado
+                  </div>
+                  <p className="clima-legend-hint">Actualización automática al arrastrar el mapa.</p>
+                </div>
               )}
             </div>
-          ))}
+          )}
         </div>
 
         {/* Panel de Control de Partículas */}
@@ -440,9 +545,14 @@ function MapaMonitoreo() {
               </select>
             </div>
           )}
-        </div>
+         </div>
       </div>
-      <WeatherParticles isEnabled={isParticlesActive} weatherCode={weatherCode} />
+      
+      <WeatherParticles 
+        isEnabled={isParticlesActive} 
+        weatherCode={weatherCode} 
+        currentZoom={viewState.zoom}
+      />
     </div>
   );
 }

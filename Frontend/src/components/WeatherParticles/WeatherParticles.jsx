@@ -1,31 +1,21 @@
-import { useEffect, useState } from 'react';
-import Particles, { initParticlesEngine } from '@tsparticles/react';
-import { loadFull } from 'tsparticles';
+import React, { useEffect, useState } from 'react';
+import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { loadSlim } from "@tsparticles/slim";
 import './WeatherParticles.css';
 
-const WeatherParticles = ({ isEnabled, weatherCode }) => {
+const WeatherParticles = ({ isEnabled, weatherCode, currentZoom }) => {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
     initParticlesEngine(async (engine) => {
-      await loadFull(engine);
+      await loadSlim(engine);
     }).then(() => {
       setInit(true);
     });
   }, []);
 
-  // Return null if disabled, not initialized, or no weather code
-  if (!isEnabled || !init || weatherCode === null || weatherCode === undefined) return null;
+  if (!isEnabled || !init) return null;
 
-  // WMO codes:
-  // 0-3: Clear to overcast
-  // 45-48: Fog
-  // 51-69: Rain/Drizzle
-  // 71-77: Snow
-  // 80-82: Rain showers
-  // 85-86: Snow showers
-  // 95-99: Thunderstorm
-  
   let particleOptions = null;
   
   if ((weatherCode >= 51 && weatherCode <= 69) || (weatherCode >= 80 && weatherCode <= 82) || (weatherCode >= 95 && weatherCode <= 99)) {
@@ -33,16 +23,17 @@ const WeatherParticles = ({ isEnabled, weatherCode }) => {
     particleOptions = {
         particles: {
             color: { value: '#a0c4ff' },
-            number: { value: 150 },
-            shape: { type: 'line' },
-            size: { value: { min: 10, max: 20 } },
+            number: { value: 350 },
+            shape: { type: 'circle' },
+            stroke: { width: 1, color: '#0984e3' },
+            size: { value: 1.5 },
             move: {
                 enable: true,
-                speed: 25,
+                speed: 15,
                 direction: 'bottom',
-                straight: true,
+                straight: true
             },
-            opacity: { value: 0.6 }
+            opacity: { value: 0.8 }
         }
     };
   } else if ((weatherCode >= 71 && weatherCode <= 77) || (weatherCode >= 85 && weatherCode <= 86)) {
@@ -50,52 +41,70 @@ const WeatherParticles = ({ isEnabled, weatherCode }) => {
     particleOptions = {
         particles: {
             color: { value: '#ffffff' },
-            number: { value: 100 },
+            number: { value: 200 },
             shape: { type: 'circle' },
-            size: { value: { min: 2, max: 4 } },
+            stroke: { width: 1, color: '#0097e6' },
+            size: { value: { min: 1, max: 2.5 } },
             move: {
                 enable: true,
-                speed: 3,
+                speed: 2,
                 direction: 'bottom',
-                straight: false,
+                straight: false
+            },
+            opacity: { value: 0.9 }
+        }
+    };
+  } else if (weatherCode === 45 || weatherCode === 48) {
+    // Niebla
+    particleOptions = {
+        particles: {
+            color: { value: '#b2bec3' },
+            number: { value: 80 },
+            shape: { type: 'circle' },
+            size: { value: { min: 8, max: 20 } },
+            move: {
+                enable: true,
+                speed: 0.5,
+                direction: 'right',
+                straight: false
+            },
+            opacity: { value: 0.3 }
+        }
+    };
+  } else {
+    // Despejado o Null
+    particleOptions = {
+        particles: {
+            color: { value: '#ffeaa7' },
+            number: { value: 150 },
+            shape: { type: 'circle' },
+            stroke: { width: 0.5, color: '#e17055' },
+            size: { value: { min: 1.5, max: 2.5 } },
+            move: {
+                enable: true,
+                speed: 1,
+                direction: 'none',
+                random: true
             },
             opacity: { value: 0.8 }
         }
     };
-  } else if (weatherCode === 45 || weatherCode === 48) {
-    // Niebla / Bruma
-    particleOptions = {
-        particles: {
-            color: { value: '#dddddd' },
-            number: { value: 40 },
-            shape: { type: 'circle' },
-            size: { value: { min: 20, max: 60 } },
-            move: {
-                enable: true,
-                speed: 1,
-                direction: 'right',
-                straight: false,
-            },
-            opacity: { value: { min: 0.05, max: 0.15 } }
-        }
-    };
   }
 
-  // Si está despejado (0-3), no mostramos partículas
-  if (!particleOptions) return null;
-
   return (
-    <div className="weather-particles-container">
-      <Particles
-        id="tsparticles"
-        options={{
-          ...particleOptions,
-          background: { color: { value: 'transparent' } },
-          detectRetina: true,
-          interactivity: { events: { onClick: { enable: false }, onHover: { enable: false } } }
-        }}
-      />
-    </div>
+    <Particles
+      key={weatherCode}
+      id={`tsparticles-${weatherCode}`}
+      className="weather-particles-container"
+      options={{
+        ...particleOptions,
+        fullScreen: { enable: false },
+        background: { color: { value: 'transparent' } },
+        fpsLimit: 60,
+        detectRetina: false,
+        interactivity: { events: { onClick: { enable: false }, onHover: { enable: false } } }
+      }}
+    />
   );
 };
 

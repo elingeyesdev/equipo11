@@ -58,3 +58,40 @@ export const getPlaceName = async (lat, lng, mapboxToken) => {
     return null;
   }
 };
+
+export const getBulkWeatherForLocations = async (citiesArray) => {
+  if (!citiesArray || citiesArray.length === 0) return {};
+  
+  const lats = citiesArray.map(c => c.latitude).join(',');
+  const lngs = citiesArray.map(c => c.longitude).join(',');
+
+  try {
+    const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lats,
+        longitude: lngs,
+        current: 'weather_code',
+        timezone: 'auto'
+      }
+    });
+
+    const results = {};
+    const data = response.data;
+    
+    // Si OpenMeteo recibe múltiples coordenadas, devuelve un array. Si es una, devuelve un objeto.
+    if (Array.isArray(data)) {
+      data.forEach((locData, index) => {
+        if (locData && locData.current) {
+          results[citiesArray[index].id] = locData.current.weather_code;
+        }
+      });
+    } else if (data && data.current) {
+      results[citiesArray[0].id] = data.current.weather_code;
+    }
+    
+    return results;
+  } catch (error) {
+    console.error("Error bulk fetching weather from Open-Meteo:", error);
+    return {};
+  }
+};
