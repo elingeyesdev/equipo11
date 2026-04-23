@@ -98,31 +98,43 @@ export const getBulkWeatherForLocations = async (citiesArray) => {
 
 export const getHistoricalWeatherAtLocation = async (lat, lng) => {
   try {
-    const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
-      params: {
-        latitude: lat,
-        longitude: lng,
-        hourly: 'temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code',
-        past_days: 1,
-        forecast_days: 1,
-        timezone: 'auto' // Esto asegurará que los timesamps vengan alineados
-      }
-    });
+    const [weatherResponse, aqiResponse] = await Promise.all([
+      axios.get('https://api.open-meteo.com/v1/forecast', {
+        params: {
+          latitude: lat,
+          longitude: lng,
+          hourly: 'temperature_2m,relative_humidity_2m,weather_code',
+          past_days: 1,
+          forecast_days: 1,
+          timezone: 'auto'
+        }
+      }),
+      axios.get('https://air-quality-api.open-meteo.com/v1/air-quality', {
+        params: {
+          latitude: lat,
+          longitude: lng,
+          hourly: 'european_aqi',
+          past_days: 1,
+          forecast_days: 1,
+          timezone: 'auto'
+        }
+      })
+    ]);
     
     // Transformamos el dato masivo de Open-Meteo al formato Timeline
-    const { time, temperature_2m, relative_humidity_2m, wind_speed_10m, weather_code } = response.data.hourly;
+    const { time, temperature_2m, relative_humidity_2m, weather_code } = weatherResponse.data.hourly;
+    const aqiData = aqiResponse.data?.hourly?.european_aqi || [];
     
     const mappedArray = time.map((timestampStr, idx) => ({
       index: idx,
-      timestamp: timestampStr, // Open-Meteo retorna strings ISO o truncadas "YYYY-MM-DDTHH:00"
+      timestamp: timestampStr, 
       data: {
         temperature: temperature_2m[idx],
         weatherCode: weather_code[idx],
-        aqi: null, // Limitación: APIs genéricas no proveen histórico consolidado
+        aqi: aqiData[idx] || null, 
         waterQuality: null,
         noise: null,
-        humidity: relative_humidity_2m[idx],
-        wind: wind_speed_10m[idx]
+        humidity: relative_humidity_2m[idx]
       }
     }));
     

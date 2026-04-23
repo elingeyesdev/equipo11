@@ -341,7 +341,6 @@ function MapaMonitoreo() {
       if (weather && weather.current) {
           newCityData.temperature = weather.current.temperature_2m;
           newCityData.humidity = weather.current.relative_humidity_2m;
-          newCityData.wind = weather.current.wind_speed_10m;
           wCode = weather.current.weather_code;
       }
       if (aqiData && aqiData.current) {
@@ -490,13 +489,6 @@ function MapaMonitoreo() {
                 <div className="data-content">
                   <span className="data-label">Humedad</span>
                   <span className="data-value">{formatearValor('humidity', activeCity.data.humidity, unidades.humidity)}</span>
-                </div>
-              </div>
-              <div className="data-item">
-                <div className="data-icon">🌬️</div>
-                <div className="data-content">
-                  <span className="data-label">Viento</span>
-                  <span className="data-value">{activeCity.data.wind !== undefined && activeCity.data.wind !== null && activeCity.data.wind !== '--' ? `${activeCity.data.wind} km/h` : '--'}</span>
                 </div>
               </div>
             </div>

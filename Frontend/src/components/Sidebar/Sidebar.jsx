@@ -49,9 +49,17 @@ const navItems = [
   },
 ]
 
-function Sidebar() {
+function Sidebar({ isCollapsed, onToggle }) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <button 
+        className="sidebar-toggle-btn"
+        onClick={onToggle}
+        title={isCollapsed ? "Expandir" : "Contraer"}
+      >
+        {isCollapsed ? '▶' : '◀'}
+      </button>
+
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -84,7 +92,7 @@ function Sidebar() {
       <div className="sidebar-footer">
         <div className="sidebar-status">
           <span className="status-dot status-dot--online"></span>
-          <span>Sistema activo</span>
+          <span className="status-text">Sistema activo</span>
         </div>
         <span className="sidebar-version">MVP v0.1</span>
       </div>
