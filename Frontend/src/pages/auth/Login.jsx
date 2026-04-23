@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import AuthHero from './AuthHero'
 import './Auth.css'
 
 const VALIDACIONES = {
@@ -17,7 +18,6 @@ function Login() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
-    // Validar en tiempo real
     if (errors[name] !== undefined) {
       setErrors(prev => ({ ...prev, [name]: VALIDACIONES[name]?.(value) || '' }))
     }
@@ -59,56 +59,63 @@ function Login() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <div className="auth-brand-icon">🌿</div>
-          <h1 className="auth-brand-title">EnviroSense</h1>
-          <p className="auth-brand-sub">Monitor de Datos Ambientales</p>
+      <AuthHero />
+
+      <div className="auth-form-col">
+        <div className="auth-form-wrap">
+          <div className="auth-eyebrow">Acceso</div>
+          <h2 className="auth-heading">Bienvenido de <em>vuelta</em>.</h2>
+          <p className="auth-subheading">Ingresa tus credenciales para continuar con la observación.</p>
+
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            <div className={`auth-field ${errors.email ? 'auth-field--error' : ''}`}>
+              <label htmlFor="login-email">Correo electrónico</label>
+              <input
+                id="login-email"
+                type="email"
+                name="email"
+                placeholder="tu@envirosense.bo"
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+              />
+              {errors.email && <span className="auth-error-msg">{errors.email}</span>}
+            </div>
+
+            <div className={`auth-field ${errors.password ? 'auth-field--error' : ''}`}>
+              <label htmlFor="login-password">Contraseña</label>
+              <input
+                id="login-password"
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                value={form.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+              />
+              {errors.password && <span className="auth-error-msg">{errors.password}</span>}
+            </div>
+
+            {apiError && <div className="auth-api-error">{apiError}</div>}
+
+            <button type="submit" className="auth-btn" disabled={loading}>
+              {loading ? 'Ingresando...' : (
+                <>
+                  Ingresar
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="auth-footer-text">
+            ¿No tienes cuenta?{' '}
+            <Link to="/register" className="auth-link">Solicita acceso</Link>
+          </p>
         </div>
-
-        <h2 className="auth-heading">Iniciar Sesión</h2>
-        <p className="auth-subheading">Ingresa tus credenciales para continuar</p>
-
-        <form onSubmit={handleSubmit} className="auth-form" noValidate>
-          <div className={`auth-field ${errors.email ? 'auth-field--error' : ''}`}>
-            <label htmlFor="login-email">Correo electrónico</label>
-            <input
-              id="login-email"
-              type="email"
-              name="email"
-              placeholder="correo@ejemplo.com"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-            />
-            {errors.email && <span className="auth-error-msg">{errors.email}</span>}
-          </div>
-
-          <div className={`auth-field ${errors.password ? 'auth-field--error' : ''}`}>
-            <label htmlFor="login-password">Contraseña</label>
-            <input
-              id="login-password"
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={handleChange}
-              autoComplete="current-password"
-            />
-            {errors.password && <span className="auth-error-msg">{errors.password}</span>}
-          </div>
-
-          {apiError && <div className="auth-api-error">{apiError}</div>}
-
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
-
-        <p className="auth-footer-text">
-          ¿No tienes cuenta?{' '}
-          <Link to="/register" className="auth-link">Regístrate aquí</Link>
-        </p>
       </div>
     </div>
   )

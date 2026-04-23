@@ -128,10 +128,11 @@ function PanelSimulacion() {
       {/* Encabezado */}
       <div className="panel-sim-header">
         <div>
-          <h2 className="panel-sim-title">Panel de Simulación</h2>
-          <p className="panel-sim-subtitle">Control y visualización de datos ambientales simulados</p>
+          <div className="panel-sim-eyebrow">Consola de simulación · tick {tickCount}</div>
+          <h2 className="panel-sim-title">Panel de <em>simulación</em></h2>
+          <p className="panel-sim-subtitle">Genera lecturas sintéticas para probar el pipeline, visualizar escenarios extremos o sembrar datos para demos.</p>
         </div>
-        <span className="page-tag">Sprint 0</span>
+        <span className="page-tag">Operación</span>
       </div>
 
       {/* Controles */}
@@ -268,7 +269,7 @@ function PanelSimulacion() {
 
       {/* Tabla de datos por departamento */}
       <div className="sim-table-card">
-        <h3 className="sim-table-title">Datos por Departamento</h3>
+        <h3 className="sim-table-title">Datos <em>por departamento</em></h3>
         <div className="sim-table-wrapper">
           <table className="sim-table">
             <thead>
@@ -328,7 +329,7 @@ function PanelSimulacion() {
       <div className="inject-card">
         <div className="inject-card-header">
           <div>
-            <h3 className="inject-title">Inyección Manual de Datos</h3>
+            <h3 className="inject-title">Inyección <em>manual</em> de datos</h3>
             <p className="inject-subtitle">Escribe los valores que quieras y envíalos directamente al mapa para pruebas</p>
           </div>
         </div>

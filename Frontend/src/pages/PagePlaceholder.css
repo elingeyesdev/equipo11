@@ -1,71 +1,117 @@
+/* ==========================================================
+   PageHeader · placeholders · compartido
+   ========================================================== */
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  max-width: 960px;
+  gap: 22px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
+/* ─── Page header editorial ─── */
 .page-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: end;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.page-eyebrow {
+  font: 600 10.5px/1 var(--font-mono);
+  color: var(--moss-ink);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 12px;
-  padding-bottom: 4px;
-  border-bottom: 2px solid var(--border);
+}
+.page-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: currentColor;
 }
 
 .page-heading {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 40px;
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.page-heading em { font-style: italic; color: var(--moss-ink); }
+
+.page-desc {
+  font-size: 13.5px;
+  color: var(--ink-mute);
+  line-height: 1.5;
+  max-width: 620px;
 }
 
 .page-tag {
-  background: var(--primary-extra-light);
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-  border: 1px solid rgba(234,88,12,0.25);
+  display: inline-flex;
+  align-items: center;
+  background: var(--card);
+  color: var(--ink-mute);
+  font: 600 10px/1 var(--font-sans);
+  padding: 6px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-soft);
+  white-space: nowrap;
 }
 
-/* Placeholder card */
+/* ─── Placeholder card (editorial) ─── */
 .placeholder-card {
-  background-color: var(--bg-panel);
-  border: 2px dashed var(--border-strong);
-  border-radius: 16px;
-  padding: 64px 40px;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 72px 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 16px;
   box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s;
+  position: relative;
+  overflow: hidden;
 }
-
-.placeholder-card:hover {
-  border-color: var(--primary-light);
+.placeholder-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--moss);
 }
 
 .placeholder-icon {
-  font-size: 60px;
+  font-size: 42px;
   line-height: 1;
+  opacity: 0.85;
 }
 
 .placeholder-card h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
+.placeholder-card h3 em { font-style: italic; color: var(--moss-ink); }
 
 .placeholder-card p {
   font-size: 14px;
-  color: var(--text-secondary);
-  max-width: 480px;
-  line-height: 1.7;
+  color: var(--ink-mute);
+  max-width: 520px;
+  line-height: 1.6;
 }
 
 .placeholder-chips {
@@ -73,29 +119,37 @@
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .chip {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 14px;
-  border-radius: 20px;
-  letter-spacing: 0.3px;
+  font: 500 11px/1 var(--font-mono);
+  padding: 6px 11px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-mute);
 }
 
-.chip--air     { background: rgba(22,163,74,0.08);   color: var(--air);     border: 1px solid rgba(22,163,74,0.25); }
-.chip--water   { background: rgba(2,132,199,0.08);   color: var(--water);   border: 1px solid rgba(2,132,199,0.25); }
-.chip--noise   { background: rgba(217,119,6,0.08);   color: var(--noise);   border: 1px solid rgba(217,119,6,0.25); }
-.chip--climate { background: rgba(124,58,237,0.08);  color: var(--climate); border: 1px solid rgba(124,58,237,0.25); }
+.chip--air     { background: var(--moss-soft);   color: var(--moss-ink);  border-color: transparent; }
+.chip--water   { background: var(--river-soft);  color: #1e4e6d;          border-color: transparent; }
+.chip--noise   { background: var(--amber-soft);  color: #7a4b0c;          border-color: transparent; }
+.chip--climate { background: var(--violet-soft); color: #553d78;          border-color: transparent; }
 
 .placeholder-pending {
   margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  padding: 8px 20px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  font-weight: 500;
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-faint);
+  background: var(--paper);
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px dashed var(--line);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 700px) {
+  .page-heading { font-size: 30px; }
+  .page-header { grid-template-columns: 1fr; }
+  .placeholder-card { padding: 48px 20px; }
 }

@@ -5,19 +5,19 @@
   transform: translateX(-50%);
   width: 90%;
   max-width: 800px;
-  background: rgba(15, 23, 42, 0.75);
+  background: rgba(20, 26, 22, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
+  border: 1px solid rgba(223, 227, 219, 0.15);
+  border-radius: 14px;
   padding: 12px;
   display: flex;
   align-items: center;
   gap: 15px;
   z-index: 1000;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-  color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: 0 10px 40px rgba(20, 26, 22, 0.4);
+  color: var(--paper);
+  font-family: var(--font-sans);
   overflow: hidden;
 }
 
@@ -27,21 +27,18 @@
   gap: 10px;
   overflow-x: auto;
   scroll-behavior: smooth;
-  padding: 15px 5px; /* Added top padding to prevent badge cutoff */
-  /* Ocultar barra de scroll para estética limpia */
+  padding: 15px 5px;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.forecast-scroll-area::-webkit-scrollbar {
-  display: none;
-}
+.forecast-scroll-area::-webkit-scrollbar { display: none; }
 
 .history-card {
   position: relative;
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
+  background: rgba(251, 250, 245, 0.06);
+  border: 1px solid rgba(251, 250, 245, 0.1);
+  border-radius: 10px;
   padding: 10px 15px;
   display: flex;
   flex-direction: column;
@@ -53,46 +50,51 @@
 }
 
 .history-card:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(251, 250, 245, 0.14);
   transform: translateY(-2px);
 }
 
 .history-card.current-time {
-  border-color: #fab1a0;
-  box-shadow: 0 0 15px rgba(250, 177, 160, 0.2);
+  border-color: oklch(62% 0.09 148);
+  box-shadow: 0 0 14px rgba(87, 160, 98, 0.3);
   margin: 0 5px;
-  background: rgba(250, 177, 160, 0.1);
+  background: rgba(87, 160, 98, 0.14);
 }
 
 .history-card.active {
-  background: linear-gradient(135deg, #0984e3, #74b9ff);
-  border-color: #74b9ff;
-  box-shadow: 0 5px 15px rgba(9, 132, 227, 0.4);
+  background: var(--moss-ink);
+  border-color: var(--moss);
+  box-shadow: 0 5px 14px rgba(87, 160, 98, 0.4);
 }
 
 .history-card-badge {
   position: absolute;
-  top: -12px;
-  background: #fab1a0;
-  color: #2d3436;
-  font-size: 0.6rem;
-  font-weight: 800;
+  top: -11px;
+  background: var(--moss);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
   padding: 3px 8px;
-  border-radius: 10px;
-  letter-spacing: 0.5px;
+  border-radius: 4px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   z-index: 2;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(20, 26, 22, 0.4);
 }
 
 .history-card-time {
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 500;
   opacity: 0.8;
   margin-bottom: 5px;
+  letter-spacing: 0.02em;
 }
 
 .history-card-temp {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }

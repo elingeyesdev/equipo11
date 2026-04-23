@@ -62,19 +62,20 @@ function Sidebar({ isCollapsed, onToggle }) {
 
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2a10 10 0 1 0 10 10"/>
-            <path d="M12 2v10l6.5 3.5"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3C7 3 4 7 4 12c0 5 4 9 8 9s8-4 8-9"/>
+            <path d="M12 3c3 2 4 6 4 9s-1 7-4 9"/>
+            <path d="M4 12h16"/>
           </svg>
         </div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-title">EnviroSense</span>
-          <span className="sidebar-brand-sub">Monitor Ambiental</span>
+          <span className="sidebar-brand-sub">Obs · v2.0</span>
         </div>
       </div>
 
       <nav className="sidebar-nav">
-        <p className="sidebar-section-label">NAVEGACIÓN</p>
+        <p className="sidebar-section-label">Navegación</p>
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -92,9 +93,9 @@ function Sidebar({ isCollapsed, onToggle }) {
       <div className="sidebar-footer">
         <div className="sidebar-status">
           <span className="status-dot status-dot--online"></span>
-          <span className="status-text">Sistema activo</span>
+          <span className="status-text">En línea</span>
         </div>
-        <span className="sidebar-version">MVP v0.1</span>
+        <span className="sidebar-version">v2.0</span>
       </div>
     </aside>
   )

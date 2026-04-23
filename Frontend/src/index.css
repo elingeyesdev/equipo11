@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 * {
   margin: 0;
@@ -7,52 +7,89 @@
 }
 
 :root {
-  /* Naranja profesional */
-  --primary:        #ea580c;
-  --primary-light:  #fb923c;
-  --primary-extra-light: #fff7ed;
-  --primary-dark:   #c2410c;
+  /* ─── Paleta editorial · papel · tinta · musgo ─── */
+  --paper:       #f4f2ea;
+  --paper-2:     #eceadf;
+  --card:        #fbfaf5;
+  --white:       #ffffff;
 
-  /* Fondos claros */
-  --bg-app:         #f8fafc;
-  --bg-panel:       #ffffff;
-  --bg-card:        #f1f5f9;
-  --bg-hover:       #fef3ec;
+  --ink:         #141a16;
+  --ink-2:       #2a332d;
+  --ink-mute:    #5c6760;
+  --ink-faint:   #8d968f;
 
-  /* Bordes */
-  --border:         #e2e8f0;
-  --border-strong:  #cbd5e1;
+  --line:        #dfe3db;
+  --line-soft:   #ecefe8;
 
-  /* Textos */
-  --text-primary:   #0f172a;
-  --text-secondary: #64748b;
-  --text-muted:     #94a3b8;
+  /* Acentos semánticos (mismo chroma, hue distinta) */
+  --moss:        oklch(62% 0.09 148);
+  --moss-ink:    oklch(38% 0.07 148);
+  --moss-soft:   oklch(92% 0.04 148);
+  --river:       oklch(62% 0.09 230);
+  --river-soft:  oklch(92% 0.04 230);
+  --amber:       oklch(62% 0.12 70);
+  --amber-soft:  oklch(92% 0.06 70);
+  --rust:        oklch(55% 0.14 35);
+  --rust-soft:   oklch(92% 0.06 35);
+  --violet:      oklch(58% 0.10 300);
+  --violet-soft: oklch(92% 0.04 300);
+
+  /* Aliases heredados (para no romper componentes existentes) */
+  --primary:             var(--moss-ink);
+  --primary-light:       var(--moss);
+  --primary-extra-light: var(--moss-soft);
+  --primary-dark:        #1e2a20;
+
+  --bg-app:     var(--paper);
+  --bg-panel:   var(--card);
+  --bg-card:    var(--paper-2);
+  --bg-hover:   var(--paper);
+
+  --border:         var(--line);
+  --border-strong:  #c8cec0;
+
+  --text-primary:   var(--ink);
+  --text-secondary: var(--ink-mute);
+  --text-muted:     var(--ink-faint);
+
+  /* Semáforos ambientales */
+  --air:     #3f7a4a;
+  --water:   #1e4e6d;
+  --noise:   #7a4b0c;
+  --climate: #553d78;
 
   /* Layout */
-  --sidebar-width:  240px;
-  --navbar-height:  60px;
+  --sidebar-width:  232px;
+  --navbar-height:  56px;
 
-  /* Semáforos de calidad */
-  --air:     #16a34a;
-  --water:   #0284c7;
-  --noise:   #d97706;
-  --climate: #7c3aed;
+  /* Radii, sombras */
+  --radius:  10px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 0 rgba(20,26,22,.04), 0 1px 2px rgba(20,26,22,.04);
+  --shadow-md: 0 1px 0 rgba(20,26,22,.04), 0 8px 24px -12px rgba(20,26,22,.15);
 
-  /* Sombras */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+  /* Tipografías utilitarias */
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans:  'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
-body {
-  font-family: 'Inter', 'Segoe UI', sans-serif;
-  background-color: var(--bg-app);
-  color: var(--text-primary);
+html, body {
+  font-family: var(--font-sans);
+  background-color: var(--paper);
+  color: var(--ink);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-card); }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+/* Utilidades tipográficas reusables */
+.serif  { font-family: var(--font-serif); font-weight: 400; }
+.mono   { font-family: var(--font-mono); }
+.uikick { font: 600 10.5px/1 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute); }
+
+/* Scrollbar editorial */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

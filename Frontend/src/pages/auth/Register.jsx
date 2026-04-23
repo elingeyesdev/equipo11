@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import AuthHero from './AuthHero'
 import './Auth.css'
 
 const VALIDACIONES = {
@@ -71,101 +72,100 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card auth-card--wide">
-        <div className="auth-brand">
-          <div className="auth-brand-icon">🌿</div>
-          <h1 className="auth-brand-title">EnviroSense</h1>
-          <p className="auth-brand-sub">Monitor de Datos Ambientales</p>
+      <AuthHero />
+
+      <div className="auth-form-col">
+        <div className="auth-form-wrap">
+          <div className="auth-eyebrow">Solicitar acceso</div>
+          <h2 className="auth-heading">Crear una <em>cuenta</em>.</h2>
+          <p className="auth-subheading">Completa el formulario para sumarte a la red de observación.</p>
+
+          <form onSubmit={handleSubmit} className="auth-form" noValidate>
+            <div className="auth-row">
+              <div className={`auth-field ${errors.nombre ? 'auth-field--error' : ''}`}>
+                <label htmlFor="reg-nombre">Nombre</label>
+                <input
+                  id="reg-nombre"
+                  type="text"
+                  name="nombre"
+                  placeholder="Juan"
+                  value={form.nombre}
+                  onChange={handleChange}
+                />
+                {errors.nombre && <span className="auth-error-msg">{errors.nombre}</span>}
+              </div>
+
+              <div className={`auth-field ${errors.apellido ? 'auth-field--error' : ''}`}>
+                <label htmlFor="reg-apellido">Apellido</label>
+                <input
+                  id="reg-apellido"
+                  type="text"
+                  name="apellido"
+                  placeholder="Pérez"
+                  value={form.apellido}
+                  onChange={handleChange}
+                />
+                {errors.apellido && <span className="auth-error-msg">{errors.apellido}</span>}
+              </div>
+            </div>
+
+            <div className={`auth-field ${errors.email ? 'auth-field--error' : ''}`}>
+              <label htmlFor="reg-email">Correo electrónico</label>
+              <input
+                id="reg-email"
+                type="email"
+                name="email"
+                placeholder="tu@envirosense.bo"
+                value={form.email}
+                onChange={handleChange}
+                autoComplete="email"
+              />
+              {errors.email && <span className="auth-error-msg">{errors.email}</span>}
+            </div>
+
+            <div className="auth-row">
+              <div className={`auth-field ${errors.password ? 'auth-field--error' : ''}`}>
+                <label htmlFor="reg-password">Contraseña</label>
+                <input
+                  id="reg-password"
+                  type="password"
+                  name="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                />
+                {errors.password && <span className="auth-error-msg">{errors.password}</span>}
+              </div>
+
+              <div className={`auth-field ${errors.confirmar ? 'auth-field--error' : ''}`}>
+                <label htmlFor="reg-confirmar">Confirmar</label>
+                <input
+                  id="reg-confirmar"
+                  type="password"
+                  name="confirmar"
+                  placeholder="••••••••"
+                  value={form.confirmar}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                />
+                {errors.confirmar && <span className="auth-error-msg">{errors.confirmar}</span>}
+              </div>
+            </div>
+
+            {apiError && <div className="auth-api-error">{apiError}</div>}
+            {success   && <div className="auth-success">{success}</div>}
+
+            <button type="submit" className="auth-btn" disabled={loading}>
+              {loading ? 'Registrando...' : 'Crear cuenta'}
+            </button>
+          </form>
+
+          <p className="auth-footer-text">
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="auth-link">Inicia sesión</Link>
+          </p>
         </div>
-
-        <h2 className="auth-heading">Crear Cuenta</h2>
-        <p className="auth-subheading">Completa el formulario para registrarte</p>
-
-        <form onSubmit={handleSubmit} className="auth-form" noValidate>
-          <div className="auth-row">
-            <div className={`auth-field ${errors.nombre ? 'auth-field--error' : ''}`}>
-              <label htmlFor="reg-nombre">Nombre</label>
-              <input
-                id="reg-nombre"
-                type="text"
-                name="nombre"
-                placeholder="Juan"
-                value={form.nombre}
-                onChange={handleChange}
-              />
-              {errors.nombre && <span className="auth-error-msg">{errors.nombre}</span>}
-            </div>
-
-            <div className={`auth-field ${errors.apellido ? 'auth-field--error' : ''}`}>
-              <label htmlFor="reg-apellido">Apellido</label>
-              <input
-                id="reg-apellido"
-                type="text"
-                name="apellido"
-                placeholder="Pérez"
-                value={form.apellido}
-                onChange={handleChange}
-              />
-              {errors.apellido && <span className="auth-error-msg">{errors.apellido}</span>}
-            </div>
-          </div>
-
-          <div className={`auth-field ${errors.email ? 'auth-field--error' : ''}`}>
-            <label htmlFor="reg-email">Correo electrónico</label>
-            <input
-              id="reg-email"
-              type="email"
-              name="email"
-              placeholder="correo@ejemplo.com"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-            />
-            {errors.email && <span className="auth-error-msg">{errors.email}</span>}
-          </div>
-
-          <div className="auth-row">
-            <div className={`auth-field ${errors.password ? 'auth-field--error' : ''}`}>
-              <label htmlFor="reg-password">Contraseña</label>
-              <input
-                id="reg-password"
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={handleChange}
-                autoComplete="new-password"
-              />
-              {errors.password && <span className="auth-error-msg">{errors.password}</span>}
-            </div>
-
-            <div className={`auth-field ${errors.confirmar ? 'auth-field--error' : ''}`}>
-              <label htmlFor="reg-confirmar">Confirmar contraseña</label>
-              <input
-                id="reg-confirmar"
-                type="password"
-                name="confirmar"
-                placeholder="••••••••"
-                value={form.confirmar}
-                onChange={handleChange}
-                autoComplete="new-password"
-              />
-              {errors.confirmar && <span className="auth-error-msg">{errors.confirmar}</span>}
-            </div>
-          </div>
-
-          {apiError && <div className="auth-api-error">{apiError}</div>}
-          {success   && <div className="auth-success">{success}</div>}
-
-          <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'Registrando...' : 'Crear Cuenta'}
-          </button>
-        </form>
-
-        <p className="auth-footer-text">
-          ¿Ya tienes cuenta?{' '}
-          <Link to="/login" className="auth-link">Inicia sesión</Link>
-        </p>
       </div>
     </div>
   )

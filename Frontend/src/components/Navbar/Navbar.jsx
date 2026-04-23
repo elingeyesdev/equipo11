@@ -1,17 +1,17 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import './Navbar.css'
 
-const pageTitles = {
-  '/mapa': { title: 'Mapa de Monitoreo', desc: 'Visualización en tiempo real de sensores ambientales' },
-  '/simulacion': { title: 'Panel de Simulación', desc: 'Control y configuración de datos simulados' },
-  '/reportes': { title: 'Área de Reportes', desc: 'Generación y descarga de reportes ambientales' },
-  '/usuarios': { title: 'Administración de Usuarios', desc: 'Gestión de accesos y permisos del sistema' },
+const pageCrumbs = {
+  '/mapa':       { group: 'Observación', leaf: 'Mapa de Monitoreo' },
+  '/simulacion': { group: 'Operación',   leaf: 'Simulación' },
+  '/reportes':   { group: 'Operación',   leaf: 'Reportes' },
+  '/usuarios':   { group: 'Operación',   leaf: 'Usuarios' },
 }
 
 function Navbar() {
   const location = useLocation()
   const navigate  = useNavigate()
-  const current = pageTitles[location.pathname] || { title: 'EnviroSense', desc: '' }
+  const current = pageCrumbs[location.pathname] || { group: 'EnviroSense', leaf: '—' }
 
   const handleLogout = () => {
     localStorage.removeItem('usuario')
@@ -21,8 +21,9 @@ function Navbar() {
   return (
     <header className="navbar">
       <div className="navbar-left">
-        <h1 className="navbar-title">{current.title}</h1>
-        {current.desc && <p className="navbar-desc">{current.desc}</p>}
+        <p className="navbar-title">
+          EnviroSense · Bolivia / {current.group} / <b>{current.leaf}</b>
+        </p>
       </div>
       <div className="navbar-right">
         <div className="navbar-badge navbar-badge--air">
@@ -44,7 +45,7 @@ function Navbar() {
         <div className="navbar-user">
           <div className="navbar-avatar">AD</div>
           <button className="navbar-logout" onClick={handleLogout} title="Cerrar sesión">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
