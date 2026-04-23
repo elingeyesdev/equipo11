@@ -7,7 +7,7 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -42,11 +42,19 @@ function MapaMonitoreo() {
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [injectedCityId, setInjectedCityId]   = useState(null);
+
+  // --- Estado del buscador geocoder ---
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching]     = useState(false);
+  const [showResults, setShowResults]     = useState(false);
+
   const [isParticlesActive, setIsParticlesActive] = useState(false);
   const [weatherCode, setWeatherCode]         = useState(null);
   const [isLegendOpen, setIsLegendOpen]       = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
   const [localWeathers, setLocalWeathers]     = useState({});
+  const [isControlsOpen, setIsControlsOpen]   = useState(false);
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
@@ -112,6 +120,9 @@ function MapaMonitoreo() {
     return () => { mounted = false; };
   }, [isParticlesActive]);
 
+  const searchRef    = useRef(null);
+  const debounceRef  = useRef(null);
+
   const mapRef      = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
 
@@ -142,6 +153,82 @@ function MapaMonitoreo() {
       window.history.replaceState({}, '')
     }
   }, [location.state]);
+
+  // --- Cerrar dropdown al hacer clic fuera ---
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // --- Búsqueda con Mapbox Geocoding API (debounced) ---
+  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=6&language=es`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setSearchResults(data.features || []);
+        setShowResults(true);
+      } catch (err) {
+        console.error('Error en geocoding:', err);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+  }, [MAPBOX_TOKEN]);
+
+  const handleSelectResult = (result) => {
+    const [lng, lat] = result.center;
+    // Determinar zoom según tipo de lugar
+    const placeType = result.place_type?.[0] || '';
+    let zoom = 10;
+    if (placeType === 'country') zoom = 4;
+    else if (placeType === 'region') zoom = 6;
+    else if (placeType === 'district' || placeType === 'locality') zoom = 8;
+    else if (placeType === 'place') zoom = 10;
+    else if (placeType === 'address' || placeType === 'poi') zoom = 14;
+
+    mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1500 });
+
+    // Verificar si coincide con uno de los departamentos locales
+    const matchedCity = citiesData.find(c =>
+      c.name.toLowerCase() === result.text?.toLowerCase() ||
+      result.place_name?.toLowerCase().includes(c.name.toLowerCase())
+    );
+    if (matchedCity) {
+      setSelectedCity(matchedCity);
+    } else {
+      setSelectedCity(null);
+    }
+
+    setSearchQuery(result.place_name || result.text);
+    setShowResults(false);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+  };
 
   // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
   let citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
@@ -275,8 +362,6 @@ function MapaMonitoreo() {
     zoom: 5
   });
 
-  const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return '#00e400';
     if (aqi <= 100) return '#ffff00';
@@ -362,6 +447,9 @@ function MapaMonitoreo() {
     }
   };
 
+  // Contar cuántos controles están activos para el badge
+  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode].filter(Boolean).length;
+
   return (
     <div className="mapa-page-container">
       <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
@@ -386,6 +474,73 @@ function MapaMonitoreo() {
       )}
 
       <div className="map-container">
+        {/* ========== Buscador Geocoder Global ========== */}
+        <div className="geocoder-search-container" ref={searchRef}>
+          <div className="geocoder-input-wrapper">
+            <span className="geocoder-icon">🔍</span>
+            <input
+              id="geocoder-search-input"
+              type="text"
+              className="geocoder-input"
+              placeholder="Buscar país, ciudad o lugar…"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  handleClearSearch();
+                  e.target.blur();
+                }
+              }}
+              autoComplete="off"
+            />
+            {searchQuery && (
+              <button className="geocoder-clear-btn" onClick={handleClearSearch} aria-label="Limpiar búsqueda">
+                ×
+              </button>
+            )}
+          </div>
+
+          {showResults && (
+            <ul className="geocoder-results-list">
+              {isSearching && (
+                <li className="geocoder-result-item geocoder-loading">Buscando…</li>
+              )}
+              {!isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2 && (
+                <li className="geocoder-result-item geocoder-no-results">Sin resultados</li>
+              )}
+              {!isSearching && searchResults.map((result) => {
+                const typeIcon = {
+                  country: '🌍',
+                  region: '🏔️',
+                  place: '🏙️',
+                  locality: '📍',
+                  district: '🏘️',
+                  address: '📫',
+                  poi: '⭐',
+                };
+                const icon = typeIcon[result.place_type?.[0]] || '📍';
+                return (
+                  <li
+                    key={result.id}
+                    className="geocoder-result-item"
+                    onClick={() => handleSelectResult(result)}
+                  >
+                    <span className="geocoder-result-icon">{icon}</span>
+                    <div className="geocoder-result-text">
+                      <span className="geocoder-result-name">{result.text}</span>
+                      {result.place_name !== result.text && (
+                        <span className="geocoder-result-context">
+                          {result.place_name?.replace(`${result.text}, `, '')}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
         <Map
           ref={mapRef}
           {...viewState}
@@ -411,8 +566,6 @@ function MapaMonitoreo() {
               <Layer {...heatmapLayer} />
             </Source>
           )}
-
-
 
           {/* Marcadores — se muestran siempre fuera del modo heatmap */}
           {!isHeatmapActive && citiesData.map((city) => (
@@ -567,65 +720,101 @@ function MapaMonitoreo() {
           )}
         </div>
 
-        {/* Panel de Control de Partículas */}
-        <div className="particles-control-panel">
-          <div className="heatmap-toggle-wrapper">
-            <label className="ios-switch">
-              <input
-                type="checkbox"
-                checked={isParticlesActive}
-                onChange={(e) => setIsParticlesActive(e.target.checked)}
-              />
-              <span className="slider round"></span>
-            </label>
-            <span className="heatmap-label">{isParticlesActive ? 'Clima 3D: ON' : 'Clima 3D: OFF'}</span>
-          </div>
-        </div>
+        {/* ═══ Toolbar Unificado de Controles (Superior Derecha) ═══ */}
+        <div className="map-controls-toolbar">
+          <button
+            className="controls-toggle-btn"
+            onClick={() => setIsControlsOpen(!isControlsOpen)}
+          >
+            <span className={`controls-toggle-icon ${isControlsOpen ? 'open' : ''}`}>⚙️</span>
+            Capas
+            {activeControlsCount > 0 && (
+              <span className="control-status on">{activeControlsCount}</span>
+            )}
+          </button>
 
-        {/* Panel de Control del Heatmap */}
-        <div className="heatmap-control-panel">
-          <div className="heatmap-toggle-wrapper">
-            <label className="ios-switch">
-              <input
-                type="checkbox"
-                checked={isHeatmapActive}
-                onChange={(e) => {
-                  setIsHeatmapActive(e.target.checked);
-                  if (e.target.checked) setSelectedCity(null);
-                }}
-              />
-              <span className="slider round"></span>
-            </label>
-            <span className="heatmap-label">{isHeatmapActive ? 'Mapa de calor: ON' : 'Mapa de calor: OFF'}</span>
-          </div>
+          {isControlsOpen && (
+            <div className="controls-dropdown">
+              {/* Clima 3D */}
+              <div className="control-row">
+                <div className="control-row-label">
+                  <span className="control-icon">🌦️</span>
+                  <span className="control-text">Clima 3D</span>
+                  <span className={`control-status ${isParticlesActive ? 'on' : 'off'}`}>
+                    {isParticlesActive ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <label className="ios-switch">
+                  <input
+                    type="checkbox"
+                    checked={isParticlesActive}
+                    onChange={(e) => setIsParticlesActive(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
 
-          {isHeatmapActive && (
-            <div className="heatmap-metric-selector">
-              <label>Métrica a evaluar:</label>
-              <select value={heatmapMetric} onChange={(e) => setHeatmapMetric(e.target.value)}>
-                <option value="aqi">Calidad de Aire (AQI)</option>
-                <option value="waterQuality">Calidad del Agua (ICA)</option>
-                <option value="temperature">Temperatura</option>
-                <option value="noise">Ruido</option>
-                <option value="humidity">Humedad</option>
-              </select>
+              {/* Mapa de calor */}
+              <div className="control-row">
+                <div className="control-row-label">
+                  <span className="control-icon">🗺️</span>
+                  <span className="control-text">Mapa de calor</span>
+                  <span className={`control-status ${isHeatmapActive ? 'on' : 'off'}`}>
+                    {isHeatmapActive ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <label className="ios-switch">
+                  <input
+                    type="checkbox"
+                    checked={isHeatmapActive}
+                    onChange={(e) => {
+                      setIsHeatmapActive(e.target.checked);
+                      if (e.target.checked) setSelectedCity(null);
+                    }}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
+
+              {/* Selector de métrica — solo visible cuando el heatmap está activo */}
+              {isHeatmapActive && (
+                <div className="heatmap-expanded-section">
+                  <div className="heatmap-metric-label">Métrica a evaluar</div>
+                  <select
+                    className="heatmap-metric-select"
+                    value={heatmapMetric}
+                    onChange={(e) => setHeatmapMetric(e.target.value)}
+                  >
+                    <option value="aqi">Calidad de Aire (AQI)</option>
+                    <option value="waterQuality">Calidad del Agua (ICA)</option>
+                    <option value="temperature">Temperatura</option>
+                    <option value="noise">Ruido</option>
+                    <option value="humidity">Humedad</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Histórico */}
+              <div className="control-row">
+                <div className="control-row-label">
+                  <span className="control-icon">⏳</span>
+                  <span className="control-text">Histórico</span>
+                  <span className={`control-status ${isHistoricalMode ? 'on' : 'off'}`}>
+                    {isHistoricalMode ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <label className="ios-switch">
+                  <input
+                    type="checkbox"
+                    checked={isHistoricalMode}
+                    onChange={(e) => setIsHistoricalMode(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
             </div>
           )}
-
-          <div className="heatmap-toggle-wrapper" style={{ marginTop: '15px' }}>
-            <label className="ios-switch">
-              <input
-                type="checkbox"
-                checked={isHistoricalMode}
-                onChange={(e) => {
-                  setIsHistoricalMode(e.target.checked);
-                }}
-              />
-              <span className="slider round"></span>
-            </label>
-            <span className="heatmap-label">{isHistoricalMode ? 'Histórico: ON' : 'Histórico: OFF'}</span>
-          </div>
-         </div>
+        </div>
       </div>
       
       <WeatherParticles 

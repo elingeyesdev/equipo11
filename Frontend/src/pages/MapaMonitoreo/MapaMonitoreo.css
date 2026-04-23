@@ -110,20 +110,178 @@
 }
 
 /* ========================================================
+   Buscador Geocoder Global (Top Center)
+   ======================================================== */
+.geocoder-search-container {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: 380px;
+  max-width: calc(100vw - 2rem);
+}
+
+.geocoder-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  padding: 0.55rem 0.9rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.25s, border-color 0.25s;
+}
+
+.geocoder-input-wrapper:focus-within {
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.16);
+  border-color: rgba(234, 88, 12, 0.35);
+}
+
+.geocoder-icon {
+  font-size: 1rem;
+  margin-right: 0.6rem;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.geocoder-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: #1a1a1a;
+}
+
+.geocoder-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.geocoder-clear-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  line-height: 1;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.geocoder-clear-btn:hover {
+  color: #ef4444;
+}
+
+/* --- Dropdown de resultados --- */
+.geocoder-results-list {
+  list-style: none;
+  margin: 0.45rem 0 0 0;
+  padding: 0.4rem 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  max-height: 320px;
+  overflow-y: auto;
+  animation: geocoderSlideDown 0.2s ease-out;
+}
+
+@keyframes geocoderSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.geocoder-result-item {
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 0.7rem;
+}
+
+.geocoder-result-item:hover {
+  background: rgba(234, 88, 12, 0.07);
+}
+
+.geocoder-result-item.geocoder-loading,
+.geocoder-result-item.geocoder-no-results {
+  cursor: default;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.geocoder-result-item.geocoder-loading:hover,
+.geocoder-result-item.geocoder-no-results:hover {
+  background: transparent;
+}
+
+.geocoder-result-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.geocoder-result-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* para que el truncado funcione */
+}
+
+.geocoder-result-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.geocoder-result-context {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========================================================
    Panel de Información (Esquina Superior Izquierda)
    ======================================================== */
 .city-info-panel {
   position: absolute;
   top: 1rem;
   left: 1rem;
-  width: 320px;
-  background: rgba(255, 255, 255, 0.85); /* Formato claro / Glassmorphism */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  width: 300px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.06);
   z-index: 20;
   animation: slideIn 0.3s ease-out;
 }
@@ -142,66 +300,74 @@
 
 .close-panel-btn {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: none;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: rgba(0,0,0,0.04);
   border: none;
-  font-size: 1.5rem;
-  color: #666;
+  font-size: 1.2rem;
+  color: #999;
   cursor: pointer;
   padding: 0;
   line-height: 1;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .close-panel-btn:hover {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0,0,0,0.08);
+  color: #555;
 }
 
 .panel-header h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.25rem;
+  margin: 0 0 0.15rem 0;
+  font-size: 1.1rem;
   color: #1a1a1a;
+  font-weight: 700;
 }
 
 .panel-subtitle {
   margin: 0;
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 0.78rem;
+  color: #888;
+  font-weight: 400;
 }
 
 .panel-body {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .data-item {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.75rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  background: rgba(0, 0, 0, 0.02);
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+
+.data-item:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .data-icon {
-  font-size: 1.5rem;
-  margin-right: 1rem;
-  background: #f0f4f8;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  font-size: 1.25rem;
+  margin-right: 0.75rem;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .data-content {
@@ -210,17 +376,18 @@
 }
 
 .data-label {
-  font-size: 0.75rem;
-  color: #777;
+  font-size: 0.68rem;
+  color: #999;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.2rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.1rem;
+  font-weight: 500;
 }
 
 .data-value {
-  font-size: 1.1rem;
-  color: #333;
-  font-weight: 500;
+  font-size: 1rem;
+  color: #222;
+  font-weight: 600;
 }
 
 /* ========================================================
@@ -274,28 +441,28 @@
   position: absolute;
   bottom: 1rem;
   left: 1rem;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.04);
   z-index: 20;
-  min-width: 230px;
+  min-width: 210px;
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
 }
 
 .unified-legend-panel.collapsed {
-  min-width: 150px;
+  min-width: 140px;
 }
 
 .unified-legend-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0.8rem;
+  padding: 0.5rem 0.7rem;
   border-bottom: 1px solid transparent;
 }
 
@@ -305,105 +472,111 @@
 
 .unified-legend-tabs {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .legend-tab {
   background: none;
   border: none;
-  padding: 0.2rem 0.4rem;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: #888;
+  color: #aaa;
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
   letter-spacing: 0.03em;
 }
 
+.legend-tab:hover {
+  color: #666;
+}
+
 .legend-tab.active {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0,0,0,0.06);
   color: #333;
 }
 
 .legend-toggle-btn {
   background: none;
   border: none;
-  color: #888;
+  color: #aaa;
   cursor: pointer;
-  font-size: 0.8rem;
-  padding: 0.2rem;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.3rem;
   border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .legend-toggle-btn:hover {
   background: rgba(0,0,0,0.05);
-  color: #333;
+  color: #555;
 }
 
 .unified-legend-body {
-  padding: 0.85rem 1.1rem;
+  padding: 0.65rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .units-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .clima-legend-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .clima-legend-item {
   display: flex;
   align-items: center;
-  font-size: 0.85rem;
-  color: #444;
+  font-size: 0.8rem;
+  color: #555;
   font-weight: 500;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .clima-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .clima-legend-hint {
-  margin-top: 0.5rem;
-  font-size: 0.65rem;
-  color: #888;
-  border-top: 1px dashed rgba(0,0,0,0.1);
-  padding-top: 0.5rem;
+  margin-top: 0.4rem;
+  font-size: 0.62rem;
+  color: #999;
+  border-top: 1px dashed rgba(0,0,0,0.08);
+  padding-top: 0.4rem;
 }
 
 .units-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .units-row-icon {
-  font-size: 1rem;
-  width: 22px;
+  font-size: 0.9rem;
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .units-select {
   flex: 1;
-  padding: 0.3rem 0.5rem;
-  border-radius: 7px;
-  border: 1px solid #ddd;
+  padding: 0.25rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.1);
   background: rgba(255, 255, 255, 0.95);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #333;
   outline: none;
   cursor: pointer;
@@ -417,9 +590,9 @@
 
 .units-fixed-label {
   flex: 1;
-  font-size: 0.8rem;
-  color: #888;
-  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  color: #999;
+  padding: 0.25rem 0.4rem;
 }
 
 @media screen and (max-width: 600px) {
@@ -429,98 +602,201 @@
     min-width: unset;
     width: calc(50vw - 8vw);
   }
+
+  .geocoder-search-container {
+    width: 92vw;
+    top: 0.75rem;
+  }
+
+  .geocoder-input-wrapper {
+    padding: 0.5rem 0.75rem;
+  }
 }
 
 /* ========================================================
-   Panel de Control Flotante del Mapa de Calor (Heatmap)
+   Panel de Controles Unificado (Superior Derecha)
    ======================================================== */
-.heatmap-control-panel {
+.map-controls-toolbar {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: rgba(255, 255, 255, 0.85); /* Glassmorphism */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 1rem 1.25rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-width: 220px;
+  gap: 0;
+  align-items: flex-end;
 }
 
-.particles-control-panel {
-  position: absolute;
-  top: 1rem;
-  right: 16rem; /* A lado del panel de heatmap */
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 1rem 1.25rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  z-index: 20;
+/* Botón colapsable para abrir/cerrar controles */
+.controls-toggle-btn {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  padding: 0.5rem 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.04);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.heatmap-toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.heatmap-label {
+  gap: 0.5rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: #333;
-  font-size: 0.95rem;
+  color: #444;
+  transition: all 0.2s;
 }
 
-/* Selector Select Moderno */
-.heatmap-metric-selector {
+.controls-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.controls-toggle-icon {
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.controls-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+/* Panel desplegable de controles */
+.controls-dropdown {
+  margin-top: 0.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0,0,0,0.06);
+  overflow: hidden;
+  animation: controlsSlideDown 0.25s ease-out;
+  min-width: 240px;
+}
+
+@keyframes controlsSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Cada control individual */
+.control-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background 0.15s;
+}
+
+.control-row:last-child {
+  border-bottom: none;
+}
+
+.control-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.control-row-label {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.heatmap-metric-selector label {
-  font-size: 0.8rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.control-icon {
+  font-size: 1rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-.heatmap-metric-selector select {
+.control-text {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.control-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.control-status.on {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.control-status.off {
+  color: #999;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Sección expandible de métricas del heatmap */
+.heatmap-expanded-section {
+  padding: 0 1rem 0.65rem;
+  animation: fadeInMetric 0.2s ease;
+}
+
+@keyframes fadeInMetric {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.heatmap-metric-label {
+  font-size: 0.68rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  font-weight: 500;
+}
+
+.heatmap-metric-select {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.4rem 0.55rem;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background-color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 0.8rem;
   color: #333;
   outline: none;
   cursor: pointer;
   transition: border-color 0.2s;
+  font-weight: 500;
 }
 
-.heatmap-metric-selector select:hover,
-.heatmap-metric-selector select:focus {
+.heatmap-metric-select:hover,
+.heatmap-metric-select:focus {
   border-color: #888;
 }
 
+/* Divider sutil entre secciones */
+.control-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 0;
+}
+
 /* ========================================================
-   iOS Style Switch (Toggle)
+   iOS Style Switch (Toggle) — Refined
    ======================================================== */
 .ios-switch {
   position: relative;
   display: inline-block;
-  width: 50px;
-  height: 28px;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .ios-switch input {
@@ -536,32 +812,32 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
+  background-color: #d1d5db;
+  transition: .3s;
 }
 
 .slider:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
-  left: 4px;
-  bottom: 4px;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
   background-color: white;
-  transition: .4s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: .3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 input:checked + .slider {
-  background-color: #00c853; /* Verde iOS */
+  background-color: #22c55e; /* Verde moderno */
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #00c853;
+  box-shadow: 0 0 2px rgba(34, 197, 94, 0.4);
 }
 
 input:checked + .slider:before {
-  transform: translateX(22px);
+  transform: translateX(18px);
 }
 
 .slider.round {
@@ -572,15 +848,56 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-@media screen and (max-width: 600px) {
-  .heatmap-control-panel {
-    top: 5rem; /* Asegurar que no tape controles base de mapbox si estuvieran arriba */
-    right: 4vw;
+/* ========================================================
+   Prompt de Modo Histórico
+   ======================================================== */
+.historical-prompt {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  padding: 14px 28px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1000;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+  pointer-events: none;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
   }
-  .particles-control-panel {
-    top: 9rem;
-    right: 4vw;
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.historical-prompt { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 15px 30px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.3); pointer-events: none; }
+/* ========================================================
+   Mobile Responsive — Controles
+   ======================================================== */
+@media screen and (max-width: 600px) {
+  .map-controls-toolbar {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .controls-dropdown {
+    min-width: 200px;
+  }
+  
+  .controls-toggle-btn {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.72rem;
+  }
+}
