@@ -28,9 +28,33 @@ function registerSocketEvents(io) {
     socket.on('simulacion:iniciar', (options = {}) => {
       const interval = options.interval || DEFAULT_INTERVAL
 
-      const started = simulacionService.start(interval, (data) => {
+const MetricaAmbiental = require('../../models/MetricaAmbiental');
+
+      const started = simulacionService.start(interval, async (data) => {
         // Emitir datos a TODOS los clientes conectados
         io.emit('simulacion:datos', data)
+        
+        // Autoguardado en BD:
+        try {
+          if (data && data.cities) {
+            const recordsToInsert = data.cities.map(city => ({
+              latitud: city.latitude,
+              longitud: city.longitude,
+              ciudad: city.name,
+              temperatura: city.data?.temperature,
+              aqi: city.data?.aqi,
+              condicion_climatica: city.data?.weatherCode ? String(city.data.weatherCode) : null,
+              detalles: {
+                humidity: city.data?.humidity,
+                waterQuality: city.data?.waterQuality,
+                noise: city.data?.noise
+              }
+            }));
+            await MetricaAmbiental.bulkCreate(recordsToInsert);
+          }
+        } catch(err) {
+           console.error("Error al autoguardar simulación:", err);
+        }
       })
 
       if (started) {

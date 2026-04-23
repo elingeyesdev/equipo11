@@ -95,3 +95,40 @@ export const getBulkWeatherForLocations = async (citiesArray) => {
     return {};
   }
 };
+
+export const getHistoricalWeatherAtLocation = async (lat, lng) => {
+  try {
+    const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lat,
+        longitude: lng,
+        hourly: 'temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code',
+        past_days: 1,
+        forecast_days: 1,
+        timezone: 'auto' // Esto asegurará que los timesamps vengan alineados
+      }
+    });
+    
+    // Transformamos el dato masivo de Open-Meteo al formato Timeline
+    const { time, temperature_2m, relative_humidity_2m, wind_speed_10m, weather_code } = response.data.hourly;
+    
+    const mappedArray = time.map((timestampStr, idx) => ({
+      index: idx,
+      timestamp: timestampStr, // Open-Meteo retorna strings ISO o truncadas "YYYY-MM-DDTHH:00"
+      data: {
+        temperature: temperature_2m[idx],
+        weatherCode: weather_code[idx],
+        aqi: null, // Limitación: APIs genéricas no proveen histórico consolidado
+        waterQuality: null,
+        noise: null,
+        humidity: relative_humidity_2m[idx],
+        wind: wind_speed_10m[idx]
+      }
+    }));
+    
+    return mappedArray;
+  } catch (error) {
+    console.error('Error fetching historical weather from API:', error);
+    return null;
+  }
+};

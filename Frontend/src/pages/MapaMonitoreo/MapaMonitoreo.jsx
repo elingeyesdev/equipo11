@@ -15,7 +15,8 @@ import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import WeatherParticles from '../../components/WeatherParticles/WeatherParticles';
-import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getBulkWeatherForLocations } from '../../utils/weatherApi';
+import Timeline from '../../components/Timeline/Timeline';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getBulkWeatherForLocations, getHistoricalWeatherAtLocation } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 
@@ -46,6 +47,52 @@ function MapaMonitoreo() {
   const [isLegendOpen, setIsLegendOpen]       = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
   const [localWeathers, setLocalWeathers]     = useState({});
+
+  const [isHistoricalMode, setIsHistoricalMode] = useState(false);
+  const [cityHistoryArray, setCityHistoryArray] = useState([]);
+  const [timelineIndex, setTimelineIndex] = useState(0);
+
+  // Fetch historical data dinámicamente según click
+  useEffect(() => {
+    if (isHistoricalMode && selectedCity) {
+      const fetchHistory = async () => {
+        // Intentar API de Open-Meteo primero
+        const apiData = await getHistoricalWeatherAtLocation(selectedCity.latitude, selectedCity.longitude);
+        
+        if (apiData && apiData.length > 0) {
+          setCityHistoryArray(apiData);
+          const now = Date.now();
+          let closestIdx = apiData.length - 1;
+          let minDiff = Infinity;
+          apiData.forEach(e => {
+            const diff = Math.abs(new Date(e.timestamp).getTime() - now);
+            if (diff < minDiff) { minDiff = diff; closestIdx = e.index; }
+          });
+          setTimelineIndex(closestIdx);
+        } else {
+          // Fallback a Base de Datos Local
+          try {
+            const res = await fetch('http://localhost:3000/api/historial');
+            const data = await res.json();
+            const fallbackMapped = data.map((snapshot, idx) => {
+              const cData = snapshot.cities.find(c => c.id === selectedCity.id);
+              return {
+                index: idx,
+                timestamp: snapshot.timestamp,
+                data: cData ? cData.data : null
+              };
+            }).filter(e => e.data !== null);
+
+            setCityHistoryArray(fallbackMapped);
+            setTimelineIndex(fallbackMapped.length > 0 ? fallbackMapped.length - 1 : 0);
+          } catch(err) {
+            console.error("Historical Fallback failed", err);
+          }
+        }
+      };
+      fetchHistory();
+    }
+  }, [isHistoricalMode, selectedCity?.latitude, selectedCity?.longitude]);
 
   // Carga paralela masiva de climas locales para todas las ciudades si se activa la vista 3D
   useEffect(() => {
@@ -97,12 +144,31 @@ function MapaMonitoreo() {
   }, [location.state]);
 
   // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
-  const citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
+  let citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
 
-  // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos
-  const activeCity = selectedCity
+  // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
+  let activeCity = selectedCity
     ? citiesData.find(c => c.id === selectedCity.id) || selectedCity
     : null;
+    
+  // Override para Modo Histórico enfocado en la ciudad seleccionada
+  if (isHistoricalMode && activeCity && cityHistoryArray.length > 0 && cityHistoryArray[timelineIndex]) {
+    // Sobrescribimos temporalmente solo los datos internos que muestra el panel flotante
+    const histData = cityHistoryArray[timelineIndex].data;
+    activeCity = {
+      ...activeCity,
+      data: {
+        ...activeCity.data, 
+        temperature: histData.temperature,
+        weatherCode: histData.weatherCode,
+        // Limpiamos los que sabemos que OpenAPI no tiene; si hay db fallback los conservaría.
+        aqi: histData.aqi !== null ? histData.aqi : '--',
+        waterQuality: histData.waterQuality !== null ? histData.waterQuality : '--',
+        noise: histData.noise !== null ? histData.noise : '--',
+        humidity: histData.humidity !== null ? histData.humidity : '--'
+      }
+    };
+  }
 
   const MAX_METRICS = {
     temperature: 40,
@@ -275,6 +341,7 @@ function MapaMonitoreo() {
       if (weather && weather.current) {
           newCityData.temperature = weather.current.temperature_2m;
           newCityData.humidity = weather.current.relative_humidity_2m;
+          newCityData.wind = weather.current.wind_speed_10m;
           wCode = weather.current.weather_code;
       }
       if (aqiData && aqiData.current) {
@@ -425,6 +492,13 @@ function MapaMonitoreo() {
                   <span className="data-value">{formatearValor('humidity', activeCity.data.humidity, unidades.humidity)}</span>
                 </div>
               </div>
+              <div className="data-item">
+                <div className="data-icon">🌬️</div>
+                <div className="data-content">
+                  <span className="data-label">Viento</span>
+                  <span className="data-value">{activeCity.data.wind !== undefined && activeCity.data.wind !== null && activeCity.data.wind !== '--' ? `${activeCity.data.wind} km/h` : '--'}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -545,6 +619,20 @@ function MapaMonitoreo() {
               </select>
             </div>
           )}
+
+          <div className="heatmap-toggle-wrapper" style={{ marginTop: '15px' }}>
+            <label className="ios-switch">
+              <input
+                type="checkbox"
+                checked={isHistoricalMode}
+                onChange={(e) => {
+                  setIsHistoricalMode(e.target.checked);
+                }}
+              />
+              <span className="slider round"></span>
+            </label>
+            <span className="heatmap-label">{isHistoricalMode ? 'Histórico: ON' : 'Histórico: OFF'}</span>
+          </div>
          </div>
       </div>
       
@@ -553,6 +641,21 @@ function MapaMonitoreo() {
         weatherCode={weatherCode} 
         currentZoom={viewState.zoom}
       />
+
+      {isHistoricalMode && !activeCity && (
+        <div className="historical-prompt">
+          <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
+          <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
+        </div>
+      )}
+
+      {isHistoricalMode && activeCity && (
+        <Timeline 
+          cityHistoryArray={cityHistoryArray}
+          currentIndex={timelineIndex}
+          onIndexChange={(idx) => setTimelineIndex(idx)}
+        />
+      )}
     </div>
   );
 }
