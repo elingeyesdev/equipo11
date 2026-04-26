@@ -265,7 +265,6 @@ function MapaMonitoreo() {
     humidity: 100
   };
 
-  // GeoJSON para heatmap — se recalcula cuando cambian datos o métrica
   const heatmapData = useMemo(() => ({
     type: 'FeatureCollection',
     features: citiesData.map((city) => {
@@ -274,7 +273,7 @@ function MapaMonitoreo() {
       return {
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [city.longitude, city.latitude] },
-        properties: { intensityWeight: Math.min(rawValue / maxVal, 1) }
+        properties: { intensityWeight: Math.min(rawValue / maxVal, 1), val: rawValue }
       };
     })
   }), [citiesData, heatmapMetric]);
@@ -286,9 +285,13 @@ function MapaMonitoreo() {
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
-          0.2, '#0000ff', // azul
-          0.6, '#ffffff', // blanco
-          1.0, '#ff0000'  // rojo
+          0.1, '#08306b', // Frio extremo
+          0.2, '#2171b5', // Frio
+          0.4, '#6baed6', // Fresco
+          0.5, '#74c476', // Confortable
+          0.7, '#fee08b', // Calido
+          0.85, '#fd8d3c', // Calor
+          1.0, '#bd0026'  // Calor extremo
         ];
         break;
       case 'aqi':
@@ -297,8 +300,9 @@ function MapaMonitoreo() {
           0, 'rgba(0,0,0,0)',
           0.2, '#00e400',   // Bueno
           0.4, '#ffff00',   // Moderado
-          0.6, '#ff7e00',   // No saludable sensibles
+          0.6, '#ff7e00',   // Dañino sensibles
           0.8, '#ff0000',   // No saludable
+          0.9, '#8f3f97',   // Muy no saludable
           1.0, '#7e0023'    // Peligroso
         ];
         break;
@@ -306,29 +310,34 @@ function MapaMonitoreo() {
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
-          0.2, '#00008b',   // azul oscuro
-          0.5, '#00bfff',   // celeste
-          0.8, '#ffff00',   // amarillo
-          1.0, '#8b4513'    // marrón
+          0.25, '#6d4c41',  // Muy mala
+          0.5, '#f57c00',   // Mala
+          0.7, '#fbc02d',   // Regular
+          0.9, '#1976d2',   // Buena
+          1.0, '#0d47a1'    // Excelente
         ];
         break;
       case 'noise':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
-          0.2, '#00e400',   // verde
-          0.5, '#ffff00',   // amarillo
-          0.8, '#ff7e00',   // naranja
-          1.0, '#ff0000'    // rojo
+          0.3, '#1a9850',   // Silencio
+          0.55, '#91cf60',  // Tranquilo
+          0.7, '#ffffbf',   // Moderado
+          0.85, '#fc8d59',  // Ruidoso
+          0.95, '#d73027',  // Dañino
+          1.0, '#7f0000'    // Peligroso
         ];
         break;
       case 'humidity':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
-          0.2, '#f5f5dc',   // beige seco
-          0.5, '#00bfff',   // celeste
-          1.0, '#00008b'    // azul oscuro
+          0.2, '#fdae61',   // Muy seco
+          0.4, '#fee090',   // Seco
+          0.6, '#abd9e9',   // Confortable
+          0.8, '#74add1',   // Humedo
+          1.0, '#313695'    // Muy humedo
         ];
         break;
       default:
