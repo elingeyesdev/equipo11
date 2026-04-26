@@ -97,6 +97,56 @@ let currentState = createInitialState()
 let intervalId = null
 let tickCount = 0
 
+// --- Integración con Base de Datos (Tarea 1.6) ---
+const db = require('../../config/db')
+let dbMapping = { localidades: {}, metricas: {} }
+
+async function loadDbMapping() {
+  try {
+    const locRes = await db.query('SELECT id, nombre FROM localidades');
+    locRes.rows.forEach(r => dbMapping.localidades[r.nombre.toLowerCase()] = r.id);
+    
+    const metRes = await db.query('SELECT id, clave FROM metricas');
+    metRes.rows.forEach(r => dbMapping.metricas[r.clave] = r.id);
+  } catch (err) {
+    console.error('[Simulación] Error cargando DB mapping. La simulación no guardará en BD hasta que exista esquema:', err.message);
+  }
+}
+
+async function persistReadings(state) {
+  if (!Object.keys(dbMapping.localidades).length) return;
+  
+  const localidadIds = [];
+  const metricaIds = [];
+  const valores = [];
+  
+  state.forEach(city => {
+    const locId = dbMapping.localidades[city.name.toLowerCase()];
+    if (!locId) return;
+    
+    Object.entries(city.data).forEach(([metricKey, val]) => {
+      const metId = dbMapping.metricas[metricKey];
+      if (metId && val !== null) {
+        localidadIds.push(locId);
+        metricaIds.push(metId);
+        valores.push(val);
+      }
+    });
+  });
+  
+  if (!localidadIds.length) return;
+  
+  try {
+    await db.query(`
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
+      SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
+      ON CONFLICT DO NOTHING
+    `, [localidadIds, metricaIds, valores]);
+  } catch (err) {
+    console.error('[Simulación] Error guardando tick en BD:', err.message);
+  }
+}
+
 /**
  * Inicia la simulación. Llama a onTick cada `intervalMs` milisegundos.
  * Si ya está corriendo, no hace nada (idempotente).
@@ -104,12 +154,15 @@ let tickCount = 0
 function start(intervalMs, onTick) {
   if (intervalId) return false // Ya está corriendo
 
+  loadDbMapping(); // Carga de IDs para persistencia
+
   tickCount = 0
   currentState = createInitialState()
 
   intervalId = setInterval(() => {
     currentState = generateNextTick(currentState)
     tickCount++
+    persistReadings(currentState) // Fire and forget a BD
     onTick({
       cities: currentState,
       tickCount,
@@ -171,6 +224,9 @@ function injectData(cityId, partialData) {
     ...currentState[cityIndex],
     data: { ...currentState[cityIndex].data, ...sanitized }
   }
+  
+  persistReadings([currentState[cityIndex]]) // Guardar inyección manual en BD
+
   return true
 }
 

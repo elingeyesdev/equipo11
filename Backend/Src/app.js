@@ -10,6 +10,8 @@ app.use(express.json())
 // Rutas
 app.use('/api/auth', authRoutes)
 app.use('/api/historial', require('./modules/historial/historial.routes'))
+app.use('/api/umbrales', require('./modules/umbrales/umbrales.routes'))
+app.use('/api/geografia', require('./modules/geografia/geografia.routes'))
 
 // Ruta de prueba
 app.get('/', (req, res) => res.json({ mensaje: 'API EnviroSense activa ✅' }))
