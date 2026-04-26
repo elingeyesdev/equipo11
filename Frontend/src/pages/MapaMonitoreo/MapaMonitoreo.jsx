@@ -19,7 +19,8 @@ import Timeline from '../../components/Timeline/Timeline';
 import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getBulkWeatherForLocations, getHistoricalWeatherAtLocation } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
-
+import HeatmapLegend from './components/HeatmapLegend';
+import Draggable from '../../components/Draggable/Draggable';
 // Datos fallback cuando la simulación NO está activa (9 departamentos)
 const FALLBACK_DATA = [
   { id: 'lapaz',      name: 'La Paz',      latitude: -16.4897, longitude: -68.1193, data: { temperature: 12, aqi: 65,  waterQuality: 78, noise: 72, humidity: 45 } },
@@ -42,6 +43,26 @@ function MapaMonitoreo() {
   const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [injectedCityId, setInjectedCityId]   = useState(null);
+  const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
+
+  const handleLegendRangeClick = useCallback((umbral) => {
+    setActiveUmbralFilter(umbral);
+    if (mapRef.current) {
+      const map = mapRef.current.getMap();
+      // Asegurarse de que el layer exista antes de aplicar el filtro
+      if (map.getLayer('heatmap-layer')) {
+        if (umbral) {
+          map.setFilter('heatmap-layer', [
+            'all',
+            ['>=', ['get', 'val'], umbral.valor_min],
+            ['<=', ['get', 'val'], umbral.valor_max],
+          ]);
+        } else {
+          map.setFilter('heatmap-layer', null);
+        }
+      }
+    }
+  }, []);
 
   // --- Estado del buscador geocoder ---
   const [searchQuery, setSearchQuery]     = useState('');
@@ -484,72 +505,74 @@ function MapaMonitoreo() {
 
       <div className="map-container">
         {/* ========== Buscador Geocoder Global ========== */}
-        <div className="geocoder-search-container" ref={searchRef}>
-          <div className="geocoder-input-wrapper">
-            <span className="geocoder-icon">🔍</span>
-            <input
-              id="geocoder-search-input"
-              type="text"
-              className="geocoder-input"
-              placeholder="Buscar país, ciudad o lugar…"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  handleClearSearch();
-                  e.target.blur();
-                }
-              }}
-              autoComplete="off"
-            />
-            {searchQuery && (
-              <button className="geocoder-clear-btn" onClick={handleClearSearch} aria-label="Limpiar búsqueda">
-                ×
-              </button>
+        <Draggable className="geocoder-search-container">
+          <div ref={searchRef}>
+            <div className="geocoder-input-wrapper">
+              <span className="geocoder-icon">🔍</span>
+              <input
+                id="geocoder-search-input"
+                type="text"
+                className="geocoder-input"
+                placeholder="Buscar país, ciudad o lugar…"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    handleClearSearch();
+                    e.target.blur();
+                  }
+                }}
+                autoComplete="off"
+              />
+              {searchQuery && (
+                <button className="geocoder-clear-btn" onClick={handleClearSearch} aria-label="Limpiar búsqueda">
+                  ×
+                </button>
+              )}
+            </div>
+
+            {showResults && (
+              <ul className="geocoder-results-list">
+                {isSearching && (
+                  <li className="geocoder-result-item geocoder-loading">Buscando…</li>
+                )}
+                {!isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2 && (
+                  <li className="geocoder-result-item geocoder-no-results">Sin resultados</li>
+                )}
+                {!isSearching && searchResults.map((result) => {
+                  const typeIcon = {
+                    country: '🌍',
+                    region: '🏔️',
+                    place: '🏙️',
+                    locality: '📍',
+                    district: '🏘️',
+                    address: '📫',
+                    poi: '⭐',
+                  };
+                  const icon = typeIcon[result.place_type?.[0]] || '📍';
+                  return (
+                    <li
+                      key={result.id}
+                      className="geocoder-result-item"
+                      onClick={() => handleSelectResult(result)}
+                    >
+                      <span className="geocoder-result-icon">{icon}</span>
+                      <div className="geocoder-result-text">
+                        <span className="geocoder-result-name">{result.text}</span>
+                        {result.place_name !== result.text && (
+                          <span className="geocoder-result-context">
+                            {result.place_name?.replace(`${result.text}, `, '')}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
-
-          {showResults && (
-            <ul className="geocoder-results-list">
-              {isSearching && (
-                <li className="geocoder-result-item geocoder-loading">Buscando…</li>
-              )}
-              {!isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2 && (
-                <li className="geocoder-result-item geocoder-no-results">Sin resultados</li>
-              )}
-              {!isSearching && searchResults.map((result) => {
-                const typeIcon = {
-                  country: '🌍',
-                  region: '🏔️',
-                  place: '🏙️',
-                  locality: '📍',
-                  district: '🏘️',
-                  address: '📫',
-                  poi: '⭐',
-                };
-                const icon = typeIcon[result.place_type?.[0]] || '📍';
-                return (
-                  <li
-                    key={result.id}
-                    className="geocoder-result-item"
-                    onClick={() => handleSelectResult(result)}
-                  >
-                    <span className="geocoder-result-icon">{icon}</span>
-                    <div className="geocoder-result-text">
-                      <span className="geocoder-result-name">{result.text}</span>
-                      {result.place_name !== result.text && (
-                        <span className="geocoder-result-context">
-                          {result.place_name?.replace(`${result.text}, `, '')}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
+        </Draggable>
         <Map
           ref={mapRef}
           {...viewState}
@@ -602,6 +625,14 @@ function MapaMonitoreo() {
             </Marker>
           ))}
         </Map>
+
+        <HeatmapLegend
+          metrica={heatmapMetric}
+          visible={isHeatmapActive}
+          onRangeClick={handleLegendRangeClick}
+          onClose={() => setIsHeatmapActive(false)}
+          unidad={unidades[heatmapMetric]}
+        />
 
         {/* Panel Flotante de Información */}
         {(!isHeatmapActive && activeCity) && (
@@ -658,7 +689,7 @@ function MapaMonitoreo() {
         )}
 
         {/* Panel Unificado de Leyendas y Unidades */}
-        <div className={`unified-legend-panel ${!isLegendOpen ? 'collapsed' : ''}`}>
+        <Draggable className={`unified-legend-panel ${!isLegendOpen ? 'collapsed' : ''}`}>
           <div className="unified-legend-header">
             <div className="unified-legend-tabs">
               <button 
@@ -727,10 +758,10 @@ function MapaMonitoreo() {
               )}
             </div>
           )}
-        </div>
+        </Draggable>
 
         {/* ═══ Toolbar Unificado de Controles (Superior Derecha) ═══ */}
-        <div className="map-controls-toolbar">
+        <Draggable className="map-controls-toolbar">
           <button
             className="controls-toggle-btn"
             onClick={() => setIsControlsOpen(!isControlsOpen)}
@@ -823,7 +854,7 @@ function MapaMonitoreo() {
               </div>
             </div>
           )}
-        </div>
+        </Draggable>
       </div>
       
       <WeatherParticles 
