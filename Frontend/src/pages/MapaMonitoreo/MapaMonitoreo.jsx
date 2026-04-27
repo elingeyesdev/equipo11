@@ -23,15 +23,15 @@ import HeatmapLegend from './components/HeatmapLegend';
 import Draggable from '../../components/Draggable/Draggable';
 // Datos fallback cuando la simulación NO está activa (9 departamentos)
 const FALLBACK_DATA = [
-  { id: 'lapaz',      name: 'La Paz',      latitude: -16.4897, longitude: -68.1193, data: { temperature: 12, aqi: 65,  waterQuality: 78, noise: 72, humidity: 45 } },
-  { id: 'cochabamba', name: 'Cochabamba',  latitude: -17.3895, longitude: -66.1568, data: { temperature: 24, aqi: 95,  waterQuality: 82, noise: 65, humidity: 30 } },
-  { id: 'santacruz',  name: 'Santa Cruz',  latitude: -17.7833, longitude: -63.1812, data: { temperature: 30, aqi: 110, waterQuality: 55, noise: 78, humidity: 70 } },
-  { id: 'oruro',      name: 'Oruro',       latitude: -17.9624, longitude: -67.1061, data: { temperature: 8,  aqi: 42,  waterQuality: 88, noise: 45, humidity: 35 } },
-  { id: 'potosi',     name: 'Potosí',      latitude: -19.5836, longitude: -65.7531, data: { temperature: 5,  aqi: 38,  waterQuality: 91, noise: 40, humidity: 28 } },
-  { id: 'sucre',      name: 'Sucre',       latitude: -19.0353, longitude: -65.2592, data: { temperature: 18, aqi: 55,  waterQuality: 85, noise: 58, humidity: 42 } },
-  { id: 'tarija',     name: 'Tarija',      latitude: -21.5355, longitude: -64.7296, data: { temperature: 22, aqi: 48,  waterQuality: 79, noise: 52, humidity: 55 } },
-  { id: 'beni',       name: 'Trinidad',    latitude: -14.8333, longitude: -64.9000, data: { temperature: 32, aqi: 78,  waterQuality: 65, noise: 62, humidity: 82 } },
-  { id: 'pando',      name: 'Cobija',      latitude: -11.0267, longitude: -68.7692, data: { temperature: 28, aqi: 72,  waterQuality: 60, noise: 55, humidity: 88 } },
+  { id: 'lapaz',      name: 'La Paz',      latitude: -16.4897, longitude: -68.1193, data: { temperatura: 12, aqi: 65,  ica: 78, ruido: 72, humedad: 45 } },
+  { id: 'cochabamba', name: 'Cochabamba',  latitude: -17.3895, longitude: -66.1568, data: { temperatura: 24, aqi: 95,  ica: 82, ruido: 65, humedad: 30 } },
+  { id: 'santacruz',  name: 'Santa Cruz',  latitude: -17.7833, longitude: -63.1812, data: { temperatura: 30, aqi: 110, ica: 55, ruido: 78, humedad: 70 } },
+  { id: 'oruro',      name: 'Oruro',       latitude: -17.9624, longitude: -67.1061, data: { temperatura: 8,  aqi: 42,  ica: 88, ruido: 45, humedad: 35 } },
+  { id: 'potosi',     name: 'Potosí',      latitude: -19.5836, longitude: -65.7531, data: { temperatura: 5,  aqi: 38,  ica: 91, ruido: 40, humedad: 28 } },
+  { id: 'sucre',      name: 'Sucre',       latitude: -19.0353, longitude: -65.2592, data: { temperatura: 18, aqi: 55,  ica: 85, ruido: 58, humedad: 42 } },
+  { id: 'tarija',     name: 'Tarija',      latitude: -21.5355, longitude: -64.7296, data: { temperatura: 22, aqi: 48,  ica: 79, ruido: 52, humedad: 55 } },
+  { id: 'beni',       name: 'Trinidad',    latitude: -14.8333, longitude: -64.9000, data: { temperatura: 32, aqi: 78,  ica: 65, ruido: 62, humedad: 82 } },
+  { id: 'pando',      name: 'Cobija',      latitude: -11.0267, longitude: -68.7692, data: { temperatura: 28, aqi: 72,  ica: 60, ruido: 55, humedad: 88 } },
 ];
 
 function MapaMonitoreo() {
@@ -40,7 +40,7 @@ function MapaMonitoreo() {
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity]       = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
-  const [heatmapMetric, setHeatmapMetric]     = useState('aqi');
+  const [heatmapMetric, setHeatmapMetric]     = useState('aqi'); // clave en español (BD)
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [injectedCityId, setInjectedCityId]   = useState(null);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
@@ -266,24 +266,23 @@ function MapaMonitoreo() {
     activeCity = {
       ...activeCity,
       data: {
-        ...activeCity.data, 
-        temperature: histData.temperature,
+        ...activeCity.data,
+        temperatura: histData.temperatura,
         weatherCode: histData.weatherCode,
-        // Limpiamos los que sabemos que OpenAPI no tiene; si hay db fallback los conservaría.
-        aqi: histData.aqi !== null ? histData.aqi : '--',
-        waterQuality: histData.waterQuality !== null ? histData.waterQuality : '--',
-        noise: histData.noise !== null ? histData.noise : '--',
-        humidity: histData.humidity !== null ? histData.humidity : '--'
+        aqi:     histData.aqi     != null ? histData.aqi     : '--',
+        ica:     histData.ica     != null ? histData.ica     : '--',
+        ruido:   histData.ruido   != null ? histData.ruido   : '--',
+        humedad: histData.humedad != null ? histData.humedad : '--'
       }
     };
   }
 
   const MAX_METRICS = {
-    temperature: 40,
+    temperatura: 40,
     aqi: 200,
-    waterQuality: 100,
-    noise: 100,
-    humidity: 100
+    ica: 100,
+    ruido: 100,
+    humedad: 100
   };
 
   const heatmapData = useMemo(() => ({
@@ -302,7 +301,7 @@ function MapaMonitoreo() {
   const heatmapLayer = useMemo(() => {
     let heatmapColor;
     switch (heatmapMetric) {
-      case 'temperature':
+      case 'temperatura':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
@@ -327,7 +326,7 @@ function MapaMonitoreo() {
           1.0, '#7e0023'    // Peligroso
         ];
         break;
-      case 'waterQuality':
+      case 'ica':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
@@ -338,7 +337,7 @@ function MapaMonitoreo() {
           1.0, '#0d47a1'    // Excelente
         ];
         break;
-      case 'noise':
+      case 'ruido':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
@@ -350,7 +349,7 @@ function MapaMonitoreo() {
           1.0, '#7f0000'    // Peligroso
         ];
         break;
-      case 'humidity':
+      case 'humedad':
         heatmapColor = [
           'interpolate', ['linear'], ['heatmap-density'],
           0, 'rgba(0,0,0,0)',
@@ -437,7 +436,7 @@ function MapaMonitoreo() {
       subtitle: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
       latitude: lat,
       longitude: lng,
-      data: { temperature: null, aqi: null, waterQuality: null, noise: null, humidity: null },
+      data: { temperatura: null, aqi: null, ica: null, ruido: null, humedad: null },
       isLoading: true
     };
     setSelectedCity(clickCity);
@@ -454,8 +453,8 @@ function MapaMonitoreo() {
       let newCityData = { ...clickCity.data };
       
       if (weather && weather.current) {
-          newCityData.temperature = weather.current.temperature_2m;
-          newCityData.humidity = weather.current.relative_humidity_2m;
+          newCityData.temperatura = weather.current.temperature_2m;
+          newCityData.humedad = weather.current.relative_humidity_2m;
           wCode = weather.current.weather_code;
       }
       if (aqiData && aqiData.current) {
@@ -651,7 +650,7 @@ function MapaMonitoreo() {
                 <div className="data-icon">🌡️</div>
                 <div className="data-content">
                   <span className="data-label">Temperatura</span>
-                  <span className="data-value">{formatearValor('temperature', activeCity.data.temperature, unidades.temperature)}</span>
+                  <span className="data-value">{formatearValor('temperatura', activeCity.data.temperatura, unidades.temperatura)}</span>
                 </div>
               </div>
               <div className="data-item">
@@ -667,21 +666,21 @@ function MapaMonitoreo() {
                 <div className="data-icon">💧</div>
                 <div className="data-content">
                   <span className="data-label">Calidad del Agua</span>
-                  <span className="data-value">{formatearValor('waterQuality', activeCity.data.waterQuality, unidades.waterQuality)}</span>
+                  <span className="data-value">{formatearValor('ica', activeCity.data.ica, unidades.ica)}</span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">🔊</div>
                 <div className="data-content">
                   <span className="data-label">Nivel de Ruido</span>
-                  <span className="data-value">{formatearValor('noise', activeCity.data.noise, unidades.noise)}</span>
+                  <span className="data-value">{formatearValor('ruido', activeCity.data.ruido, unidades.ruido)}</span>
                 </div>
               </div>
               <div className="data-item">
                 <div className="data-icon">💦</div>
                 <div className="data-content">
                   <span className="data-label">Humedad</span>
-                  <span className="data-value">{formatearValor('humidity', activeCity.data.humidity, unidades.humidity)}</span>
+                  <span className="data-value">{formatearValor('humedad', activeCity.data.humedad, unidades.humedad)}</span>
                 </div>
               </div>
             </div>
@@ -826,10 +825,10 @@ function MapaMonitoreo() {
                     onChange={(e) => setHeatmapMetric(e.target.value)}
                   >
                     <option value="aqi">Calidad de Aire (AQI)</option>
-                    <option value="waterQuality">Calidad del Agua (ICA)</option>
-                    <option value="temperature">Temperatura</option>
-                    <option value="noise">Ruido</option>
-                    <option value="humidity">Humedad</option>
+                    <option value="ica">Calidad del Agua (ICA)</option>
+                    <option value="temperatura">Temperatura</option>
+                    <option value="ruido">Ruido</option>
+                    <option value="humedad">Humedad</option>
                   </select>
                 </div>
               )}

@@ -27,8 +27,7 @@ async function getUmbrales(req, res) {
            un.simbolo AS unidad
          FROM umbrales u
          JOIN metricas m  ON m.id = u.metrica_id
-         LEFT JOIN metrica_unidades mu ON mu.metrica_id = m.id AND mu.es_principal = TRUE
-         LEFT JOIN unidades un         ON un.id = mu.unidad_id
+         JOIN unidades un ON un.id = m.unidad_base_id
          WHERE m.clave = $1
          ORDER BY u.nivel ASC`
       : `SELECT
@@ -43,8 +42,7 @@ async function getUmbrales(req, res) {
            un.simbolo AS unidad
          FROM umbrales u
          JOIN metricas m  ON m.id = u.metrica_id
-         LEFT JOIN metrica_unidades mu ON mu.metrica_id = m.id AND mu.es_principal = TRUE
-         LEFT JOIN unidades un         ON un.id = mu.unidad_id
+         JOIN unidades un ON un.id = m.unidad_base_id
          ORDER BY m.clave, u.nivel ASC`
 
     const { rows } = await db.query(sql, metrica ? [metrica] : [])

@@ -12,11 +12,11 @@ import { useSimulacion } from '../../context/SimulacionContext'
 import './ModalSimulacion.css'
 
 const METRICS = [
-  { key: 'temperature',  label: 'Temperatura',      icon: '🌡️', unit: '°C'  },
-  { key: 'aqi',          label: 'Calidad del Aire',  icon: '🌫️', unit: 'AQI' },
-  { key: 'waterQuality', label: 'Calidad del Agua',  icon: '💧', unit: 'ICA' },
-  { key: 'noise',        label: 'Nivel de Ruido',    icon: '🔊', unit: 'dB'  },
-  { key: 'humidity',     label: 'Humedad',           icon: '💦', unit: '%'   },
+  { key: 'temperatura', label: 'Temperatura',      icon: '🌡️', unit: '°C'  },
+  { key: 'aqi',         label: 'Calidad del Aire',  icon: '🌫️', unit: 'AQI' },
+  { key: 'ica',         label: 'Calidad del Agua',  icon: '💧', unit: 'ICA' },
+  { key: 'ruido',       label: 'Nivel de Ruido',    icon: '🔊', unit: 'dB'  },
+  { key: 'humedad',     label: 'Humedad',           icon: '💦', unit: '%'   },
 ]
 
 function calcPromedio(cities, key) {

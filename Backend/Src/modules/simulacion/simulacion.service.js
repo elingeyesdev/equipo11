@@ -11,20 +11,20 @@ const DEPARTAMENTOS = require('./departamentos.data')
 
 // Configuración de variación por métrica (delta máximo por tick)
 const METRIC_CONFIG = {
-  temperature: { delta: 2 },
-  aqi:          { delta: 12 },
-  waterQuality: { delta: 6 },
-  noise:        { delta: 5 },
-  humidity:     { delta: 4 }
+  temperatura: { delta: 2 },
+  aqi:         { delta: 12 },
+  ica:         { delta: 6 },
+  ruido:       { delta: 5 },
+  humedad:     { delta: 4 }
 }
 
 // Rangos válidos absolutos por métrica (para validar inyección manual)
 const METRIC_LIMITS = {
-  temperature:  { min: -40, max: 60 },   // Permite negativos (frío intenso)
-  aqi:          { min: 0,   max: 500 },
-  waterQuality: { min: 0,   max: 100 },
-  noise:        { min: 0,   max: 140 },
-  humidity:     { min: 0,   max: 100 },
+  temperatura: { min: -40, max: 60 },
+  aqi:         { min: 0,   max: 500 },
+  ica:         { min: 0,   max: 100 },
+  ruido:       { min: 0,   max: 140 },
+  humedad:     { min: 0,   max: 100 },
 }
 
 const METRIC_KEYS = Object.keys(METRIC_CONFIG)
@@ -138,7 +138,7 @@ async function persistReadings(state) {
   
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores]);

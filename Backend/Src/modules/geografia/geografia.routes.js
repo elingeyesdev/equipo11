@@ -19,7 +19,7 @@ router.get('/localidades', async (req, res) => {
 
     if (pais_codigo) {
       params.push(pais_codigo.toUpperCase())
-      conditions.push(`p.codigo_iso2 = $${params.length}`)
+      conditions.push(`p.codigo = $${params.length}`)
     }
     if (region_id) {
       params.push(region_id)
@@ -45,7 +45,7 @@ router.get('/localidades', async (req, res) => {
         l.longitud,
         r.nombre  AS region,
         p.nombre  AS pais,
-        p.codigo_iso2
+        p.codigo
       FROM localidades l
       JOIN regiones r ON r.id = l.region_id
       JOIN paises   p ON p.id = r.pais_id

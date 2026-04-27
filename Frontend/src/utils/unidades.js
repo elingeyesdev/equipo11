@@ -26,15 +26,8 @@ function pm25ToAqi(pm) {
   return 500
 }
 
-/**
- * Configuración de unidades por métrica ambiental.
- * - convertir: valor base → valor en esta unidad (para mostrar)
- * - invertir:  valor en esta unidad → valor base (para formularios)
- * - precision: decimales en la presentación
- * - sufijo:    texto que va pegado al número (incluye espacio si aplica)
- */
 export const METRICAS_UNIDADES = {
-  temperature: {
+  temperatura: {
     label: 'Temperatura', icon: '🌡️',
     unidades: [
       { key: 'C', label: '°C — Celsius',    convertir: v => v,             invertir: v => v,                  precision: 1, sufijo: '°C' },
@@ -51,21 +44,21 @@ export const METRICAS_UNIDADES = {
     ],
     defecto: 'AQI',
   },
-  waterQuality: {
+  ica: {
     label: 'Calidad del Agua', icon: '💧',
     unidades: [
       { key: 'ICA', label: 'ICA (0–100)', convertir: v => v, invertir: v => v, precision: 0, sufijo: ' ICA' },
     ],
     defecto: 'ICA',
   },
-  noise: {
+  ruido: {
     label: 'Nivel de Ruido', icon: '🔊',
     unidades: [
       { key: 'dB', label: 'dB — Decibeles', convertir: v => v, invertir: v => v, precision: 0, sufijo: ' dB' },
     ],
     defecto: 'dB',
   },
-  humidity: {
+  humedad: {
     label: 'Humedad', icon: '💦',
     unidades: [
       { key: '%', label: '% — Relativa', convertir: v => v, invertir: v => v, precision: 0, sufijo: '%' },
@@ -74,28 +67,24 @@ export const METRICAS_UNIDADES = {
   },
 }
 
-/** Resuelve la configuración de unidad activa para una métrica */
 function resolverUnidad(metricKey, unitKey) {
   const cfg = METRICAS_UNIDADES[metricKey]
   if (!cfg) return null
   return cfg.unidades.find(u => u.key === unitKey) ?? cfg.unidades[0]
 }
 
-/** Devuelve el valor con unidad formateado (ej: "25.0°C") */
 export function formatearValor(metricKey, rawValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
   if (!unit || rawValue == null || typeof rawValue !== 'number' || isNaN(rawValue)) return '—'
   return `${unit.convertir(rawValue).toFixed(unit.precision)}${unit.sufijo}`
 }
 
-/** Devuelve solo el número convertido (sin sufijo) */
 export function convertirValor(metricKey, rawValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
   if (!unit || rawValue == null) return rawValue
   return unit.convertir(rawValue)
 }
 
-/** Convierte un valor en la unidad seleccionada de vuelta a la unidad base */
 export function invertirValor(metricKey, displayValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
   if (!unit || displayValue == null) return displayValue

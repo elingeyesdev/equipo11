@@ -129,12 +129,12 @@ export const getHistoricalWeatherAtLocation = async (lat, lng) => {
       index: idx,
       timestamp: timestampStr, 
       data: {
-        temperature: temperature_2m[idx],
+        temperatura: temperature_2m[idx],
         weatherCode: weather_code[idx],
-        aqi: aqiData[idx] || null, 
-        waterQuality: null,
-        noise: null,
-        humidity: relative_humidity_2m[idx]
+        aqi: aqiData[idx] || null,
+        ica: null,
+        ruido: null,
+        humedad: relative_humidity_2m[idx]
       }
     }));
     

@@ -8,23 +8,14 @@ import { convertirValor, METRICAS_UNIDADES } from '../../../utils/unidades'
  * Se autoactiva cuando el heatmap está ON.
  *
  * Props:
- *   metrica      {string}   - clave activa ("aqi", "temperature", etc.)
+ *   metrica      {string}   - clave activa ("aqi", "temperatura", "ica", "ruido", "humedad")
  *   onRangeClick {Function} - callback(umbral|null) para filtrar el mapa
  *   visible      {boolean}  - mostrar/ocultar la leyenda
  *   onClose      {Function} - callback para apagar la capa
  *   unidad       {string}   - unidad activa (ej: 'C', 'F', 'AQI')
  */
 export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose, unidad }) {
-  // Mapeo de variables del Frontend a las claves de la base de datos
-  const apiMetricMap = {
-    waterQuality: 'ica',
-    temperature: 'temperatura',
-    noise: 'ruido',
-    humidity: 'humedad',
-    aqi: 'aqi'
-  }
-  
-  const metricQuery = apiMetricMap[metrica] || metrica;
+  const metricQuery = metrica;
   
   const { umbrales: dbUmbrales, loading } = useUmbrales(metricQuery)
   const [activeRange, setActiveRange] = useState(null)
@@ -38,17 +29,17 @@ export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose,
 
   // Título amigable por métrica (incluyendo la unidad dinámicamente)
   const titulos = {
-    aqi:         `Calidad del Aire (${sufijo || 'AQI'})`,
-    temperature: `Temperatura (${sufijo || '°C'})`,
-    waterQuality:`Calidad del Agua (${sufijo || 'ICA'})`,
-    noise:       `Nivel de Ruido (${sufijo || 'dB'})`,
-    humidity:    `Humedad Relativa (${sufijo || '%'})`,
+    aqi:        `Calidad del Aire (${sufijo || 'AQI'})`,
+    temperatura:`Temperatura (${sufijo || '°C'})`,
+    ica:        `Calidad del Agua (${sufijo || 'ICA'})`,
+    ruido:      `Nivel de Ruido (${sufijo || 'dB'})`,
+    humedad:    `Humedad Relativa (${sufijo || '%'})`,
   }
 
   // Fallbacks visuales estáticos si el backend falla o está cargando, 
   // diseñados exactamente como los mapas de clima profesionales
   const fallbackScales = {
-    temperature: [
+    temperatura: [
       { nivel: 1, valor_min: -40, color_hex: '#ff99ff', label: 'Extremo' },
       { nivel: 2, valor_min: -30, color_hex: '#cc00cc', label: 'Muy Frío' },
       { nivel: 3, valor_min: -20, color_hex: '#6600cc', label: 'Frío' },
@@ -68,14 +59,14 @@ export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose,
       { nivel: 5, valor_min: 200, color_hex: '#8f3f97', label: 'Muy Dañino' },
       { nivel: 6, valor_min: 300, color_hex: '#7e0023', label: 'Peligroso' },
     ],
-    waterQuality: [
+    ica: [
       { nivel: 1, valor_min: 0,  color_hex: '#6d4c41', label: 'Muy mala' },
       { nivel: 2, valor_min: 26, color_hex: '#f57c00', label: 'Mala' },
       { nivel: 3, valor_min: 51, color_hex: '#fbc02d', label: 'Regular' },
       { nivel: 4, valor_min: 71, color_hex: '#1976d2', label: 'Buena' },
       { nivel: 5, valor_min: 91, color_hex: '#0d47a1', label: 'Excelente' },
     ],
-    noise: [
+    ruido: [
       { nivel: 1, valor_min: 0,   color_hex: '#1a9850', label: 'Silencio' },
       { nivel: 2, valor_min: 30,  color_hex: '#91cf60', label: 'Tranquilo' },
       { nivel: 3, valor_min: 55,  color_hex: '#ffffbf', label: 'Moderado' },
@@ -83,7 +74,7 @@ export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose,
       { nivel: 5, valor_min: 85,  color_hex: '#d73027', label: 'Dañino' },
       { nivel: 6, valor_min: 100, color_hex: '#7f0000', label: 'Peligroso' },
     ],
-    humidity: [
+    humedad: [
       { nivel: 1, valor_min: 0,  color_hex: '#fdae61', label: 'Muy seco' },
       { nivel: 2, valor_min: 20, color_hex: '#fee090', label: 'Seco' },
       { nivel: 3, valor_min: 40, color_hex: '#abd9e9', label: 'Confortable' },
@@ -92,7 +83,7 @@ export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose,
     ]
   };
 
-  const currentUmbrales = dbUmbrales.length > 0 ? dbUmbrales : (fallbackScales[metrica] || fallbackScales.temperature);
+  const currentUmbrales = dbUmbrales.length > 0 ? dbUmbrales : (fallbackScales[metrica] || fallbackScales.temperatura);
 
   const handleRangeClick = (umbral) => {
     const next = activeRange?.nivel === umbral.nivel ? null : umbral

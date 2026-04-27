@@ -67,7 +67,7 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange }) => {
                 <span className="history-card-time">{timeString}</span>
               </div>
               <div className="history-card-temp">
-                {entry.data.temperature !== null ? `${Math.round(entry.data.temperature)}°` : '--°'}
+                {entry.data.temperatura != null ? `${Math.round(entry.data.temperatura)}°` : '--°'}
               </div>
             </div>
           );

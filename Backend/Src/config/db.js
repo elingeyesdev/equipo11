@@ -1,27 +1,18 @@
 require('dotenv').config()
-const { Sequelize } = require('sequelize')
+const { Pool } = require('pg')
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'sistema_ambiental',
-  process.env.DB_USER || 'admin',
-  process.env.DB_PASSWORD || 'admin123',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: false, // set to console.log to see raw SQL
-  }
-)
+const pool = new Pool({
+  host:     process.env.DB_HOST     || 'localhost',
+  port:     Number(process.env.DB_PORT) || 5432,
+  database: process.env.DB_NAME     || 'sistema_ambiental',
+  user:     process.env.DB_USER     || 'admin',
+  password: process.env.DB_PASSWORD || 'admin123',
+})
 
-const authenticateDB = async () => {
-  try {
-    await sequelize.authenticate()
-    console.log('✅ Conectado a PostgreSQL a través de Sequelize (ORM)')
-  } catch (error) {
-    console.error('❌ Error de conexión a BD con Sequelize:', error)
-  }
-}
+pool.on('error', (err) => console.error('[pg] error en cliente idle:', err))
 
-authenticateDB()
+pool.connect()
+  .then(c => { console.log('✅ Conectado a PostgreSQL (pg.Pool)'); c.release() })
+  .catch(err => console.error('❌ Error de conexión a PostgreSQL:', err))
 
-module.exports = sequelize
+module.exports = pool

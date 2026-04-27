@@ -30,3 +30,5 @@ docker-compose.override.yml
 ANALISIS_MEJORAS.md
 CLAUDE.md
 implementation_plan.md
+esquema_envirosense.sql
+PROPUESTA_MAPAS_DE_CALOR.md

@@ -16,20 +16,20 @@ import './PanelSimulacion.css'
 
 // Configuración de métricas para renderizar cards (OCP: agregar una métrica = agregar un objeto)
 const METRICS = [
-  { key: 'aqi',          label: 'Calidad del Aire',  icon: '🌫️', unit: 'AQI', thresholds: [50, 100, 150] },
-  { key: 'waterQuality', label: 'Calidad del Agua',  icon: '💧', unit: 'ICA', thresholds: [40, 60, 80] },
-  { key: 'noise',        label: 'Nivel de Ruido',    icon: '🔊', unit: 'dB',  thresholds: [50, 65, 80] },
-  { key: 'temperature',  label: 'Temperatura',       icon: '🌡️', unit: '°C',  thresholds: [10, 25, 32] },
-  { key: 'humidity',     label: 'Humedad',           icon: '💦', unit: '%',   thresholds: [30, 60, 80] },
+  { key: 'aqi',        label: 'Calidad del Aire',  icon: '🌫️', unit: 'AQI', thresholds: [50, 100, 150] },
+  { key: 'ica',        label: 'Calidad del Agua',  icon: '💧', unit: 'ICA', thresholds: [40, 60, 80] },
+  { key: 'ruido',      label: 'Nivel de Ruido',    icon: '🔊', unit: 'dB',  thresholds: [50, 65, 80] },
+  { key: 'temperatura',label: 'Temperatura',       icon: '🌡️', unit: '°C',  thresholds: [10, 25, 32] },
+  { key: 'humedad',    label: 'Humedad',           icon: '💦', unit: '%',   thresholds: [30, 60, 80] },
 ]
 
 // Rangos válidos para inyección manual (espejo del backend)
 const METRIC_LIMITS = {
-  temperature:  { min: -40, max: 60 },
-  aqi:          { min: 0,   max: 500 },
-  waterQuality: { min: 0,   max: 100 },
-  noise:        { min: 0,   max: 140 },
-  humidity:     { min: 0,   max: 100 },
+  temperatura: { min: -40, max: 60 },
+  aqi:         { min: 0,   max: 500 },
+  ica:         { min: 0,   max: 100 },
+  ruido:       { min: 0,   max: 140 },
+  humedad:     { min: 0,   max: 100 },
 }
 
 const INTERVAL_OPTIONS = [
@@ -68,7 +68,7 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('es-BO')
 }
 
-const EMPTY_INJECT = { temperature: '', aqi: '', waterQuality: '', noise: '', humidity: '' }
+const EMPTY_INJECT = { temperatura: '', aqi: '', ica: '', ruido: '', humedad: '' }
 
 function PanelSimulacion() {
   const navigate = useNavigate()
@@ -84,7 +84,7 @@ function PanelSimulacion() {
     setInjectCity(cityId)
     const city = cities.find(c => c.id === cityId)
     setInjectValues(city
-      ? { temperature: city.data.temperature, aqi: city.data.aqi, waterQuality: city.data.waterQuality, noise: city.data.noise, humidity: city.data.humidity }
+      ? { temperatura: city.data.temperatura, aqi: city.data.aqi, ica: city.data.ica, ruido: city.data.ruido, humedad: city.data.humedad }
       : EMPTY_INJECT
     )
   }
