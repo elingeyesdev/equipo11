@@ -242,20 +242,28 @@
 }
 
 /* ==========================================================
-   Panel de información de ciudad (superior izquierda)
+   Panel de información de ciudad — wrapper arrastrable
    ========================================================== */
-.city-info-panel {
+.city-info-panel-wrapper {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  width: 320px;
+  top: 68px;        /* debajo del buscador (≈60px) */
+  left: 15px;
+  z-index: 20;
+  cursor: grab;
+}
+.city-info-panel-wrapper:active { cursor: grabbing; }
+
+.city-info-panel {
+  width: 290px;
+  max-height: 70vh;
+  overflow-y: auto;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 18px 20px 16px;
+  padding: 16px 18px 14px;
   box-shadow: var(--shadow-md);
-  z-index: 20;
-  animation: slideIn 0.3s ease-out;
+  animation: slideIn 0.25s ease-out;
+  cursor: default;
 }
 
 @keyframes slideIn {
@@ -722,4 +730,105 @@ input:checked + .slider:before { transform: translateX(16px); }
   .map-controls-toolbar { top: 0.5rem; right: 0.5rem; }
   .controls-dropdown { min-width: 200px; }
   .controls-toggle-btn { padding: 6px 10px; font-size: 10.5px; }
+}
+
+/* ═══ Marcadores coloreados por umbral (modo heatmap) ═══ */
+.city-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--marker-color, #666);
+  border: 2.5px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.city-marker:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.city-marker__value {
+  color: #fff;
+  font-size: 0.63rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.city-marker--pulse {
+  animation: markerPulse 2s ease-in-out infinite;
+}
+
+@keyframes markerPulse {
+  0%,  100% { box-shadow: 0 0 0 0   color-mix(in srgb, var(--marker-color, #f00) 60%, transparent); }
+  50%        { box-shadow: 0 0 0 10px transparent; }
+}
+
+/* ==========================================================
+   Skeleton Loader — card de información mientras carga API
+   ========================================================== */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.panel-skeleton-title,
+.panel-skeleton-value {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--line-soft) 25%, var(--paper) 50%, var(--line-soft) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+.panel-skeleton-title {
+  height: 22px;
+  width: 70%;
+  margin-bottom: 4px;
+}
+
+.panel-skeleton-value {
+  height: 16px;
+  width: 55%;
+  margin-top: 2px;
+}
+
+/* ==========================================================
+   Badge de fuente de datos en el panel
+   ========================================================== */
+.panel-source-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.panel-source-badge.sim {
+  background: var(--moss-soft);
+  color: var(--moss-ink);
+  border-color: rgba(87, 160, 98, 0.3);
+}
+
+/* Mobile responsive para el nuevo wrapper */
+@media screen and (max-width: 600px) {
+  .city-info-panel-wrapper {
+    top: auto;
+    bottom: 4rem;
+    left: 4vw;
+    right: 4vw;
+  }
+  .city-info-panel { width: 100%; }
 }

@@ -21,90 +21,113 @@ import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 import HeatmapLegend from './components/HeatmapLegend';
 import Draggable from '../../components/Draggable/Draggable';
-// Datos fallback cuando la simulación NO está activa (9 departamentos)
+import VoronoiLayer from './layers/VoronoiLayer';
+import MarkersLayer from './layers/MarkersLayer';
+import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
+// Fallback estático con cobertura de Sudamérica (usado cuando la simulación NO está activa)
 const FALLBACK_DATA = [
-  { id: 'lapaz',      name: 'La Paz',      latitude: -16.4897, longitude: -68.1193, data: { temperatura: 12, aqi: 65,  ica: 78, ruido: 72, humedad: 45 } },
-  { id: 'cochabamba', name: 'Cochabamba',  latitude: -17.3895, longitude: -66.1568, data: { temperatura: 24, aqi: 95,  ica: 82, ruido: 65, humedad: 30 } },
-  { id: 'santacruz',  name: 'Santa Cruz',  latitude: -17.7833, longitude: -63.1812, data: { temperatura: 30, aqi: 110, ica: 55, ruido: 78, humedad: 70 } },
-  { id: 'oruro',      name: 'Oruro',       latitude: -17.9624, longitude: -67.1061, data: { temperatura: 8,  aqi: 42,  ica: 88, ruido: 45, humedad: 35 } },
-  { id: 'potosi',     name: 'Potosí',      latitude: -19.5836, longitude: -65.7531, data: { temperatura: 5,  aqi: 38,  ica: 91, ruido: 40, humedad: 28 } },
-  { id: 'sucre',      name: 'Sucre',       latitude: -19.0353, longitude: -65.2592, data: { temperatura: 18, aqi: 55,  ica: 85, ruido: 58, humedad: 42 } },
-  { id: 'tarija',     name: 'Tarija',      latitude: -21.5355, longitude: -64.7296, data: { temperatura: 22, aqi: 48,  ica: 79, ruido: 52, humedad: 55 } },
-  { id: 'beni',       name: 'Trinidad',    latitude: -14.8333, longitude: -64.9000, data: { temperatura: 32, aqi: 78,  ica: 65, ruido: 62, humedad: 82 } },
-  { id: 'pando',      name: 'Cobija',      latitude: -11.0267, longitude: -68.7692, data: { temperatura: 28, aqi: 72,  ica: 60, ruido: 55, humedad: 88 } },
+  // Bolivia
+  { id: 'lapaz', name: 'La Paz', latitude: -16.4897, longitude: -68.1193, data: { temperatura: 12, aqi: 65, ica: 78, ruido: 72, humedad: 45 } },
+  { id: 'cochabamba', name: 'Cochabamba', latitude: -17.3895, longitude: -66.1568, data: { temperatura: 24, aqi: 95, ica: 82, ruido: 65, humedad: 30 } },
+  { id: 'santacruz', name: 'Santa Cruz', latitude: -17.7833, longitude: -63.1812, data: { temperatura: 30, aqi: 110, ica: 55, ruido: 78, humedad: 70 } },
+  { id: 'oruro', name: 'Oruro', latitude: -17.9624, longitude: -67.1061, data: { temperatura: 8, aqi: 42, ica: 88, ruido: 45, humedad: 35 } },
+  { id: 'potosi', name: 'Potosí', latitude: -19.5836, longitude: -65.7531, data: { temperatura: 5, aqi: 38, ica: 91, ruido: 40, humedad: 28 } },
+  { id: 'sucre', name: 'Sucre', latitude: -19.0353, longitude: -65.2592, data: { temperatura: 18, aqi: 55, ica: 85, ruido: 58, humedad: 42 } },
+  { id: 'tarija', name: 'Tarija', latitude: -21.5355, longitude: -64.7296, data: { temperatura: 22, aqi: 48, ica: 79, ruido: 52, humedad: 55 } },
+  { id: 'trinidad', name: 'Trinidad', latitude: -14.8333, longitude: -64.9000, data: { temperatura: 32, aqi: 78, ica: 65, ruido: 62, humedad: 82 } },
+  { id: 'cobija', name: 'Cobija', latitude: -11.0267, longitude: -68.7692, data: { temperatura: 28, aqi: 72, ica: 60, ruido: 55, humedad: 88 } },
+  // Argentina
+  { id: 'buenos_aires', name: 'Buenos Aires', latitude: -34.6037, longitude: -58.3816, data: { temperatura: 22, aqi: 95, ica: 68, ruido: 80, humedad: 65 } },
+  { id: 'cordoba_ar', name: 'Córdoba', latitude: -31.4135, longitude: -64.1811, data: { temperatura: 20, aqi: 80, ica: 72, ruido: 70, humedad: 58 } },
+  { id: 'mendoza', name: 'Mendoza', latitude: -32.8908, longitude: -68.8272, data: { temperatura: 18, aqi: 55, ica: 75, ruido: 58, humedad: 30 } },
+  { id: 'salta', name: 'Salta', latitude: -24.7821, longitude: -65.4232, data: { temperatura: 24, aqi: 60, ica: 78, ruido: 55, humedad: 48 } },
+  { id: 'bariloche', name: 'Bariloche', latitude: -41.1335, longitude: -71.3103, data: { temperatura: 8, aqi: 22, ica: 92, ruido: 35, humedad: 62 } },
+  { id: 'ushuaia', name: 'Ushuaia', latitude: -54.8019, longitude: -68.3030, data: { temperatura: 2, aqi: 12, ica: 96, ruido: 28, humedad: 72 } },
+  // Brasil
+  { id: 'sao_paulo', name: 'São Paulo', latitude: -23.5505, longitude: -46.6333, data: { temperatura: 24, aqi: 145, ica: 58, ruido: 88, humedad: 72 } },
+  { id: 'rio_de_janeiro', name: 'Rio de Janeiro', latitude: -22.9068, longitude: -43.1729, data: { temperatura: 30, aqi: 120, ica: 62, ruido: 82, humedad: 78 } },
+  { id: 'manaus', name: 'Manaus', latitude: -3.1019, longitude: -60.0250, data: { temperatura: 32, aqi: 65, ica: 55, ruido: 60, humedad: 90 } },
+  { id: 'fortaleza', name: 'Fortaleza', latitude: -3.7172, longitude: -38.5433, data: { temperatura: 30, aqi: 90, ica: 65, ruido: 72, humedad: 78 } },
+  { id: 'porto_alegre', name: 'Porto Alegre', latitude: -30.0346, longitude: -51.2177, data: { temperatura: 20, aqi: 75, ica: 70, ruido: 68, humedad: 68 } },
+  // Chile
+  { id: 'santiago', name: 'Santiago', latitude: -33.4489, longitude: -70.6693, data: { temperatura: 18, aqi: 110, ica: 72, ruido: 75, humedad: 45 } },
+  { id: 'antofagasta', name: 'Antofagasta', latitude: -23.6509, longitude: -70.3975, data: { temperatura: 18, aqi: 45, ica: 80, ruido: 48, humedad: 15 } },
+  { id: 'punta_arenas', name: 'Punta Arenas', latitude: -53.1638, longitude: -70.9171, data: { temperatura: 4, aqi: 18, ica: 92, ruido: 32, humedad: 68 } },
+  // Colombia
+  { id: 'bogota', name: 'Bogotá', latitude: 4.7110, longitude: -74.0721, data: { temperatura: 14, aqi: 105, ica: 65, ruido: 78, humedad: 72 } },
+  { id: 'medellin', name: 'Medellín', latitude: 6.2442, longitude: -75.5812, data: { temperatura: 22, aqi: 115, ica: 62, ruido: 80, humedad: 72 } },
+  { id: 'cartagena', name: 'Cartagena', latitude: 10.3910, longitude: -75.4794, data: { temperatura: 32, aqi: 80, ica: 58, ruido: 72, humedad: 82 } },
+  // Perú
+  { id: 'lima', name: 'Lima', latitude: -12.0464, longitude: -77.0428, data: { temperatura: 20, aqi: 95, ica: 70, ruido: 78, humedad: 82 } },
+  { id: 'cusco', name: 'Cusco', latitude: -13.5319, longitude: -71.9675, data: { temperatura: 10, aqi: 48, ica: 80, ruido: 45, humedad: 48 } },
+  { id: 'iquitos', name: 'Iquitos', latitude: -3.7491, longitude: -73.2538, data: { temperatura: 30, aqi: 55, ica: 52, ruido: 52, humedad: 92 } },
+  // Ecuador
+  { id: 'quito', name: 'Quito', latitude: -0.2295, longitude: -78.5243, data: { temperatura: 14, aqi: 70, ica: 72, ruido: 65, humedad: 65 } },
+  { id: 'guayaquil', name: 'Guayaquil', latitude: -2.1894, longitude: -79.8891, data: { temperatura: 30, aqi: 95, ica: 62, ruido: 78, humedad: 78 } },
+  // Paraguay
+  { id: 'asuncion', name: 'Asunción', latitude: -25.2867, longitude: -57.6470, data: { temperatura: 28, aqi: 88, ica: 65, ruido: 70, humedad: 65 } },
+  // Uruguay
+  { id: 'montevideo', name: 'Montevideo', latitude: -34.9011, longitude: -56.1645, data: { temperatura: 18, aqi: 72, ica: 75, ruido: 65, humedad: 72 } },
+  // Venezuela
+  { id: 'caracas', name: 'Caracas', latitude: 10.4806, longitude: -66.9036, data: { temperatura: 22, aqi: 110, ica: 62, ruido: 78, humedad: 72 } },
+  { id: 'maracaibo', name: 'Maracaibo', latitude: 10.6544, longitude: -71.6011, data: { temperatura: 36, aqi: 105, ica: 58, ruido: 75, humedad: 78 } },
+  // Otros
+  { id: 'georgetown', name: 'Georgetown', latitude: 6.8013, longitude: -58.1551, data: { temperatura: 30, aqi: 60, ica: 60, ruido: 55, humedad: 85 } },
+  { id: 'paramaribo', name: 'Paramaribo', latitude: 5.8520, longitude: -55.2038, data: { temperatura: 30, aqi: 55, ica: 62, ruido: 52, humedad: 85 } },
 ];
 
 function MapaMonitoreo() {
   const location = useLocation();
   const { isRunning, cities: simulatedCities } = useSimulacion();
   const { unidades, cambiarUnidad } = useUnidades();
-  const [selectedCity, setSelectedCity]       = useState(null);
+  const [selectedCity, setSelectedCity] = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
-  const [heatmapMetric, setHeatmapMetric]     = useState('aqi'); // clave en español (BD)
-  const [isModalOpen, setIsModalOpen]         = useState(false);
-  const [injectedCityId, setInjectedCityId]   = useState(null);
+  const [heatmapMetric, setHeatmapMetric] = useState('aqi'); // clave en español (BD)
+  // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
+  const { umbrales } = useUmbrales(heatmapMetric);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [injectedCityId, setInjectedCityId] = useState(null);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
 
   const handleLegendRangeClick = useCallback((umbral) => {
     setActiveUmbralFilter(umbral);
-    if (mapRef.current) {
-      const map = mapRef.current.getMap();
-      // Asegurarse de que el layer exista antes de aplicar el filtro
-      if (map.getLayer('heatmap-layer')) {
-        if (umbral) {
-          map.setFilter('heatmap-layer', [
-            'all',
-            ['>=', ['get', 'val'], umbral.valor_min],
-            ['<=', ['get', 'val'], umbral.valor_max],
-          ]);
-        } else {
-          map.setFilter('heatmap-layer', null);
-        }
-      }
-    }
   }, []);
 
   // --- Estado del buscador geocoder ---
-  const [searchQuery, setSearchQuery]     = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching]     = useState(false);
-  const [showResults, setShowResults]     = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   const [isParticlesActive, setIsParticlesActive] = useState(false);
-  const [weatherCode, setWeatherCode]         = useState(null);
-  const [isLegendOpen, setIsLegendOpen]       = useState(true);
+  const [weatherCode, setWeatherCode] = useState(null);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
-  const [localWeathers, setLocalWeathers]     = useState({});
-  const [isControlsOpen, setIsControlsOpen]   = useState(false);
+  const [localWeathers, setLocalWeathers] = useState({});
+  const [isControlsOpen, setIsControlsOpen] = useState(false);
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
   const [timelineIndex, setTimelineIndex] = useState(0);
 
-  // Fetch historical data dinámicamente según click
+  // Fetch historical data — prioriza BD local (lecturas del simulador)
   useEffect(() => {
     if (isHistoricalMode && selectedCity) {
       const fetchHistory = async () => {
-        // Intentar API de Open-Meteo primero
-        const apiData = await getHistoricalWeatherAtLocation(selectedCity.latitude, selectedCity.longitude);
-        
-        if (apiData && apiData.length > 0) {
-          setCityHistoryArray(apiData);
-          const now = Date.now();
-          let closestIdx = apiData.length - 1;
-          let minDiff = Infinity;
-          apiData.forEach(e => {
-            const diff = Math.abs(new Date(e.timestamp).getTime() - now);
-            if (diff < minDiff) { minDiff = diff; closestIdx = e.index; }
-          });
-          setTimelineIndex(closestIdx);
-        } else {
-          // Fallback a Base de Datos Local
-          try {
-            const res = await fetch('http://localhost:3000/api/historial');
-            const data = await res.json();
-            const fallbackMapped = data.map((snapshot, idx) => {
-              const cData = snapshot.cities.find(c => c.id === selectedCity.id);
+        // 1. Intentar historial en BD local (datos del simulador)
+        try {
+          // Buscar localidad_id en la BD por nombre
+          const locRes = await fetch(`http://localhost:3000/api/historial`);
+          const allData = await locRes.json();
+
+          // Intentar con el nuevo endpoint por ciudad si tiene id numérico de BD
+          // El id de la ciudad en el simulador puede no coincidir con localidad_id de BD
+          // Usamos el endpoint general y filtramos por nombre
+          if (allData && allData.length > 0) {
+            const fallbackMapped = allData.map((snapshot, idx) => {
+              const cData = snapshot.cities.find(
+                c => c.name?.toLowerCase() === selectedCity.name?.toLowerCase()
+              );
               return {
                 index: idx,
                 timestamp: snapshot.timestamp,
@@ -112,11 +135,28 @@ function MapaMonitoreo() {
               };
             }).filter(e => e.data !== null);
 
-            setCityHistoryArray(fallbackMapped);
-            setTimelineIndex(fallbackMapped.length > 0 ? fallbackMapped.length - 1 : 0);
-          } catch(err) {
-            console.error("Historical Fallback failed", err);
+            if (fallbackMapped.length > 0) {
+              setCityHistoryArray(fallbackMapped);
+              setTimelineIndex(fallbackMapped.length - 1);
+              return; // BD local tiene datos → no usar Open-Meteo
+            }
           }
+        } catch (err) {
+          console.warn('[Histórico] BD local falló, usando Open-Meteo:', err.message);
+        }
+
+        // 2. Fallback: Open-Meteo (clima real si no hay datos simulados)
+        try {
+          const apiData = await getHistoricalWeatherAtLocation(selectedCity.latitude, selectedCity.longitude);
+          if (apiData && apiData.length > 0) {
+            setCityHistoryArray(apiData);
+            setTimelineIndex(apiData.length - 1);
+          } else {
+            setCityHistoryArray([]);
+          }
+        } catch (err) {
+          console.error('Historical Fallback failed', err);
+          setCityHistoryArray([]);
         }
       };
       fetchHistory();
@@ -126,13 +166,13 @@ function MapaMonitoreo() {
   // Carga paralela masiva de climas locales para todas las ciudades si se activa la vista 3D
   useEffect(() => {
     if (!isParticlesActive) return;
-    
+
     let mounted = true;
     const fetchLocalWeathers = async () => {
       try {
         const results = await getBulkWeatherForLocations(citiesData);
         if (mounted) {
-          setLocalWeathers(prev => ({...prev, ...results}));
+          setLocalWeathers(prev => ({ ...prev, ...results }));
         }
       } catch (e) { console.error("Error bulk weather", e); }
     };
@@ -141,10 +181,10 @@ function MapaMonitoreo() {
     return () => { mounted = false; };
   }, [isParticlesActive]);
 
-  const searchRef    = useRef(null);
-  const debounceRef  = useRef(null);
+  const searchRef = useRef(null);
+  const debounceRef = useRef(null);
 
-  const mapRef      = useRef(null);
+  const mapRef = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
 
   // Abrir modal o centrar en ciudad inyectada según el estado de navegación
@@ -258,7 +298,7 @@ function MapaMonitoreo() {
   let activeCity = selectedCity
     ? citiesData.find(c => c.id === selectedCity.id) || selectedCity
     : null;
-    
+
   // Override para Modo Histórico enfocado en la ciudad seleccionada
   if (isHistoricalMode && activeCity && cityHistoryArray.length > 0 && cityHistoryArray[timelineIndex]) {
     // Sobrescribimos temporalmente solo los datos internos que muestra el panel flotante
@@ -269,126 +309,24 @@ function MapaMonitoreo() {
         ...activeCity.data,
         temperatura: histData.temperatura,
         weatherCode: histData.weatherCode,
-        aqi:     histData.aqi     != null ? histData.aqi     : '--',
-        ica:     histData.ica     != null ? histData.ica     : '--',
-        ruido:   histData.ruido   != null ? histData.ruido   : '--',
+        aqi: histData.aqi != null ? histData.aqi : '--',
+        ica: histData.ica != null ? histData.ica : '--',
+        ruido: histData.ruido != null ? histData.ruido : '--',
         humedad: histData.humedad != null ? histData.humedad : '--'
       }
     };
   }
 
-  const MAX_METRICS = {
-    temperatura: 40,
-    aqi: 200,
-    ica: 100,
-    ruido: 100,
-    humedad: 100
-  };
+  // Modo oscuro automático cuando el heatmap está activo — mejora el contraste de colores
+  const mapStyle = isHeatmapActive
+    ? 'mapbox://styles/mapbox/dark-v11'
+    : 'mapbox://styles/mapbox/light-v11';
 
-  const heatmapData = useMemo(() => ({
-    type: 'FeatureCollection',
-    features: citiesData.map((city) => {
-      const rawValue = city.data[heatmapMetric] || 0;
-      const maxVal = MAX_METRICS[heatmapMetric];
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [city.longitude, city.latitude] },
-        properties: { intensityWeight: Math.min(rawValue / maxVal, 1), val: rawValue }
-      };
-    })
-  }), [citiesData, heatmapMetric]);
-
-  const heatmapLayer = useMemo(() => {
-    let heatmapColor;
-    switch (heatmapMetric) {
-      case 'temperatura':
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(0,0,0,0)',
-          0.1, '#08306b', // Frio extremo
-          0.2, '#2171b5', // Frio
-          0.4, '#6baed6', // Fresco
-          0.5, '#74c476', // Confortable
-          0.7, '#fee08b', // Calido
-          0.85, '#fd8d3c', // Calor
-          1.0, '#bd0026'  // Calor extremo
-        ];
-        break;
-      case 'aqi':
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(0,0,0,0)',
-          0.2, '#00e400',   // Bueno
-          0.4, '#ffff00',   // Moderado
-          0.6, '#ff7e00',   // Dañino sensibles
-          0.8, '#ff0000',   // No saludable
-          0.9, '#8f3f97',   // Muy no saludable
-          1.0, '#7e0023'    // Peligroso
-        ];
-        break;
-      case 'ica':
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(0,0,0,0)',
-          0.25, '#6d4c41',  // Muy mala
-          0.5, '#f57c00',   // Mala
-          0.7, '#fbc02d',   // Regular
-          0.9, '#1976d2',   // Buena
-          1.0, '#0d47a1'    // Excelente
-        ];
-        break;
-      case 'ruido':
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(0,0,0,0)',
-          0.3, '#1a9850',   // Silencio
-          0.55, '#91cf60',  // Tranquilo
-          0.7, '#ffffbf',   // Moderado
-          0.85, '#fc8d59',  // Ruidoso
-          0.95, '#d73027',  // Dañino
-          1.0, '#7f0000'    // Peligroso
-        ];
-        break;
-      case 'humedad':
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(0,0,0,0)',
-          0.2, '#fdae61',   // Muy seco
-          0.4, '#fee090',   // Seco
-          0.6, '#abd9e9',   // Confortable
-          0.8, '#74add1',   // Humedo
-          1.0, '#313695'    // Muy humedo
-        ];
-        break;
-      default:
-        heatmapColor = [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0, 'rgba(33,102,172,0)',
-          0.2, 'rgb(103,169,207)',
-          0.4, 'rgb(209,229,240)',
-          0.6, 'rgb(253,219,199)',
-          0.8, 'rgb(239,138,98)',
-          1, 'rgb(178,24,43)'
-        ];
-    }
-
-    return {
-      id: 'heatmap-layer',
-      type: 'heatmap',
-      paint: {
-        'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensityWeight'], 0, 0, 1, 1],
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 3],
-        'heatmap-color': heatmapColor,
-        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 30, 9, 70],
-        'heatmap-opacity': 0.8
-      }
-    };
-  }, [heatmapMetric]);
-
+  // Vista centrada en Sudamérica
   const [viewState, setViewState] = useState({
-    longitude: -64.6853,
-    latitude: -16.2902,
-    zoom: 5
+    longitude: -60.0,
+    latitude: -20.0,
+    zoom: 3.5
   });
 
   const getAqiColor = (aqi) => {
@@ -398,12 +336,22 @@ function MapaMonitoreo() {
     return '#ff0000';
   };
 
+  const getDynamicColor = (metricKey, value) => {
+    if (value === null || value === undefined || isNaN(value)) return 'var(--ink)';
+    if (metricKey === heatmapMetric && umbrales.length > 0) {
+      const color = colorPorValor(umbrales, value);
+      return color !== '#666' ? color : 'var(--ink)';
+    }
+    if (metricKey === 'aqi') return getAqiColor(value);
+    return 'var(--ink)';
+  };
+
   // Disparo inicial de clima al encender el Switch
   useEffect(() => {
     if (isParticlesActive) {
       getWeatherAtLocation(viewState.latitude, viewState.longitude).then(w => {
-         if (w && w.current) setWeatherCode(w.current.weather_code);
-      }).catch(() => {});
+        if (w && w.current) setWeatherCode(w.current.weather_code);
+      }).catch(() => { });
     }
   }, [isParticlesActive]);
 
@@ -417,22 +365,40 @@ function MapaMonitoreo() {
       if (weather && weather.current) {
         setWeatherCode(weather.current.weather_code);
       }
-    } catch(err) {
+    } catch (err) {
       console.error("Error auto-fetching weather map center", err);
     }
   };
 
   const handleMapClick = async (evt) => {
-    if (isHeatmapActive) {
-        setSelectedCity(null);
-        return;
+    const { lng, lat } = evt.lngLat;
+
+    // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
+    const nearest = citiesData.reduce(
+      (best, city) => {
+        const d = Math.hypot(city.latitude - lat, city.longitude - lng);
+        return d < best.dist ? { city, dist: d } : best;
+      },
+      { city: null, dist: Infinity }
+    );
+
+    if (nearest.city && nearest.dist < 2.5) {
+      // Usar datos del simulador directamente
+      setSelectedCity({
+        ...nearest.city,
+        subtitle: `Área de ${nearest.city.name} (simulación)`,
+      });
+      try {
+        const weather = await getWeatherAtLocation(lat, lng);
+        if (weather?.current) setWeatherCode(weather.current.weather_code);
+      } catch { /* ignorar */ }
+      return;
     }
 
-    const { lng, lat } = evt.lngLat;
-    
+    // Fuera del radio del simulador → consultar APIs externas
     const clickCity = {
       id: `click_${Date.now()}`,
-      name: `Buscando zona...`,
+      name: 'Buscando zona...',
       subtitle: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
       latitude: lat,
       longitude: lng,
@@ -440,7 +406,7 @@ function MapaMonitoreo() {
       isLoading: true
     };
     setSelectedCity(clickCity);
-    setWeatherCode(null); // Reseteamos clima mientras carga
+    setWeatherCode(null);
 
     try {
       const [weather, aqiData, placeName] = await Promise.all([
@@ -450,29 +416,28 @@ function MapaMonitoreo() {
       ]);
 
       let wCode = null;
-      let newCityData = { ...clickCity.data };
-      
+      const newCityData = { ...clickCity.data };
+
       if (weather && weather.current) {
-          newCityData.temperatura = weather.current.temperature_2m;
-          newCityData.humedad = weather.current.relative_humidity_2m;
-          wCode = weather.current.weather_code;
+        newCityData.temperatura = weather.current.temperature_2m;
+        newCityData.humedad = weather.current.relative_humidity_2m;
+        wCode = weather.current.weather_code;
       }
       if (aqiData && aqiData.current) {
-          newCityData.aqi = aqiData.current.european_aqi;
+        newCityData.aqi = aqiData.current.european_aqi;
       }
 
       setWeatherCode(wCode);
-
       setSelectedCity({
         ...clickCity,
-        name: placeName ? placeName : 'Ubicación Desconocida',
-        subtitle: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`,
+        name: placeName || 'Ubicación Desconocida',
+        subtitle: `📡 API externa — Lat: ${lat.toFixed(3)}, Lng: ${lng.toFixed(3)}`,
         data: newCityData,
         isLoading: false
       });
     } catch (e) {
-      console.error("Error al obtener datos:", e);
-      setSelectedCity({ ...clickCity, name: 'Error en conexión' });
+      console.error('Error al obtener datos:', e);
+      setSelectedCity({ ...clickCity, name: 'Error en conexión', isLoading: false });
     }
   };
 
@@ -583,46 +548,62 @@ function MapaMonitoreo() {
               pendingFlyTo.current = null
             }
           }}
-          mapStyle="mapbox://styles/mapbox/light-v11"
+          mapStyle={mapStyle}
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={handleMapClick}
         >
           <GeolocateControl position="bottom-right" />
           <FullscreenControl position="bottom-right" />
           <NavigationControl position="bottom-right" />
-          
-          {/* Capa de Mapa de Calor de Calidad del Aire */}
+
+          {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
-            <Source id="heatmap-data" type="geojson" data={heatmapData}>
-              <Layer {...heatmapLayer} />
-            </Source>
+            <VoronoiLayer
+              metrica={heatmapMetric}
+              umbrales={umbrales}
+              cities={citiesData}
+              activeFilter={activeUmbralFilter}
+            />
           )}
 
-          {/* Marcadores — se muestran siempre fuera del modo heatmap */}
-          {!isHeatmapActive && citiesData.map((city) => (
-            <Marker
-              key={city.id}
-              longitude={city.longitude}
-              latitude={city.latitude}
-              anchor="bottom"
-              onClick={async (e) => {
-                e.originalEvent.stopPropagation();
+          {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
+          {isHeatmapActive ? (
+            <MarkersLayer
+              cities={citiesData}
+              metrica={heatmapMetric}
+              umbrales={umbrales}
+              onCityClick={async (city) => {
                 setSelectedCity(city);
                 try {
                   const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                  let finalCode = weather.current.weather_code;
-                  
-                  setWeatherCode(finalCode);
-                } catch(err) {
-                  console.error("Error obteniendo clima para el marcador", err);
-                }
+                  if (weather && weather.current) setWeatherCode(weather.current.weather_code);
+                } catch (err) { console.error(err); }
               }}
-            >
-              <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                <span role="img" aria-label="pin">📍</span>
-              </div>
-            </Marker>
-          ))}
+            />
+          ) : (
+            /* Marcadores PIN — en modo heatmap OFF */
+            citiesData.map((city) => (
+              <Marker
+                key={city.id}
+                longitude={city.longitude}
+                latitude={city.latitude}
+                anchor="bottom"
+                onClick={async (e) => {
+                  e.originalEvent.stopPropagation();
+                  setSelectedCity(city);
+                  try {
+                    const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                    if (weather?.current) setWeatherCode(weather.current.weather_code);
+                  } catch (err) { console.error(err); }
+                }}
+              >
+                <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
+                  <span role="img" aria-label="pin">📍</span>
+                </div>
+              </Marker>
+            ))
+          )}
+
         </Map>
 
         <HeatmapLegend
@@ -633,86 +614,80 @@ function MapaMonitoreo() {
           unidad={unidades[heatmapMetric]}
         />
 
-        {/* Panel Flotante de Información */}
-        {(!isHeatmapActive && activeCity) && (
-          <div className="city-info-panel">
-            <button className="close-panel-btn" onClick={() => setSelectedCity(null)} aria-label="Cerrar panel">×</button>
-            <div className="panel-header">
-              <h3>{activeCity.name}</h3>
-              <p className="panel-subtitle">
-                {activeCity.subtitle 
-                  ? activeCity.subtitle 
-                  : (isRunning ? 'Datos en tiempo real (simulados)' : 'Datos estáticos')}
-              </p>
-            </div>
-            <div className="panel-body">
-              <div className="data-item">
-                <div className="data-icon">🌡️</div>
-                <div className="data-content">
-                  <span className="data-label">Temperatura</span>
-                  <span className="data-value">{formatearValor('temperatura', activeCity.data.temperatura, unidades.temperatura)}</span>
-                </div>
+        {/* Panel Flotante de Información — arrastrable, visible en ambos modos */}
+        {activeCity && (
+          <Draggable className="city-info-panel-wrapper">
+            <div className="city-info-panel">
+              <button className="close-panel-btn" onClick={() => setSelectedCity(null)} aria-label="Cerrar panel">×</button>
+              <div className="panel-header">
+                {activeCity.isLoading
+                  ? <div className="panel-skeleton-title" />
+                  : <h3>{activeCity.name}</h3>
+                }
+                <p className="panel-subtitle">
+                  {activeCity.isLoading
+                    ? 'Consultando datos...'
+                    : activeCity.subtitle
+                      ? <><span className="panel-source-badge">📡 API</span> {activeCity.subtitle}</>
+                      : isRunning
+                        ? <><span className="panel-source-badge sim">🔬 Simulado</span> Tiempo real</>
+                        : 'Datos estáticos'
+                  }
+                </p>
               </div>
-              <div className="data-item">
-                <div className="data-icon">🌫️</div>
-                <div className="data-content">
-                  <span className="data-label">Calidad del Aire</span>
-                  <span className="data-value" style={{ color: getAqiColor(activeCity.data.aqi), fontWeight: 'bold' }}>
-                    {formatearValor('aqi', activeCity.data.aqi, unidades.aqi)}
-                  </span>
-                </div>
-              </div>
-              <div className="data-item">
-                <div className="data-icon">💧</div>
-                <div className="data-content">
-                  <span className="data-label">Calidad del Agua</span>
-                  <span className="data-value">{formatearValor('ica', activeCity.data.ica, unidades.ica)}</span>
-                </div>
-              </div>
-              <div className="data-item">
-                <div className="data-icon">🔊</div>
-                <div className="data-content">
-                  <span className="data-label">Nivel de Ruido</span>
-                  <span className="data-value">{formatearValor('ruido', activeCity.data.ruido, unidades.ruido)}</span>
-                </div>
-              </div>
-              <div className="data-item">
-                <div className="data-icon">💦</div>
-                <div className="data-content">
-                  <span className="data-label">Humedad</span>
-                  <span className="data-value">{formatearValor('humedad', activeCity.data.humedad, unidades.humedad)}</span>
-                </div>
+              <div className="panel-body">
+                {[
+                  { icon: '🌡️', label: 'Temperatura', key: 'temperatura', unit: unidades.temperatura },
+                  { icon: '🌫️', label: 'Calidad del Aire', key: 'aqi', unit: unidades.aqi },
+                  { icon: '💧', label: 'Calidad del Agua', key: 'ica', unit: unidades.ica },
+                  { icon: '🔊', label: 'Nivel de Ruido', key: 'ruido', unit: unidades.ruido },
+                  { icon: '💦', label: 'Humedad', key: 'humedad', unit: unidades.humedad },
+                ].map(({ icon, label, key, unit }) => (
+                  <div key={key} className="data-item">
+                    <div className="data-icon">{icon}</div>
+                    <div className="data-content">
+                      <span className="data-label">{label}</span>
+                      {activeCity.isLoading
+                        ? <div className="panel-skeleton-value" />
+                        : <span className="data-value" style={{ color: getDynamicColor(key, activeCity.data[key]), fontWeight: 'bold' }}>
+                          {formatearValor(key, activeCity.data[key], unit)}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          </Draggable>
         )}
+
 
         {/* Panel Unificado de Leyendas y Unidades */}
         <Draggable className={`unified-legend-panel ${!isLegendOpen ? 'collapsed' : ''}`}>
           <div className="unified-legend-header">
             <div className="unified-legend-tabs">
-              <button 
+              <button
                 className={`legend-tab ${activeLegendTab === 'unidades' ? 'active' : ''}`}
                 onClick={() => setActiveLegendTab('unidades')}
               >
                 Unidades
               </button>
-              <button 
+              <button
                 className={`legend-tab ${activeLegendTab === 'clima' ? 'active' : ''}`}
                 onClick={() => setActiveLegendTab('clima')}
               >
                 Clima 3D
               </button>
             </div>
-            <button 
-              className="legend-toggle-btn" 
+            <button
+              className="legend-toggle-btn"
               onClick={() => setIsLegendOpen(!isLegendOpen)}
               title={isLegendOpen ? "Ocultar panel" : "Mostrar panel"}
             >
               {isLegendOpen ? '▼' : '▲'}
             </button>
           </div>
-          
+
           {isLegendOpen && (
             <div className="unified-legend-body">
               {activeLegendTab === 'unidades' && (
@@ -737,7 +712,7 @@ function MapaMonitoreo() {
                   ))}
                 </div>
               )}
-              
+
               {activeLegendTab === 'clima' && (
                 <div className="clima-legend-content">
                   <div className="clima-legend-item">
@@ -855,10 +830,10 @@ function MapaMonitoreo() {
           )}
         </Draggable>
       </div>
-      
-      <WeatherParticles 
-        isEnabled={isParticlesActive} 
-        weatherCode={weatherCode} 
+
+      <WeatherParticles
+        isEnabled={isParticlesActive}
+        weatherCode={weatherCode}
         currentZoom={viewState.zoom}
       />
 
@@ -870,7 +845,7 @@ function MapaMonitoreo() {
       )}
 
       {isHistoricalMode && activeCity && (
-        <Timeline 
+        <Timeline
           cityHistoryArray={cityHistoryArray}
           currentIndex={timelineIndex}
           onIndexChange={(idx) => setTimelineIndex(idx)}

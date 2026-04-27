@@ -1,0 +1,105 @@
+<h2>¿Cómo recortar el manto de color al continente?</h2>
+<p class="subtitle">La capa IDW actual pinta el océano porque cubre un bbox rectangular. Hay 3 estrategias para evitarlo.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0f7f0;padding:16px;border-radius:8px;text-align:center;">
+      <svg width="180" height="120" viewBox="-90 -60 180 130">
+        <!-- Silueta simplificada de Sudamérica -->
+        <path d="M-20,-55 Q0,-58 15,-50 Q30,-40 35,-20 Q40,10 30,40 Q20,65 5,75 Q-10,80 -20,70 Q-35,60 -40,40 Q-50,15 -45,-10 Q-40,-35 -30,-50 Z" fill="#4ade80" opacity="0.7" stroke="#16a34a" stroke-width="1.5"/>
+        <!-- Puntos en tierra -->
+        <circle cx="-15" cy="-10" r="4" fill="#ef4444" opacity="0.8"/>
+        <circle cx="5" cy="10" r="4" fill="#f97316" opacity="0.8"/>
+        <circle cx="-25" cy="30" r="4" fill="#84cc16" opacity="0.8"/>
+        <circle cx="-5" cy="45" r="4" fill="#22c55e" opacity="0.8"/>
+        <!-- Gradiente heatmap limitado -->
+        <circle cx="-15" cy="-10" r="35" fill="url(#g1)" opacity="0.4"/>
+        <circle cx="5" cy="10" r="30" fill="url(#g2)" opacity="0.4"/>
+        <circle cx="-25" cy="30" r="28" fill="url(#g3)" opacity="0.4"/>
+        <defs>
+          <radialGradient id="g1"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+          <radialGradient id="g2"><stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+          <radialGradient id="g3"><stop offset="0%" stop-color="#22c55e"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+        <!-- Océano sin color -->
+        <text x="-80" y="-45" font-size="8" fill="#94a3b8">océano limpio</text>
+      </svg>
+      <div style="font-size:11px;color:#059669;margin-top:6px;font-weight:600;">Puntos limitados a 8° de ciudad más cercana</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Radio máximo por ciudad</h3>
+      <p>Genera puntos de la cuadrícula IDW solo si están a menos de 8° de una ciudad. Sin fetch externo, sin dependencias. El heatmap nativo de Mapbox difumina los puntos.</p>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pro</h4><ul><li>Sin dependencias externas</li><li>Funciona offline / Docker</li><li>Simple de implementar</li></ul></div>
+        <div class="cons"><h4>Contra</h4><ul><li>Puede "sangrar" levemente en costas</li><li>No respeta exactamente el contorno</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f0f4ff;padding:16px;border-radius:8px;text-align:center;">
+      <svg width="180" height="120" viewBox="-90 -60 180 130">
+        <!-- Silueta del continente como mask -->
+        <defs>
+          <clipPath id="continent">
+            <path d="M-20,-55 Q0,-58 15,-50 Q30,-40 35,-20 Q40,10 30,40 Q20,65 5,75 Q-10,80 -20,70 Q-35,60 -40,40 Q-50,15 -45,-10 Q-40,-35 -30,-50 Z"/>
+          </clipPath>
+          <radialGradient id="g4"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+          <radialGradient id="g5"><stop offset="0%" stop-color="#f97316"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+        <!-- Océano -->
+        <rect x="-90" y="-60" width="180" height="130" fill="#dbeafe" opacity="0.4"/>
+        <!-- Heatmap clipeado al continente -->
+        <g clip-path="url(#continent)">
+          <rect x="-90" y="-60" width="180" height="130" fill="url(#g4)" opacity="0.5"/>
+          <circle cx="5" cy="10" r="50" fill="url(#g5)" opacity="0.6"/>
+          <circle cx="-25" cy="30" r="45" fill="#22c55e" opacity="0.3"/>
+        </g>
+        <!-- Borde del continente -->
+        <path d="M-20,-55 Q0,-58 15,-50 Q30,-40 35,-20 Q40,10 30,40 Q20,65 5,75 Q-10,80 -20,70 Q-35,60 -40,40 Q-50,15 -45,-10 Q-40,-35 -30,-50 Z" fill="none" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="-80" y="-45" font-size="8" fill="#94a3b8">sin color</text>
+      </svg>
+      <div style="font-size:11px;color:#3b82f6;margin-top:6px;font-weight:600;">Heatmap exactamente recortado al contorno</div>
+    </div>
+    <div class="card-body">
+      <h3>B — Clip GeoJSON bundled</h3>
+      <p>Incluir un archivo GeoJSON de Sudamérica (~250 KB) en el proyecto. Usarlo como clipPath en Mapbox para que el heatmap no salga del continente. Sin fetch externo.</p>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pro</h4><ul><li>Contorno exacto del continente</li><li>Sin internet en runtime</li><li>Resultado visual perfecto</li></ul></div>
+        <div class="cons"><h4>Contra</h4><ul><li>Archivo GeoJSON en el repo</li><li>Mapbox clip-layer es experimental</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#fff8f0;padding:16px;border-radius:8px;text-align:center;">
+      <svg width="180" height="120" viewBox="-90 -60 180 130">
+        <defs>
+          <radialGradient id="g6"><stop offset="0%" stop-color="#ef4444"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+        </defs>
+        <!-- Heatmap sin recorte, solo en ciudades -->
+        <rect x="-90" y="-60" width="180" height="130" fill="#f8fafc"/>
+        <circle cx="-15" cy="-10" r="40" fill="#ef4444" opacity="0.25"/>
+        <circle cx="5" cy="10" r="38" fill="#f97316" opacity="0.25"/>
+        <circle cx="-25" cy="30" r="35" fill="#22c55e" opacity="0.3"/>
+        <circle cx="-5" cy="45" r="30" fill="#22c55e" opacity="0.3"/>
+        <!-- Silueta del continente apenas visible -->
+        <path d="M-20,-55 Q0,-58 15,-50 Q30,-40 35,-20 Q40,10 30,40 Q20,65 5,75 Q-10,80 -20,70 Q-35,60 -40,40 Q-50,15 -45,-10 Q-40,-35 -30,-50 Z" fill="none" stroke="#cbd5e1" stroke-width="0.8" stroke-dasharray="3,2"/>
+        <text x="-80" y="-45" font-size="8" fill="#94a3b8">leve sangrado</text>
+      </svg>
+      <div style="font-size:11px;color:#d97706;margin-top:6px;font-weight:600;">Solo heatmap nativo · sin masking adicional</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Heatmap puro (sin clip)</h3>
+      <p>Usar el heatmap nativo de Mapbox directamente sobre las ciudades como fuente (sin cuadrícula IDW extra). Simple y rápido. El radio grande crea mezcla suave, pero puede haber algo de sangrado en el océano.</p>
+      <div class="pros-cons" style="margin-top:10px;">
+        <div class="pros"><h4>Pro</h4><ul><li>Implementación más sencilla</li><li>Sin archivos adicionales</li><li>Render muy rápido</li></ul></div>
+        <div class="cons"><h4>Contra</h4><ul><li>Sangra en el océano (mínimo)</li><li>Cobertura más dispersa</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px;">Haz clic en la opción que prefieras, luego dime en el terminal. Las 3 usan el heatmap nativo de Mapbox con los colores de los umbrales de la BD.</p>

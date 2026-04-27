@@ -1,6 +1,44 @@
 const db = require('../../config/db')
 
 const historialController = {
+  /**
+   * GET /api/historial/ciudad/:localidadId?horas=24
+   * Devuelve el historial horario de una ciudad específica.
+   * Agrupa por hora para reducir el volumen de datos al cliente.
+   */
+  getCiudadHistorial: async (req, res) => {
+    try {
+      const { localidadId } = req.params
+      const horas = parseInt(req.query.horas) || 24
+
+      const { rows } = await db.query(`
+        SELECT
+          date_trunc('hour', l.tiempo)    AS hora,
+          m.clave                         AS metrica,
+          ROUND(AVG(l.valor)::numeric, 2) AS valor
+        FROM lecturas l
+        JOIN metricas m ON m.id = l.metrica_id
+        WHERE l.localidad_id = $1
+          AND l.tiempo >= NOW() - ($2 || ' hours')::interval
+        GROUP BY hora, m.clave
+        ORDER BY hora ASC
+      `, [localidadId, horas])
+
+      // Agrupar por hora → [{ timestamp, data: { aqi, temperatura, ... } }]
+      const horaMap = new Map()
+      for (const r of rows) {
+        const key = r.hora.toISOString()
+        if (!horaMap.has(key)) horaMap.set(key, { timestamp: key, data: {} })
+        horaMap.get(key).data[r.metrica] = Number(r.valor)
+      }
+
+      res.json([...horaMap.values()])
+    } catch (err) {
+      console.error('[historial/ciudad] error:', err)
+      res.status(500).json({ msg: 'Error obteniendo historial de ciudad', error: err.message })
+    }
+  },
+
   getHistorial: async (req, res) => {
     try {
       const { rows } = await db.query(`

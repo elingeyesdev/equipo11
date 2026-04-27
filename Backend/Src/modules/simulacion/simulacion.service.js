@@ -1,26 +1,32 @@
 /**
  * Servicio de Simulación de Datos Ambientales
- * 
+ *
  * Principios aplicados:
  * - SRP: Solo se encarga de generar y gestionar datos simulados.
  * - KISS: Lógica de variación gradual simple (clamp + random delta).
  * - DRY: Función clamp y generateDelta reutilizadas para todas las métricas.
  * - OCP: Agregar una nueva métrica solo requiere añadirla al objeto METRIC_CONFIG.
+ *
+ * Mejoras v2:
+ * - Ciclo diurno (temperatura y AQI varían con la hora del día)
+ * - Correlación entre métricas (humedad ↑ cuando temperatura ↓)
+ * - Picos de ruido en hora punta (7-9am, 5-8pm)
+ * - Persistencia throttled: solo 1 vez por hora para no explotar la BD
  */
-const DEPARTAMENTOS = require('./departamentos.data')
+const LOCALIDADES = require('./localidades.data')
 
 // Configuración de variación por métrica (delta máximo por tick)
 const METRIC_CONFIG = {
-  temperatura: { delta: 2 },
-  aqi:         { delta: 12 },
-  ica:         { delta: 6 },
-  ruido:       { delta: 5 },
-  humedad:     { delta: 4 }
+  temperatura: { delta: 0.8 },
+  aqi:         { delta: 8   },
+  ica:         { delta: 4   },
+  ruido:       { delta: 4   },
+  humedad:     { delta: 3   },
 }
 
 // Rangos válidos absolutos por métrica (para validar inyección manual)
 const METRIC_LIMITS = {
-  temperatura: { min: -40, max: 60 },
+  temperatura: { min: -40, max: 60  },
   aqi:         { min: 0,   max: 500 },
   ica:         { min: 0,   max: 100 },
   ruido:       { min: 0,   max: 140 },
@@ -55,7 +61,7 @@ function randomInRange(min, max) {
  * dentro de sus rangos definidos.
  */
 function createInitialState() {
-  return DEPARTAMENTOS.map(dept => {
+  return LOCALIDADES.map(dept => {
     const data = {}
     METRIC_KEYS.forEach(metric => {
       const [min, max] = dept.ranges[metric]
@@ -73,20 +79,93 @@ function createInitialState() {
 }
 
 /**
- * Genera el siguiente tick de datos aplicando variación gradual
- * sobre el estado previo. Cada métrica varía ±delta y se mantiene
- * dentro de su rango geográfico.
+ * Factor diurno basado en la hora local: valor ∈ [-1, 1].
+ * Pico positivo al mediodía (~14:00), negativo en la madrugada (~4:00).
+ */
+function getDiurnalFactor() {
+  const hour = new Date().getHours() // 0-23
+  // sin crece desde hora 6 (amanecer) hasta 14 (mediodía) y baja hasta las 2am
+  return Math.sin((hour - 6) * Math.PI / 12)
+}
+
+/**
+ * Verdadero si es hora punta (7-9am o 17-20pm).
+ */
+function isRushHour() {
+  const hour = new Date().getHours()
+  return (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20)
+}
+
+/**
+ * Genera el siguiente tick de datos con:
+ * - Variación gradual aleatoria
+ * - Ciclo diurno (temperatura, AQI)
+ * - Correlaciones entre métricas (humedad ↔ temperatura, ICA ↔ AQI)
+ * - Ruido extra en hora punta
  */
 function generateNextTick(previousState) {
+  const diurnal = getDiurnalFactor()  // -1 a +1
+  const rushHour = isRushHour()
+
   return previousState.map(city => {
-    const dept = DEPARTAMENTOS.find(d => d.id === city.id)
+    const dept = LOCALIDADES.find(d => d.id === city.id)
     const newData = {}
 
-    METRIC_KEYS.forEach(metric => {
-      const [min, max] = dept.ranges[metric]
-      const delta = generateDelta(METRIC_CONFIG[metric].delta)
-      newData[metric] = clamp(Math.round(city.data[metric] + delta), min, max)
-    })
+    // --- TEMPERATURA con ciclo diurno ---
+    const [tMin, tMax] = dept.ranges.temperatura
+    const tCenter    = (tMin + tMax) / 2
+    const tAmplitude = (tMax - tMin) / 2
+    // Target diurno: más calor al mediodía, más frío de madrugada
+    const tempTarget = clamp(tCenter + diurnal * tAmplitude * 0.45, tMin, tMax)
+    const tempDelta  = generateDelta(METRIC_CONFIG.temperatura.delta)
+    // Suave atracción al target diurno (10% por tick) + ruido
+    newData.temperatura = clamp(
+      Math.round(city.data.temperatura + tempDelta + (tempTarget - city.data.temperatura) * 0.10),
+      tMin, tMax
+    )
+
+    // --- HUMEDAD inversamente correlacionada con temperatura ---
+    const [hMin, hMax] = dept.ranges.humedad
+    // Cuando temperatura sube → humedad relativa baja (correlación -0.6)
+    const tNorm       = (newData.temperatura - tMin) / (tMax - tMin + 0.001)
+    const humTarget   = clamp(hMax - tNorm * (hMax - hMin) * 0.60, hMin, hMax)
+    const humDelta    = generateDelta(METRIC_CONFIG.humedad.delta)
+    newData.humedad   = clamp(
+      Math.round(city.data.humedad + humDelta + (humTarget - city.data.humedad) * 0.08),
+      hMin, hMax
+    )
+
+    // --- AQI: sube de día (tráfico, calor) y en hora punta ---
+    const [aMin, aMax] = dept.ranges.aqi
+    const aCenter    = (aMin + aMax) / 2
+    const aAmplitude = (aMax - aMin) / 2
+    // Target: sube 20% en pico de día y otro 15% en hora punta
+    const aqiTarget  = clamp(
+      aCenter + diurnal * aAmplitude * 0.20 + (rushHour ? aAmplitude * 0.15 : 0),
+      aMin, aMax
+    )
+    const aqiDelta   = generateDelta(METRIC_CONFIG.aqi.delta)
+    newData.aqi      = clamp(
+      Math.round(city.data.aqi + aqiDelta + (aqiTarget - city.data.aqi) * 0.07),
+      aMin, aMax
+    )
+
+    // --- ICA inversamente correlado con AQI ---
+    const [iMin, iMax] = dept.ranges.ica
+    // Más contaminación → peor calidad de agua (correlación -0.5)
+    const aqiNorm    = (newData.aqi - aMin) / (aMax - aMin + 0.001)
+    const icaTarget  = clamp(iMax - aqiNorm * (iMax - iMin) * 0.50, iMin, iMax)
+    const icaDelta   = generateDelta(METRIC_CONFIG.ica.delta)
+    newData.ica      = clamp(
+      Math.round(city.data.ica + icaDelta + (icaTarget - city.data.ica) * 0.06),
+      iMin, iMax
+    )
+
+    // --- RUIDO: pico en hora punta + variación de fondo ---
+    const [rMin, rMax] = dept.ranges.ruido
+    const rushBoost   = rushHour ? 8 : 0
+    const ruidoDelta  = generateDelta(METRIC_CONFIG.ruido.delta) + rushBoost
+    newData.ruido     = clamp(Math.round(city.data.ruido + ruidoDelta), rMin, rMax)
 
     return { ...city, data: newData }
   })
@@ -94,56 +173,72 @@ function generateNextTick(previousState) {
 
 // --- Estado interno del servicio ---
 let currentState = createInitialState()
-let intervalId = null
-let tickCount = 0
+let intervalId   = null
+let tickCount    = 0
 
-// --- Integración con Base de Datos (Tarea 1.6) ---
+// --- Integración con Base de Datos ---
 const db = require('../../config/db')
 let dbMapping = { localidades: {}, metricas: {} }
 
+// Throttle: solo persistir 1 vez por hora para no llenar la BD
+let lastPersistTime = 0
+const PERSIST_INTERVAL_MS = 60 * 60 * 1000  // 1 hora
+
 async function loadDbMapping() {
   try {
-    const locRes = await db.query('SELECT id, nombre FROM localidades');
-    locRes.rows.forEach(r => dbMapping.localidades[r.nombre.toLowerCase()] = r.id);
-    
-    const metRes = await db.query('SELECT id, clave FROM metricas');
-    metRes.rows.forEach(r => dbMapping.metricas[r.clave] = r.id);
+    const locRes = await db.query('SELECT id, nombre FROM localidades')
+    locRes.rows.forEach(r => { dbMapping.localidades[r.nombre.toLowerCase()] = r.id })
+
+    const metRes = await db.query('SELECT id, clave FROM metricas')
+    metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
+
+    console.log(`[Simulación] DB mapping cargado: ${Object.keys(dbMapping.localidades).length} localidades, ${Object.keys(dbMapping.metricas).length} métricas`)
   } catch (err) {
-    console.error('[Simulación] Error cargando DB mapping. La simulación no guardará en BD hasta que exista esquema:', err.message);
+    console.error('[Simulación] Error cargando DB mapping:', err.message)
   }
 }
 
+/**
+ * Persiste el estado actual en la tabla lecturas.
+ * Solo ejecuta si pasó al menos 1 hora desde el último guardado.
+ */
 async function persistReadings(state) {
-  if (!Object.keys(dbMapping.localidades).length) return;
-  
-  const localidadIds = [];
-  const metricaIds = [];
-  const valores = [];
-  
+  if (!Object.keys(dbMapping.localidades).length) return
+
+  const now = Date.now()
+  if (now - lastPersistTime < PERSIST_INTERVAL_MS) return  // Throttle horario
+  lastPersistTime = now
+
+  const localidadIds = []
+  const metricaIds   = []
+  const valores      = []
+
   state.forEach(city => {
-    const locId = dbMapping.localidades[city.name.toLowerCase()];
-    if (!locId) return;
-    
+    const locId = dbMapping.localidades[city.name.toLowerCase()]
+    if (!locId) return
+
     Object.entries(city.data).forEach(([metricKey, val]) => {
-      const metId = dbMapping.metricas[metricKey];
+      const metId = dbMapping.metricas[metricKey]
       if (metId && val !== null) {
-        localidadIds.push(locId);
-        metricaIds.push(metId);
-        valores.push(val);
+        localidadIds.push(locId)
+        metricaIds.push(metId)
+        valores.push(val)
       }
-    });
-  });
-  
-  if (!localidadIds.length) return;
-  
+    })
+  })
+
+  if (!localidadIds.length) return
+
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
       ON CONFLICT DO NOTHING
-    `, [localidadIds, metricaIds, valores]);
+    `, [localidadIds, metricaIds, valores])
+
+    console.log(`[Simulación] Snapshot horario guardado: ${localidadIds.length} lecturas`)
   } catch (err) {
-    console.error('[Simulación] Error guardando tick en BD:', err.message);
+    console.error('[Simulación] Error guardando snapshot horario:', err.message)
   }
 }
 
@@ -154,15 +249,16 @@ async function persistReadings(state) {
 function start(intervalMs, onTick) {
   if (intervalId) return false // Ya está corriendo
 
-  loadDbMapping(); // Carga de IDs para persistencia
+  loadDbMapping() // Carga de IDs para persistencia
 
   tickCount = 0
   currentState = createInitialState()
+  lastPersistTime = 0  // Resetear throttle al iniciar
 
   intervalId = setInterval(() => {
     currentState = generateNextTick(currentState)
     tickCount++
-    persistReadings(currentState) // Fire and forget a BD
+    persistReadings(currentState) // Throttled — solo cada hora
     onTick({
       cities: currentState,
       tickCount,
@@ -204,7 +300,6 @@ function getCurrentState() {
 /**
  * Inyecta datos manuales para una ciudad específica.
  * Los valores reemplazan el estado actual y la simulación continúa desde ahí.
- * No clampea: el usuario puede probar valores extremos a propósito.
  */
 function injectData(cityId, partialData) {
   const cityIndex = currentState.findIndex(c => c.id === cityId)
@@ -224,10 +319,48 @@ function injectData(cityId, partialData) {
     ...currentState[cityIndex],
     data: { ...currentState[cityIndex].data, ...sanitized }
   }
-  
-  persistReadings([currentState[cityIndex]]) // Guardar inyección manual en BD
+
+  // La inyección manual siempre persiste, sin throttle
+  persistInjection([currentState[cityIndex]])
 
   return true
+}
+
+/**
+ * Persiste una inyección manual inmediatamente (sin throttle).
+ */
+async function persistInjection(state) {
+  if (!Object.keys(dbMapping.localidades).length) return
+
+  const localidadIds = []
+  const metricaIds   = []
+  const valores      = []
+
+  state.forEach(city => {
+    const locId = dbMapping.localidades[city.name.toLowerCase()]
+    if (!locId) return
+
+    Object.entries(city.data).forEach(([metricKey, val]) => {
+      const metId = dbMapping.metricas[metricKey]
+      if (metId && val !== null) {
+        localidadIds.push(locId)
+        metricaIds.push(metId)
+        valores.push(val)
+      }
+    })
+  })
+
+  if (!localidadIds.length) return
+
+  try {
+    await db.query(`
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
+      SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
+      ON CONFLICT DO NOTHING
+    `, [localidadIds, metricaIds, valores])
+  } catch (err) {
+    console.error('[Simulación] Error guardando inyección manual:', err.message)
+  }
 }
 
 module.exports = { start, stop, isRunning, getCurrentState, injectData }
