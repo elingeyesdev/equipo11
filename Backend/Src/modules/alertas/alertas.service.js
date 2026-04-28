@@ -26,12 +26,23 @@ const db = require('../../config/db')
 // Ordenados por nivel ASC para búsqueda lineal eficiente.
 let umbralesCache = new Map()
 
+// ─── MAPPING DB (nombre localidad → id, clave métrica → id) ──────────────────
+let dbMapping = { localidades: {}, metricas: {} }
+
 /**
  * Carga los umbrales de la BD en memoria.
  * Debe llamarse al iniciar el servidor (antes del primer tick).
  */
 async function cargarUmbralesCache() {
   try {
+    // Cargar mapping de localidades y métricas
+    const locRes = await db.query('SELECT id, nombre FROM localidades')
+    locRes.rows.forEach(r => { dbMapping.localidades[r.nombre.toLowerCase()] = r.id })
+
+    const metRes = await db.query('SELECT id, clave FROM metricas')
+    metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
+
+    // Cargar umbrales en caché
     const { rows } = await db.query(`
       SELECT
         u.id,
@@ -102,10 +113,9 @@ function encontrarUmbral(metricaClave, valor) {
  * cambiaron de nivel de severidad no-informativa.
  *
  * @param {{ cities: Array<{ id, name, data: {[metrica]: number} }> }} tickData
- * @param {{ localidades: { [name]: id }, metricas: { [clave]: id } }} dbMapping
  * @returns {Array<{ localidad_id, metrica_id, umbral_id, valor, severidad, label, ciudad_nombre, metrica_clave }>}
  */
-function evaluarTick(tickData, dbMapping) {
+function evaluarTick(tickData) {
   if (umbralesCache.size === 0) return []  // Caché no cargada aún
 
   const alertasNuevas = []

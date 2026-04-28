@@ -10,6 +10,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./src/app')
 const { registerSocketEvents } = require('./src/modules/simulacion/simulacion.socket')
+const alertasService = require('./src/modules/alertas/alertas.service')
 
 const PORT = process.env.PORT || 3000
 
@@ -28,7 +29,9 @@ const io = new Server(server, {
 registerSocketEvents(io)
 
 // Iniciar el servidor
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`🔌 WebSocket activo en el mismo puerto`)
+  // Pre-cargar umbrales y mapping de BD para el servicio de alertas
+  await alertasService.cargarUmbralesCache()
 })

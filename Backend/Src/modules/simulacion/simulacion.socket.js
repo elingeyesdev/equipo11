@@ -1,4 +1,5 @@
 const simulacionService = require('./simulacion.service')
+const alertasService   = require('../alertas/alertas.service')
 
 const DEFAULT_INTERVAL = 3000
 
@@ -14,8 +15,15 @@ function registerSocketEvents(io) {
     socket.on('simulacion:iniciar', (options = {}) => {
       const interval = options.interval || DEFAULT_INTERVAL
 
-      const started = simulacionService.start(interval, (data) => {
+      const started = simulacionService.start(interval, async (data) => {
         io.emit('simulacion:datos', data)
+
+        // ─ Deteccion de alertas ─
+        const alertasNuevas = await alertasService.evaluarTick(data)
+        if (alertasNuevas.length > 0) {
+          await alertasService.guardarAlertas(alertasNuevas)
+          io.emit('alertas:nueva', alertasNuevas)
+        }
       })
 
       if (started) {
