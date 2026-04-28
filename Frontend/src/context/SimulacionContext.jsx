@@ -24,6 +24,11 @@ export function SimulacionProvider({ children }) {
   const [lastUpdate, setLastUpdate]   = useState(null)
   const [interval, setIntervalVal]    = useState(3000)
 
+  // ─── Alertas en tiempo real ───────────────────────────────────────────────
+  // Cada elemento: { localidad_id, metrica_id, umbral_id, valor, severidad,
+  //                  label, ciudad_nombre, metrica_clave, _uid }
+  const [alertasPendientes, setAlertasPendientes] = useState([])
+
   // Conectar al montar, desconectar al desmontar
   useEffect(() => {
     const socket = io(SOCKET_URL)
@@ -53,6 +58,13 @@ export function SimulacionProvider({ children }) {
       setLastUpdate(payload.timestamp)
     })
 
+    // Recibir alertas nuevas del servidor
+    socket.on('alertas:nueva', (nuevas) => {
+      // Añadir un _uid único para poder hacer dismiss sin depender del id de BD
+      const withUid = nuevas.map(a => ({ ...a, _uid: `${Date.now()}-${Math.random()}` }))
+      setAlertasPendientes(prev => [...prev, ...withUid])
+    })
+
     return () => {
       socket.disconnect()
     }
@@ -72,6 +84,14 @@ export function SimulacionProvider({ children }) {
     socketRef.current?.emit('simulacion:inyectar', { cityId, data })
   }, [])
 
+  /**
+   * Elimina una alerta del estado local (dismiss visual).
+   * No toca la BD — el reconocimiento persistente se hace en la página de historial.
+   */
+  const dismissAlerta = useCallback((_uid) => {
+    setAlertasPendientes(prev => prev.filter(a => a._uid !== _uid))
+  }, [])
+
   const value = {
     isConnected,
     isRunning,
@@ -81,7 +101,9 @@ export function SimulacionProvider({ children }) {
     interval,
     iniciar,
     detener,
-    inyectar
+    inyectar,
+    alertasPendientes,
+    dismissAlerta,
   }
 
   return (
