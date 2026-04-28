@@ -137,8 +137,13 @@ function evaluarTick(tickData) {
       // Anti-tormenta: solo actuar si el nivel cambió
       if (umbral.nivel === nivelAnterior) continue
 
-      // Actualizar estado interno siempre (para todos los niveles)
+      // Warm-up: el primer registro de cada pareja (ciudad, métrica) solo
+      // siembra el estado interno, nunca emite alerta. Evita el "burst" de
+      // ~80 alertas al arrancar (cada ciudad pasaría de undefined a su nivel
+      // natural, que no necesariamente es nuevo para el operador).
+      const esPrimerRegistro = nivelAnterior === undefined
       estadoNivelActual.set(clave, umbral.nivel)
+      if (esPrimerRegistro) continue
 
       // Solo generar alerta si la severidad es relevante (no informativa)
       if (umbral.severidad === 'informativa') continue
