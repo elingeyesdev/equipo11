@@ -29,4 +29,18 @@ const loginSchema = z.object({
     .min(1, 'La contraseña es requerida'),
 })
 
-module.exports = { registerSchema, loginSchema }
+const forgotPasswordSchema = z.object({
+  email: z.string({ required_error: 'El correo es requerido' })
+    .email('Debe ser un correo electrónico válido'),
+})
+
+const resetPasswordSchema = z.object({
+  email: z.string({ required_error: 'El correo es requerido' })
+    .email('Debe ser un correo electrónico válido'),
+  code: z.string({ required_error: 'El código es requerido' })
+    .length(6, 'El código debe ser de 6 dígitos'),
+  newPassword: z.string({ required_error: 'La nueva contraseña es requerida' })
+    .min(6, 'La contraseña debe tener al menos 6 caracteres'),
+})
+
+module.exports = { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema }

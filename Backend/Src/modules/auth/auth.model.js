@@ -18,4 +18,12 @@ const createUser = async ({ nombre, apellido, email, password_hash }) => {
   return rows[0]
 }
 
-module.exports = { findByEmail, createUser }
+const updatePassword = async (email, password_hash) => {
+  const { rows } = await db.query(
+    'UPDATE usuarios SET password_hash = $1 WHERE email = $2 RETURNING id, email',
+    [password_hash, email]
+  )
+  return rows[0] || null
+}
+
+module.exports = { findByEmail, createUser, updatePassword }
