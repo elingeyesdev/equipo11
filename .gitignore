@@ -30,7 +30,6 @@ docker-compose.override.yml
 ANALISIS_MEJORAS.md
 CLAUDE.md
 implementation_plan.md
-
 PROPUESTA_MAPAS_DE_CALOR.md
 PLAN_SUDAMERICA_HEATMAP.md
 CLAUDE_HEATMAP_PROMPT.md

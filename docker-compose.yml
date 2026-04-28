@@ -9,9 +9,10 @@ services:
       POSTGRES_PASSWORD: admin123
     ports:
       - "5433:5432"
-    volumes:
-      # Esquema normalizado con TimescaleDB (reemplaza init.sql legacy)
+      # Esquema normalizado y semillas de inicialización
       - ./database/esquema_envirosense.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/02_sudamerica.sql
+      - ./database/seeds/02_umbrales.sql:/docker-entrypoint-initdb.d/03_umbrales.sql
       # Volumen persistente para no perder datos al reiniciar
       - pgdata:/var/lib/postgresql/data
     healthcheck:
