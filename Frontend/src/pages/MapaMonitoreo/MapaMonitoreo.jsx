@@ -563,6 +563,10 @@ function MapaMonitoreo() {
           mapStyle={mapStyle}
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={handleMapClick}
+          projection="mercator"
+          maxPitch={0}
+          dragRotate={false}
+          touchPitch={false}
         >
           <GeolocateControl position="bottom-right" />
           <FullscreenControl position="bottom-right" />
