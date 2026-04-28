@@ -14,23 +14,27 @@
  * - Persistencia throttled: solo 1 vez por hora para no explotar la BD
  */
 const LOCALIDADES = require('./localidades.data')
+const { sendEmail } = require('../../utils/mailer')
+
+let alertEmail = null;
+let lastAlertTimes = {}; // Para no spamear { "lapaz-aqi": timestamp }
 
 // Configuración de variación por métrica (delta máximo por tick)
 const METRIC_CONFIG = {
   temperatura: { delta: 0.8 },
-  aqi:         { delta: 8   },
-  ica:         { delta: 4   },
-  ruido:       { delta: 4   },
-  humedad:     { delta: 3   },
+  aqi: { delta: 8 },
+  ica: { delta: 4 },
+  ruido: { delta: 4 },
+  humedad: { delta: 3 },
 }
 
 // Rangos válidos absolutos por métrica (para validar inyección manual)
 const METRIC_LIMITS = {
-  temperatura: { min: -40, max: 60  },
-  aqi:         { min: 0,   max: 500 },
-  ica:         { min: 0,   max: 100 },
-  ruido:       { min: 0,   max: 140 },
-  humedad:     { min: 0,   max: 100 },
+  temperatura: { min: -40, max: 60 },
+  aqi: { min: 0, max: 500 },
+  ica: { min: 0, max: 100 },
+  ruido: { min: 0, max: 140 },
+  humedad: { min: 0, max: 100 },
 }
 
 const METRIC_KEYS = Object.keys(METRIC_CONFIG)
@@ -113,11 +117,11 @@ function generateNextTick(previousState) {
 
     // --- TEMPERATURA con ciclo diurno ---
     const [tMin, tMax] = dept.ranges.temperatura
-    const tCenter    = (tMin + tMax) / 2
+    const tCenter = (tMin + tMax) / 2
     const tAmplitude = (tMax - tMin) / 2
     // Target diurno: más calor al mediodía, más frío de madrugada
     const tempTarget = clamp(tCenter + diurnal * tAmplitude * 0.45, tMin, tMax)
-    const tempDelta  = generateDelta(METRIC_CONFIG.temperatura.delta)
+    const tempDelta = generateDelta(METRIC_CONFIG.temperatura.delta)
     // Suave atracción al target diurno (10% por tick) + ruido
     newData.temperatura = clamp(
       Math.round(city.data.temperatura + tempDelta + (tempTarget - city.data.temperatura) * 0.10),
@@ -127,25 +131,25 @@ function generateNextTick(previousState) {
     // --- HUMEDAD inversamente correlacionada con temperatura ---
     const [hMin, hMax] = dept.ranges.humedad
     // Cuando temperatura sube → humedad relativa baja (correlación -0.6)
-    const tNorm       = (newData.temperatura - tMin) / (tMax - tMin + 0.001)
-    const humTarget   = clamp(hMax - tNorm * (hMax - hMin) * 0.60, hMin, hMax)
-    const humDelta    = generateDelta(METRIC_CONFIG.humedad.delta)
-    newData.humedad   = clamp(
+    const tNorm = (newData.temperatura - tMin) / (tMax - tMin + 0.001)
+    const humTarget = clamp(hMax - tNorm * (hMax - hMin) * 0.60, hMin, hMax)
+    const humDelta = generateDelta(METRIC_CONFIG.humedad.delta)
+    newData.humedad = clamp(
       Math.round(city.data.humedad + humDelta + (humTarget - city.data.humedad) * 0.08),
       hMin, hMax
     )
 
     // --- AQI: sube de día (tráfico, calor) y en hora punta ---
     const [aMin, aMax] = dept.ranges.aqi
-    const aCenter    = (aMin + aMax) / 2
+    const aCenter = (aMin + aMax) / 2
     const aAmplitude = (aMax - aMin) / 2
     // Target: sube 20% en pico de día y otro 15% en hora punta
-    const aqiTarget  = clamp(
+    const aqiTarget = clamp(
       aCenter + diurnal * aAmplitude * 0.20 + (rushHour ? aAmplitude * 0.15 : 0),
       aMin, aMax
     )
-    const aqiDelta   = generateDelta(METRIC_CONFIG.aqi.delta)
-    newData.aqi      = clamp(
+    const aqiDelta = generateDelta(METRIC_CONFIG.aqi.delta)
+    newData.aqi = clamp(
       Math.round(city.data.aqi + aqiDelta + (aqiTarget - city.data.aqi) * 0.07),
       aMin, aMax
     )
@@ -153,19 +157,19 @@ function generateNextTick(previousState) {
     // --- ICA inversamente correlado con AQI ---
     const [iMin, iMax] = dept.ranges.ica
     // Más contaminación → peor calidad de agua (correlación -0.5)
-    const aqiNorm    = (newData.aqi - aMin) / (aMax - aMin + 0.001)
-    const icaTarget  = clamp(iMax - aqiNorm * (iMax - iMin) * 0.50, iMin, iMax)
-    const icaDelta   = generateDelta(METRIC_CONFIG.ica.delta)
-    newData.ica      = clamp(
+    const aqiNorm = (newData.aqi - aMin) / (aMax - aMin + 0.001)
+    const icaTarget = clamp(iMax - aqiNorm * (iMax - iMin) * 0.50, iMin, iMax)
+    const icaDelta = generateDelta(METRIC_CONFIG.ica.delta)
+    newData.ica = clamp(
       Math.round(city.data.ica + icaDelta + (icaTarget - city.data.ica) * 0.06),
       iMin, iMax
     )
 
     // --- RUIDO: pico en hora punta + variación de fondo ---
     const [rMin, rMax] = dept.ranges.ruido
-    const rushBoost   = rushHour ? 8 : 0
-    const ruidoDelta  = generateDelta(METRIC_CONFIG.ruido.delta) + rushBoost
-    newData.ruido     = clamp(Math.round(city.data.ruido + ruidoDelta), rMin, rMax)
+    const rushBoost = rushHour ? 8 : 0
+    const ruidoDelta = generateDelta(METRIC_CONFIG.ruido.delta) + rushBoost
+    newData.ruido = clamp(Math.round(city.data.ruido + ruidoDelta), rMin, rMax)
 
     return { ...city, data: newData }
   })
@@ -173,8 +177,8 @@ function generateNextTick(previousState) {
 
 // --- Estado interno del servicio ---
 let currentState = createInitialState()
-let intervalId   = null
-let tickCount    = 0
+let intervalId = null
+let tickCount = 0
 
 // --- Integración con Base de Datos ---
 const db = require('../../config/db')
@@ -210,8 +214,8 @@ async function persistReadings(state) {
   lastPersistTime = now
 
   const localidadIds = []
-  const metricaIds   = []
-  const valores      = []
+  const metricaIds = []
+  const valores = []
 
   state.forEach(city => {
     const locId = dbMapping.localidades[city.name.toLowerCase()]
@@ -231,7 +235,7 @@ async function persistReadings(state) {
 
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
@@ -259,6 +263,7 @@ function start(intervalMs, onTick) {
     currentState = generateNextTick(currentState)
     tickCount++
     persistReadings(currentState) // Throttled — solo cada hora
+    checkCriticalThresholds(currentState)
     onTick({
       cities: currentState,
       tickCount,
@@ -322,6 +327,7 @@ function injectData(cityId, partialData) {
 
   // La inyección manual siempre persiste, sin throttle
   persistInjection([currentState[cityIndex]])
+  checkCriticalThresholds([currentState[cityIndex]])
 
   return true
 }
@@ -333,8 +339,8 @@ async function persistInjection(state) {
   if (!Object.keys(dbMapping.localidades).length) return
 
   const localidadIds = []
-  const metricaIds   = []
-  const valores      = []
+  const metricaIds = []
+  const valores = []
 
   state.forEach(city => {
     const locId = dbMapping.localidades[city.name.toLowerCase()]
@@ -354,7 +360,7 @@ async function persistInjection(state) {
 
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_datos_id, tiempo)
+      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
       SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
@@ -363,4 +369,52 @@ async function persistInjection(state) {
   }
 }
 
-module.exports = { start, stop, isRunning, getCurrentState, injectData }
+function setAlertEmail(email) {
+  alertEmail = email;
+}
+
+function checkCriticalThresholds(state) {
+  if (!alertEmail) return;
+
+  const CRITICAL_LIMITS = {
+    aqi: 150,        // > 150 (Dañino/Peligroso)
+    ica: 26,         // < 26 (Muy mala)
+    ruido: 85,       // > 85 (Dañino/Peligroso)
+    temperatura: 40, // > 40 o < -10
+    humedad: 90      // > 90
+  }
+
+  const now = Date.now();
+  const ALERT_COOLDOWN = 10 * 60 * 1000; // 10 minutos por métrica y ciudad
+
+  state.forEach(city => {
+    Object.entries(city.data).forEach(([metric, val]) => {
+      let isCritical = false;
+      let condition = '';
+
+      if (metric === 'ica' && val <= CRITICAL_LIMITS.ica) {
+        isCritical = true;
+        condition = `cayó a ${val} (Crítico: <= ${CRITICAL_LIMITS.ica})`;
+      } else if (metric === 'temperatura' && (val >= CRITICAL_LIMITS.temperatura || val <= -10)) {
+        isCritical = true;
+        condition = `alcanzó ${val}°C (Crítico: >= 40 o <= -10)`;
+      } else if (metric !== 'ica' && metric !== 'temperatura' && val >= CRITICAL_LIMITS[metric]) {
+        isCritical = true;
+        condition = `alcanzó ${val} (Crítico: >= ${CRITICAL_LIMITS[metric]})`;
+      }
+
+      if (isCritical) {
+        const key = `${city.id}-${metric}`;
+        if (!lastAlertTimes[key] || now - lastAlertTimes[key] > ALERT_COOLDOWN) {
+          lastAlertTimes[key] = now;
+
+          const msg = `Alerta: En la ciudad de <b>${city.name}</b>, el indicador <b>${metric.toUpperCase()}</b> ${condition}. Se requiere acción inmediata.`;
+          sendEmail(alertEmail, `Alerta Crítica: ${metric.toUpperCase()} en ${city.name}`, 'Alerta de Umbral Crítico', msg, 'Ver Mapa', `http://localhost:5173/mapa?city=${city.id}`)
+            .catch(err => console.error('Error enviando alerta:', err));
+        }
+      }
+    });
+  });
+}
+
+module.exports = { start, stop, isRunning, getCurrentState, injectData, setAlertEmail }

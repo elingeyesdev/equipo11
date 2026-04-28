@@ -44,6 +44,13 @@ function registerSocketEvents(io) {
       }
     })
 
+    socket.on('simulacion:alertas', ({ email }) => {
+      if (!email) return;
+      simulacionService.setAlertEmail(email);
+      console.log(`📧 Alertas configuradas para: ${email}`);
+      socket.emit('simulacion:alertas:ok', { email });
+    })
+
     socket.on('disconnect', () => {
       console.log(`❌ Cliente desconectado: ${socket.id}`)
     })

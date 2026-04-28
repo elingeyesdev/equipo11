@@ -72,8 +72,10 @@ const EMPTY_INJECT = { temperatura: '', aqi: '', ica: '', ruido: '', humedad: ''
 
 function PanelSimulacion() {
   const navigate = useNavigate()
-  const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, iniciar, detener, inyectar } = useSimulacion()
+  const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas, iniciar, detener, inyectar, suscribirAlertas } = useSimulacion()
   const { unidades, cambiarUnidad } = useUnidades()
+
+  const [alertEmailInput, setAlertEmailInput] = useState('')
 
   // injectValues almacena los valores en UNIDAD BASE internamente.
   // Los inputs los muestran convertidos según la unidad activa y convierten de vuelta al cambiar.
@@ -121,6 +123,13 @@ function PanelSimulacion() {
     }
     const base = invertirValor(metricKey, Number(displayVal), unidades[metricKey])
     setInjectValues(prev => ({ ...prev, [metricKey]: base }))
+  }
+
+  function handleAlertSubmit(e) {
+    e.preventDefault()
+    if (!alertEmailInput) return
+    suscribirAlertas(alertEmailInput)
+    setAlertEmailInput('')
   }
 
   return (
@@ -402,6 +411,43 @@ function PanelSimulacion() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Suscripción a Alertas */}
+      <div className="inject-card" style={{ marginTop: '2rem' }}>
+        <div className="inject-card-header">
+          <div>
+            <h3 className="inject-title">Alertas por <em>Umbrales</em></h3>
+            <p className="inject-subtitle">Recibe un correo si los indicadores de cualquier ciudad alcanzan niveles críticos</p>
+          </div>
+        </div>
+
+        <form className="inject-form" onSubmit={handleAlertSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+          <div className="inject-field" style={{ flex: 1 }}>
+            <label className="inject-label">Correo electrónico</label>
+            <input
+              type="email"
+              className="inject-input"
+              value={alertEmailInput}
+              onChange={(e) => setAlertEmailInput(e.target.value)}
+              placeholder="admin@envirosense.bo"
+              disabled={!isConnected}
+            />
+          </div>
+          <button
+            type="submit"
+            className="sim-btn inject-btn-send"
+            disabled={!alertEmailInput || !isConnected}
+            style={{ marginBottom: '10px' }}
+          >
+            Suscribirse
+          </button>
+        </form>
+        {emailAlertas && (
+          <p style={{ marginTop: '1rem', color: '#10ac84', fontSize: '0.9rem' }}>
+            ✓ Enviando alertas a: <b>{emailAlertas}</b>
+          </p>
+        )}
       </div>
 
       {/* Footer informativo */}
