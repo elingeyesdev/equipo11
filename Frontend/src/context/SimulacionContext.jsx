@@ -23,6 +23,7 @@ export function SimulacionProvider({ children }) {
   const [tickCount, setTickCount]     = useState(0)
   const [lastUpdate, setLastUpdate]   = useState(null)
   const [interval, setIntervalVal]    = useState(3000)
+  const [emailAlertas, setEmailAlertas] = useState('')
 
   // ─── Alertas en tiempo real ───────────────────────────────────────────────
   // Cada elemento: { localidad_id, metrica_id, umbral_id, valor, severidad,
@@ -49,6 +50,10 @@ export function SimulacionProvider({ children }) {
       setIsRunning(payload.running)
       if (payload.cities) setCities(payload.cities)
       if (payload.tickCount) setTickCount(payload.tickCount)
+    })
+
+    socket.on('simulacion:alertas:ok', (payload) => {
+      setEmailAlertas(payload.email)
     })
 
     // Recibir datos en tiempo real
@@ -92,6 +97,10 @@ export function SimulacionProvider({ children }) {
     setAlertasPendientes(prev => prev.filter(a => a._uid !== _uid))
   }, [])
 
+  const suscribirAlertas = useCallback((email) => {
+    socketRef.current?.emit('simulacion:alertas', { email })
+  }, [])
+
   const value = {
     isConnected,
     isRunning,
@@ -99,11 +108,13 @@ export function SimulacionProvider({ children }) {
     tickCount,
     lastUpdate,
     interval,
+    emailAlertas,
     iniciar,
     detener,
     inyectar,
     alertasPendientes,
     dismissAlerta,
+    suscribirAlertas,
   }
 
   return (

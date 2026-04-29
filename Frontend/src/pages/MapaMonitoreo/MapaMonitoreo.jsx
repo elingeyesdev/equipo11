@@ -187,7 +187,7 @@ function MapaMonitoreo() {
   const mapRef = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
 
-  // Abrir modal o centrar en ciudad inyectada según el estado de navegación
+  // Abrir modal o centrar en ciudad inyectada según el estado de navegación o query params
   useEffect(() => {
     if (location.state?.openModal) {
       setIsModalOpen(true)
@@ -195,14 +195,19 @@ function MapaMonitoreo() {
       return
     }
 
-    if (location.state?.abrirPanel && location.state?.ciudad) {
-      const cityId = location.state.ciudad
-      // Usar FALLBACK_DATA para coordenadas (siempre disponible, independiente de la simulación)
-      const city = FALLBACK_DATA.find(c => c.id === cityId)
+    const searchParams = new URLSearchParams(location.search);
+    const urlCityId = searchParams.get('city');
+
+    const cityIdToOpen = (location.state?.abrirPanel && location.state?.ciudad) || urlCityId;
+
+    if (cityIdToOpen) {
+      const city = FALLBACK_DATA.find(c => c.id === cityIdToOpen)
       if (city) {
         setSelectedCity(city)
-        setInjectedCityId(cityId)
-        setTimeout(() => setInjectedCityId(null), 4000)
+        if (location.state?.abrirPanel) {
+          setInjectedCityId(cityIdToOpen)
+          setTimeout(() => setInjectedCityId(null), 4000)
+        }
 
         const flyToParams = { center: [city.longitude, city.latitude], zoom: 8, duration: 1200 }
         if (mapRef.current) {
@@ -211,9 +216,16 @@ function MapaMonitoreo() {
           pendingFlyTo.current = flyToParams
         }
       }
-      window.history.replaceState({}, '')
+      
+      if (urlCityId) {
+        searchParams.delete('city');
+        const newUrl = `${location.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+        window.history.replaceState({}, '', newUrl);
+      } else {
+        window.history.replaceState({}, '')
+      }
     }
-  }, [location.state]);
+  }, [location.state, location.search]);
 
   // --- Cerrar dropdown al hacer clic fuera ---
   useEffect(() => {

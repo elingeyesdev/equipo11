@@ -87,6 +87,14 @@ async function cargarUmbralesCache() {
 // Map<`${localidadId}:${metricaClave}`, nivelActual>
 const estadoNivelActual = new Map()
 
+// Cooldown de emisión: una vez que (ciudad, métrica) emite una alerta de
+// severidad relevante, se silencia durante COOLDOWN_MS para evitar que la
+// oscilación de valores en la frontera (advertencia ↔ critica ↔ emergencia)
+// genere docenas de toasts por minuto. Se persiste en BD igual; sólo se
+// throttea la emisión hacia el cliente.
+const ultimoEmitTime = new Map()
+const COOLDOWN_MS = 3 * 60 * 1000  // 3 minutos por pareja (ciudad, métrica)
+
 /**
  * Busca el umbral que contiene el valor dado para una métrica.
  * Retorna el objeto umbral o null si no hay match.
@@ -145,8 +153,12 @@ function evaluarTick(tickData) {
       estadoNivelActual.set(clave, umbral.nivel)
       if (esPrimerRegistro) continue
 
-      // Solo generar alerta si la severidad es relevante (no informativa)
-      if (umbral.severidad === 'informativa') continue
+      // Solo generar alerta si la severidad es relevante (no informativa).
+      // Las advertencias se filtran aquí: ni se persisten ni se emiten —
+      // sólo critica + emergencia generan registro y notificación, en línea
+      // con el filtro del socket. La saturación venía de evaluar y persistir
+      // todas las advertencias aunque luego no se emitieran.
+      if (umbral.severidad !== 'critica' && umbral.severidad !== 'emergencia') continue
 
       alertasNuevas.push({
         localidad_id:  localidadId,
@@ -162,6 +174,30 @@ function evaluarTick(tickData) {
   }
 
   return alertasNuevas
+}
+
+/**
+ * Filtra las alertas que pueden emitirse al cliente respetando el cooldown.
+ * No mutamos el array de entrada — devolvemos sólo las "frescas" y registramos
+ * el timestamp de emisión sólo para esas. La idea: aunque el nivel oscile en
+ * la frontera, el operador recibe a lo sumo una notificación cada COOLDOWN_MS
+ * por (ciudad, métrica).
+ *
+ * @param {Array} alertas - retorno de evaluarTick()
+ * @returns {Array} subconjunto que debe emitirse
+ */
+function filtrarParaEmision(alertas) {
+  if (!alertas.length) return alertas
+  const ahora = Date.now()
+  const emisibles = []
+  for (const a of alertas) {
+    const clave = `${a.localidad_id}:${a.metrica_clave}`
+    const ultimo = ultimoEmitTime.get(clave) || 0
+    if (ahora - ultimo < COOLDOWN_MS) continue
+    ultimoEmitTime.set(clave, ahora)
+    emisibles.push(a)
+  }
+  return emisibles
 }
 
 /**
@@ -218,6 +254,7 @@ function cacheCargada() {
 module.exports = {
   cargarUmbralesCache,
   evaluarTick,
+  filtrarParaEmision,
   guardarAlertas,
   reconocerAlerta,
   cacheCargada,

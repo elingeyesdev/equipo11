@@ -3,10 +3,10 @@ const alertasService   = require('../alertas/alertas.service')
 
 const DEFAULT_INTERVAL = 3000
 
-// Severidades que se notifican en tiempo real (toast/modal).
-// Las 'advertencia' se persisten en BD para el historial pero no se emiten,
-// para evitar saturación visual cuando muchas ciudades están en zona-frontera.
-const SEVERIDADES_TIEMPO_REAL = new Set(['critica', 'emergencia'])
+// La política de qué se persiste y qué se notifica vive en alertasService:
+//  - evaluarTick() ya descarta informativa + advertencia.
+//  - filtrarParaEmision() aplica cooldown por (ciudad, métrica).
+// Aquí sólo coordinamos los pasos.
 
 function registerSocketEvents(io) {
   io.on('connection', (socket) => {
@@ -23,13 +23,11 @@ function registerSocketEvents(io) {
       const started = simulacionService.start(interval, async (data) => {
         io.emit('simulacion:datos', data)
 
-        // ─ Deteccion de alertas ─
+        // ─ Detección de alertas ─
         const alertasNuevas = await alertasService.evaluarTick(data)
         if (alertasNuevas.length > 0) {
-          // Persistimos todas las severidades (advertencia incluida) para el historial,
-          // pero solo notificamos en tiempo real las críticas y emergencias.
           await alertasService.guardarAlertas(alertasNuevas)
-          const paraEmitir = alertasNuevas.filter(a => SEVERIDADES_TIEMPO_REAL.has(a.severidad))
+          const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
           if (paraEmitir.length > 0) io.emit('alertas:nueva', paraEmitir)
         }
       })
@@ -67,11 +65,18 @@ function registerSocketEvents(io) {
           const alertasNuevas = await alertasService.evaluarTick({ cities: [ciudadInyectada] })
           if (alertasNuevas.length > 0) {
             await alertasService.guardarAlertas(alertasNuevas)
-            const paraEmitir = alertasNuevas.filter(a => SEVERIDADES_TIEMPO_REAL.has(a.severidad))
+            const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
             if (paraEmitir.length > 0) io.emit('alertas:nueva', paraEmitir)
           }
         }
       }
+    })
+
+    socket.on('simulacion:alertas', ({ email }) => {
+      if (!email) return;
+      simulacionService.setAlertEmail(email);
+      console.log(`📧 Alertas configuradas para: ${email}`);
+      socket.emit('simulacion:alertas:ok', { email });
     })
 
     socket.on('disconnect', () => {
