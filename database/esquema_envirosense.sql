@@ -654,3 +654,15 @@ WHERE m.clave = 'aqi';
 -- =============================================================================
 -- FIN DEL ESQUEMA
 -- =============================================================================
+
+-- =============================================================================
+-- TABLA CACHÉ PARA RADAR GLOBAL (Bolivia Scraper)
+-- =============================================================================
+CREATE TABLE radar_grid_cache (
+  latitud DECIMAL(10,4) NOT NULL,
+  longitud DECIMAL(10,4) NOT NULL,
+  weather_code INT,
+  temperatura DECIMAL(5,2),
+  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (latitud, longitud)
+);

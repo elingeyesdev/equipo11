@@ -14,9 +14,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
-import WeatherParticles from '../../components/WeatherParticles/WeatherParticles';
 import Timeline from '../../components/Timeline/Timeline';
-import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getBulkWeatherForLocations, getHistoricalWeatherAtLocation } from '../../utils/weatherApi';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation } from '../../utils/weatherApi';
+import axios from 'axios';
+import GridRadarLayer from '../../components/GridRadarLayer/GridRadarLayer';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 import HeatmapLegend from './components/HeatmapLegend';
@@ -103,7 +104,8 @@ function MapaMonitoreo() {
   const [weatherCode, setWeatherCode] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
-  const [localWeathers, setLocalWeathers] = useState({});
+  const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
+  const [weatherCanvases, setWeatherCanvases] = useState({});
   const [isControlsOpen, setIsControlsOpen] = useState(false);
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
@@ -163,27 +165,11 @@ function MapaMonitoreo() {
     }
   }, [isHistoricalMode, selectedCity?.latitude, selectedCity?.longitude]);
 
-  // Carga paralela masiva de climas locales para todas las ciudades si se activa la vista 3D
-  useEffect(() => {
-    if (!isParticlesActive) return;
-
-    let mounted = true;
-    const fetchLocalWeathers = async () => {
-      try {
-        const results = await getBulkWeatherForLocations(citiesData);
-        if (mounted) {
-          setLocalWeathers(prev => ({ ...prev, ...results }));
-        }
-      } catch (e) { console.error("Error bulk weather", e); }
-    };
-
-    fetchLocalWeathers();
-    return () => { mounted = false; };
-  }, [isParticlesActive]);
+  // Se eliminó la vieja carga estática de climas
 
   const searchRef = useRef(null);
   const debounceRef = useRef(null);
-
+  const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
 
@@ -329,8 +315,8 @@ function MapaMonitoreo() {
     };
   }
 
-  // Modo oscuro automático cuando el heatmap está activo — mejora el contraste de colores
-  const mapStyle = isHeatmapActive
+  // Modo oscuro automático cuando el heatmap o el clima 3D está activo — mejora el contraste de colores
+  const mapStyle = (isHeatmapActive || isParticlesActive)
     ? 'mapbox://styles/mapbox/dark-v11'
     : 'mapbox://styles/mapbox/light-v11';
 
@@ -360,25 +346,48 @@ function MapaMonitoreo() {
 
   // Disparo inicial de clima al encender el Switch
   useEffect(() => {
+    let intervalId;
     if (isParticlesActive) {
-      getWeatherAtLocation(viewState.latitude, viewState.longitude).then(w => {
+      const fetchRadar = async () => {
+        try {
+          // Consultar el backend local
+          const res = await axios.get('http://localhost:3000/api/radar/bolivia');
+          setScannedGrid(res.data);
+          
+          // Si ya terminó de cargar, detenemos el polling
+          if (res.data.status === 'ready') {
+            clearInterval(intervalId);
+          }
+        } catch (e) {
+          console.error('Error fetching backend radar:', e);
+        }
+      };
+      
+      fetchRadar();
+      // Hacer polling cada 1 segundo si está cargando
+      intervalId = setInterval(fetchRadar, 1000);
+      
+      const { longitude, latitude } = mapRef.current ? mapRef.current.getCenter() : viewState;
+      getWeatherAtLocation(latitude, longitude).then(w => {
         if (w && w.current) setWeatherCode(w.current.weather_code);
       }).catch(() => { });
+    } else {
+      setScannedGrid({ status: 'idle', progress: 0, data: [] });
     }
+    
+    return () => { if (intervalId) clearInterval(intervalId); };
   }, [isParticlesActive]);
 
-  // Actualización automática del clima basado en el centro del mapa 
-  // ¡Se ejecuta cuando el usuario suelta el mouse después de arrastrar!
   const handleMapMoveEnd = async (evt) => {
-    if (!isParticlesActive) return;
-    const { longitude, latitude } = evt.viewState;
+    if (!isParticlesActive || !mapRef.current) return;
     try {
+      const { longitude, latitude } = evt.viewState || viewState;
       const weather = await getWeatherAtLocation(latitude, longitude);
       if (weather && weather.current) {
         setWeatherCode(weather.current.weather_code);
       }
     } catch (err) {
-      console.error("Error auto-fetching weather map center", err);
+      console.error("Error fetching central weather", err);
     }
   };
 
@@ -582,6 +591,18 @@ function MapaMonitoreo() {
             />
           )}
 
+          {isParticlesActive && scannedGrid.status === 'loading' && (
+            <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#00e5ff', padding: '10px 20px', borderRadius: 30, zIndex: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 15px rgba(0,229,255,0.3)', border: '1px solid rgba(0,229,255,0.2)' }}>
+              <span className="spinner" style={{ animation: 'spin 1s linear infinite' }}>📡</span>
+              <span>Construyendo Radar de Bolivia... {scannedGrid.progress}%</span>
+            </div>
+          )}
+
+          {/* Radar Meteorológico Orgánico (3000 puntos desde BD local) */}
+          {isParticlesActive && scannedGrid.status === 'ready' && (
+            <GridRadarLayer scannedGrid={scannedGrid.data} currentZoom={viewState.zoom} />
+          )}
+
           {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
           {isHeatmapActive ? (
             <MarkersLayer
@@ -769,7 +790,7 @@ function MapaMonitoreo() {
               <div className="control-row">
                 <div className="control-row-label">
                   <span className="control-icon">🌦️</span>
-                  <span className="control-text">Clima 3D</span>
+                  <span className="control-text">Clima</span>
                   <span className={`control-status ${isParticlesActive ? 'on' : 'off'}`}>
                     {isParticlesActive ? 'ON' : 'OFF'}
                   </span>
@@ -846,12 +867,6 @@ function MapaMonitoreo() {
           )}
         </Draggable>
       </div>
-
-      <WeatherParticles
-        isEnabled={isParticlesActive}
-        weatherCode={weatherCode}
-        currentZoom={viewState.zoom}
-      />
 
       {isHistoricalMode && !activeCity && (
         <div className="historical-prompt">

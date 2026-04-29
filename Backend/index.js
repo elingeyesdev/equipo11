@@ -10,6 +10,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./src/app')
 const { registerSocketEvents } = require('./src/modules/simulacion/simulacion.socket')
+const { runScraper } = require('./src/modules/radar/radar.service')
 
 const PORT = process.env.PORT || 3000
 
@@ -31,4 +32,7 @@ registerSocketEvents(io)
 server.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`🔌 WebSocket activo en el mismo puerto`)
+  
+  // Ejecutar el recopilador global una vez que el servidor arranca
+  runScraper()
 })

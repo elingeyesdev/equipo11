@@ -144,3 +144,50 @@ export const getHistoricalWeatherAtLocation = async (lat, lng) => {
     return null;
   }
 };
+
+export const getGlobalGridWeather = async (pointsArray) => {
+  if (!pointsArray || pointsArray.length === 0) return [];
+  
+  const lats = pointsArray.map(p => p.latitude).join(',');
+  const lngs = pointsArray.map(p => p.longitude).join(',');
+
+  try {
+    const response = await axios.get('https://api.open-meteo.com/v1/forecast', {
+      params: {
+        latitude: lats,
+        longitude: lngs,
+        current: 'weather_code',
+        timezone: 'auto'
+      }
+    });
+
+    const data = response.data;
+    const results = Array.isArray(data) ? data : [data];
+    
+    return pointsArray.map((p, index) => ({
+      ...p,
+      weatherCode: results[index]?.current?.weather_code || null
+    }));
+  } catch (error) {
+    console.error("Error bulk fetching grid weather:", error);
+    return null; // Devolver null para no borrar la cuadrícula previa en caso de rate-limit
+  }
+};
+
+// Obtiene el timestamp más reciente del radar satelital público de RainViewer
+export const getLatestRadarTimestamp = async () => {
+  try {
+    const response = await axios.get('https://api.rainviewer.com/public/weather-maps.json');
+    if (response.data && response.data.radar && response.data.radar.past) {
+      const pastFrames = response.data.radar.past;
+      if (pastFrames.length > 0) {
+        // Tomamos el cuadro más reciente del pasado (el último del array)
+        return pastFrames[pastFrames.length - 1].time;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching RainViewer timestamp:", error);
+    return null;
+  }
+};
