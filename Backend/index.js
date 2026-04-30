@@ -29,7 +29,7 @@ const io = new Server(server, {
 registerSocketEvents(io)
 
 // Iniciar el servidor
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`🔌 WebSocket activo en el mismo puerto`)
   
