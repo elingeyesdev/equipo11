@@ -7,12 +7,13 @@ import { colorPorValor, umbralPorValor } from '../../../hooks/useUmbrales'
  * Siempre visibles cuando el heatmap está ON para dar contexto preciso por ciudad.
  *
  * Props:
- *   cities      {Array}    – { id, name, latitude, longitude, data }
- *   metrica     {string}   – clave activa ("aqi", "temperatura", etc.)
- *   umbrales    {Array}    – resultado de useUmbrales()
- *   onCityClick {Function} – callback(city)
+ *   cities         {Array}    – { id, name, latitude, longitude, data, fuente_id? }
+ *   metrica        {string}   – clave activa ("aqi", "temperatura", etc.)
+ *   umbrales       {Array}    – resultado de useUmbrales()
+ *   getFuenteLabel {Function} – (city) => string | null — badge de fuente de datos
+ *   onCityClick    {Function} – callback(city)
  */
-export default function MarkersLayer({ cities, metrica, umbrales, onCityClick }) {
+export default function MarkersLayer({ cities, metrica, umbrales, getFuenteLabel, onCityClick }) {
   if (!cities?.length || !umbrales.length) return null
 
   return cities.map(city => {
@@ -20,6 +21,7 @@ export default function MarkersLayer({ cities, metrica, umbrales, onCityClick })
     const color    = colorPorValor(umbrales, valor)
     const umbral   = umbralPorValor(umbrales, valor)
     const critico  = ['critica', 'emergencia'].includes(umbral?.severidad)
+    const fuenteLabel = getFuenteLabel?.(city) ?? null
 
     return (
       <Marker
@@ -35,6 +37,11 @@ export default function MarkersLayer({ cities, metrica, umbrales, onCityClick })
           title={`${city.name}: ${Math.round(valor)}`}
         >
           <span className="city-marker__value">{Math.round(valor)}</span>
+          {fuenteLabel && (
+            <span className={`marker-source-badge${fuenteLabel.startsWith('En vivo') ? ' marker-source-badge--sim' : ' marker-source-badge--real'}`}>
+              {fuenteLabel}
+            </span>
+          )}
         </div>
       </Marker>
     )

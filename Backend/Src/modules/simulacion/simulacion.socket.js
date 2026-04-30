@@ -1,5 +1,6 @@
 const simulacionService = require('./simulacion.service')
 const alertasService   = require('../alertas/alertas.service')
+const jwt              = require('jsonwebtoken')
 
 const DEFAULT_INTERVAL = 3000
 
@@ -20,6 +21,17 @@ function registerSocketEvents(io) {
     socket.on('simulacion:iniciar', (options = {}) => {
       const interval = options.interval || DEFAULT_INTERVAL
 
+      let userId = null
+      const token = socket.handshake.auth?.token
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET)
+          userId = decoded.id
+        } catch {
+          // token inválido o expirado — la simulación corre sin sesión persistida
+        }
+      }
+
       const started = simulacionService.start(interval, async (data) => {
         io.emit('simulacion:datos', data)
 
@@ -30,7 +42,7 @@ function registerSocketEvents(io) {
           const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
           if (paraEmitir.length > 0) io.emit('alertas:nueva', paraEmitir)
         }
-      })
+      }, userId)
 
       if (started) {
         console.log(`▶️  Simulación iniciada (intervalo: ${interval}ms)`)

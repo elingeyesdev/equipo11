@@ -1,11 +1,10 @@
 /**
  * MapaMonitoreo — Mapa interactivo con marcadores y mapa de calor.
  *
- * Principios aplicados:
- * - SRP: Solo se encarga de renderizar el mapa. Los datos vienen del Context.
- * - DRY: DEPARTAMENTOS_FALLBACK se usa solo como fallback cuando no hay simulación.
- *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
- * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
+ * Fuentes de datos (en orden de prioridad):
+ *  1. simulatedCities — socket "simulacion:datos" cuando la simulación está ON
+ *  2. ultimoEstado    — GET /api/historial/ultimo-estado cuando la simulación está OFF
+ *  3. localidades     — GET /api/geografia/localidades (base geográfica, sin métricas)
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -25,62 +24,50 @@ import Draggable from '../../components/Draggable/Draggable';
 import VoronoiLayer from './layers/VoronoiLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
-// Fallback estático con cobertura de Sudamérica (usado cuando la simulación NO está activa)
-const FALLBACK_DATA = [
-  // Bolivia
-  { id: 'lapaz', name: 'La Paz', latitude: -16.4897, longitude: -68.1193, data: { temperatura: 12, aqi: 65, ica: 78, ruido: 72, humedad: 45 } },
-  { id: 'cochabamba', name: 'Cochabamba', latitude: -17.3895, longitude: -66.1568, data: { temperatura: 24, aqi: 95, ica: 82, ruido: 65, humedad: 30 } },
-  { id: 'santacruz', name: 'Santa Cruz', latitude: -17.7833, longitude: -63.1812, data: { temperatura: 30, aqi: 110, ica: 55, ruido: 78, humedad: 70 } },
-  { id: 'oruro', name: 'Oruro', latitude: -17.9624, longitude: -67.1061, data: { temperatura: 8, aqi: 42, ica: 88, ruido: 45, humedad: 35 } },
-  { id: 'potosi', name: 'Potosí', latitude: -19.5836, longitude: -65.7531, data: { temperatura: 5, aqi: 38, ica: 91, ruido: 40, humedad: 28 } },
-  { id: 'sucre', name: 'Sucre', latitude: -19.0353, longitude: -65.2592, data: { temperatura: 18, aqi: 55, ica: 85, ruido: 58, humedad: 42 } },
-  { id: 'tarija', name: 'Tarija', latitude: -21.5355, longitude: -64.7296, data: { temperatura: 22, aqi: 48, ica: 79, ruido: 52, humedad: 55 } },
-  { id: 'trinidad', name: 'Trinidad', latitude: -14.8333, longitude: -64.9000, data: { temperatura: 32, aqi: 78, ica: 65, ruido: 62, humedad: 82 } },
-  { id: 'cobija', name: 'Cobija', latitude: -11.0267, longitude: -68.7692, data: { temperatura: 28, aqi: 72, ica: 60, ruido: 55, humedad: 88 } },
-  // Argentina
-  { id: 'buenos_aires', name: 'Buenos Aires', latitude: -34.6037, longitude: -58.3816, data: { temperatura: 22, aqi: 95, ica: 68, ruido: 80, humedad: 65 } },
-  { id: 'cordoba_ar', name: 'Córdoba', latitude: -31.4135, longitude: -64.1811, data: { temperatura: 20, aqi: 80, ica: 72, ruido: 70, humedad: 58 } },
-  { id: 'mendoza', name: 'Mendoza', latitude: -32.8908, longitude: -68.8272, data: { temperatura: 18, aqi: 55, ica: 75, ruido: 58, humedad: 30 } },
-  { id: 'salta', name: 'Salta', latitude: -24.7821, longitude: -65.4232, data: { temperatura: 24, aqi: 60, ica: 78, ruido: 55, humedad: 48 } },
-  { id: 'bariloche', name: 'Bariloche', latitude: -41.1335, longitude: -71.3103, data: { temperatura: 8, aqi: 22, ica: 92, ruido: 35, humedad: 62 } },
-  { id: 'ushuaia', name: 'Ushuaia', latitude: -54.8019, longitude: -68.3030, data: { temperatura: 2, aqi: 12, ica: 96, ruido: 28, humedad: 72 } },
-  // Brasil
-  { id: 'sao_paulo', name: 'São Paulo', latitude: -23.5505, longitude: -46.6333, data: { temperatura: 24, aqi: 145, ica: 58, ruido: 88, humedad: 72 } },
-  { id: 'rio_de_janeiro', name: 'Rio de Janeiro', latitude: -22.9068, longitude: -43.1729, data: { temperatura: 30, aqi: 120, ica: 62, ruido: 82, humedad: 78 } },
-  { id: 'manaus', name: 'Manaus', latitude: -3.1019, longitude: -60.0250, data: { temperatura: 32, aqi: 65, ica: 55, ruido: 60, humedad: 90 } },
-  { id: 'fortaleza', name: 'Fortaleza', latitude: -3.7172, longitude: -38.5433, data: { temperatura: 30, aqi: 90, ica: 65, ruido: 72, humedad: 78 } },
-  { id: 'porto_alegre', name: 'Porto Alegre', latitude: -30.0346, longitude: -51.2177, data: { temperatura: 20, aqi: 75, ica: 70, ruido: 68, humedad: 68 } },
-  // Chile
-  { id: 'santiago', name: 'Santiago', latitude: -33.4489, longitude: -70.6693, data: { temperatura: 18, aqi: 110, ica: 72, ruido: 75, humedad: 45 } },
-  { id: 'antofagasta', name: 'Antofagasta', latitude: -23.6509, longitude: -70.3975, data: { temperatura: 18, aqi: 45, ica: 80, ruido: 48, humedad: 15 } },
-  { id: 'punta_arenas', name: 'Punta Arenas', latitude: -53.1638, longitude: -70.9171, data: { temperatura: 4, aqi: 18, ica: 92, ruido: 32, humedad: 68 } },
-  // Colombia
-  { id: 'bogota', name: 'Bogotá', latitude: 4.7110, longitude: -74.0721, data: { temperatura: 14, aqi: 105, ica: 65, ruido: 78, humedad: 72 } },
-  { id: 'medellin', name: 'Medellín', latitude: 6.2442, longitude: -75.5812, data: { temperatura: 22, aqi: 115, ica: 62, ruido: 80, humedad: 72 } },
-  { id: 'cartagena', name: 'Cartagena', latitude: 10.3910, longitude: -75.4794, data: { temperatura: 32, aqi: 80, ica: 58, ruido: 72, humedad: 82 } },
-  // Perú
-  { id: 'lima', name: 'Lima', latitude: -12.0464, longitude: -77.0428, data: { temperatura: 20, aqi: 95, ica: 70, ruido: 78, humedad: 82 } },
-  { id: 'cusco', name: 'Cusco', latitude: -13.5319, longitude: -71.9675, data: { temperatura: 10, aqi: 48, ica: 80, ruido: 45, humedad: 48 } },
-  { id: 'iquitos', name: 'Iquitos', latitude: -3.7491, longitude: -73.2538, data: { temperatura: 30, aqi: 55, ica: 52, ruido: 52, humedad: 92 } },
-  // Ecuador
-  { id: 'quito', name: 'Quito', latitude: -0.2295, longitude: -78.5243, data: { temperatura: 14, aqi: 70, ica: 72, ruido: 65, humedad: 65 } },
-  { id: 'guayaquil', name: 'Guayaquil', latitude: -2.1894, longitude: -79.8891, data: { temperatura: 30, aqi: 95, ica: 62, ruido: 78, humedad: 78 } },
-  // Paraguay
-  { id: 'asuncion', name: 'Asunción', latitude: -25.2867, longitude: -57.6470, data: { temperatura: 28, aqi: 88, ica: 65, ruido: 70, humedad: 65 } },
-  // Uruguay
-  { id: 'montevideo', name: 'Montevideo', latitude: -34.9011, longitude: -56.1645, data: { temperatura: 18, aqi: 72, ica: 75, ruido: 65, humedad: 72 } },
-  // Venezuela
-  { id: 'caracas', name: 'Caracas', latitude: 10.4806, longitude: -66.9036, data: { temperatura: 22, aqi: 110, ica: 62, ruido: 78, humedad: 72 } },
-  { id: 'maracaibo', name: 'Maracaibo', latitude: 10.6544, longitude: -71.6011, data: { temperatura: 36, aqi: 105, ica: 58, ruido: 75, humedad: 78 } },
-  // Otros
-  { id: 'georgetown', name: 'Georgetown', latitude: 6.8013, longitude: -58.1551, data: { temperatura: 30, aqi: 60, ica: 60, ruido: 55, humedad: 85 } },
-  { id: 'paramaribo', name: 'Paramaribo', latitude: 5.8520, longitude: -55.2038, data: { temperatura: 30, aqi: 55, ica: 62, ruido: 52, humedad: 85 } },
-];
+const API_BASE = 'http://localhost:3000';
 
 function MapaMonitoreo() {
   const location = useLocation();
   const { isRunning, cities: simulatedCities } = useSimulacion();
   const { unidades, cambiarUnidad } = useUnidades();
+
+  // Base geográfica: localidades desde la BD (sin métricas ambientales)
+  const [localidades, setLocalidades] = useState([]);
+  // Último snapshot de métricas guardado en BD (cuando la simulación está OFF)
+  const [ultimoEstado, setUltimoEstado] = useState([]);
+
+  // Carga inicial: localidades geográficas
+  useEffect(() => {
+    fetch(`${API_BASE}/api/geografia/localidades`)
+      .then(r => r.json())
+      .then(data => {
+        const mapped = (Array.isArray(data) ? data : []).map(loc => ({
+          id: String(loc.localidad_id ?? loc.id),
+          name: loc.nombre ?? loc.name,
+          latitude: parseFloat(loc.latitud ?? loc.latitude),
+          longitude: parseFloat(loc.longitud ?? loc.longitude),
+          data: { temperatura: null, aqi: null, ica: null, ruido: null, humedad: null },
+          fuente_id: null,
+        }));
+        setLocalidades(mapped);
+      })
+      .catch(err => console.error('[Localidades]', err));
+  }, []);
+
+  // Cuando la simulación se apaga, cargar el último estado conocido de la BD
+  useEffect(() => {
+    if (isRunning) {
+      setUltimoEstado([]);
+      return;
+    }
+    fetch(`${API_BASE}/api/historial/ultimo-estado`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) setUltimoEstado(data);
+      })
+      .catch(err => console.error('[UltimoEstado]', err));
+  }, [isRunning]);
+
   const [selectedCity, setSelectedCity] = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric] = useState('aqi'); // clave en español (BD)
@@ -187,7 +174,7 @@ function MapaMonitoreo() {
     const cityIdToOpen = (location.state?.abrirPanel && location.state?.ciudad) || urlCityId;
 
     if (cityIdToOpen) {
-      const city = FALLBACK_DATA.find(c => c.id === cityIdToOpen)
+      const city = localidades.find(c => c.id === cityIdToOpen) || simulatedCities.find(c => c.id === cityIdToOpen)
       if (city) {
         setSelectedCity(city)
         if (location.state?.abrirPanel) {
@@ -211,7 +198,7 @@ function MapaMonitoreo() {
         window.history.replaceState({}, '')
       }
     }
-  }, [location.state, location.search]);
+  }, [location.state, location.search, localidades, simulatedCities]);
 
   // --- Cerrar dropdown al hacer clic fuera ---
   useEffect(() => {
@@ -289,8 +276,23 @@ function MapaMonitoreo() {
     setShowResults(false);
   };
 
-  // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
-  let citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
+  // Prioridad: simulación en vivo > último estado BD > localidades base (sin métricas)
+  let citiesData = simulatedCities.length > 0
+    ? simulatedCities
+    : ultimoEstado.length > 0
+      ? ultimoEstado
+      : localidades;
+
+  // Devuelve la etiqueta de fuente para el badge del marcador.
+  // Primero usa fuente_id si el backend lo provee; si no, infiere por el modo activo.
+  const getFuenteLabel = (city) => {
+    if (city?.fuente_id != null) {
+      return city.fuente_id === 1 ? 'En vivo (Simulado)' : 'Dato Real (API)';
+    }
+    if (isRunning && simulatedCities.length > 0) return 'En vivo (Simulado)';
+    if (!isRunning && ultimoEstado.length > 0) return 'Dato Real (API)';
+    return null;
+  };
 
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
   let activeCity = selectedCity
@@ -609,6 +611,7 @@ function MapaMonitoreo() {
               cities={citiesData}
               metrica={heatmapMetric}
               umbrales={umbrales}
+              getFuenteLabel={getFuenteLabel}
               onCityClick={async (city) => {
                 setSelectedCity(city);
                 try {
@@ -636,6 +639,11 @@ function MapaMonitoreo() {
               >
                 <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
                   <span role="img" aria-label="pin">📍</span>
+                  {getFuenteLabel(city) && (
+                    <span className={`marker-source-badge${isRunning ? ' marker-source-badge--sim' : ' marker-source-badge--real'}`}>
+                      {getFuenteLabel(city)}
+                    </span>
+                  )}
                 </div>
               </Marker>
             ))
