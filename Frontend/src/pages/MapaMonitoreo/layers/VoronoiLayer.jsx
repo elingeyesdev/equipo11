@@ -3,7 +3,7 @@ import { Source, Layer } from 'react-map-gl/mapbox'
 import voronoi from '@turf/voronoi'
 import { intersect } from '@turf/intersect'
 import { featureCollection, point } from '@turf/helpers'
-import { colorPorValor } from '../../../hooks/useUmbrales'
+import { colorPorValor, buildHeatmapDensityColor } from '../../../hooks/useUmbrales'
 
 /**
  * VoronoiLayer — Manto territorial coloreado por umbral.
@@ -97,7 +97,7 @@ function addColors(clippedGeometry, cities, metrica, umbrales, activeFilter) {
           ...f.properties,
           fillColor: colorPorValor(umbrales, value),
           value,
-          opacity: inRange ? 0.78 : 0.1,
+          opacity: inRange ? 0.45 : 0.07,
         },
       }
     }),
@@ -136,28 +136,100 @@ export default function VoronoiLayer({ metrica, umbrales, cities, activeFilter }
     return addColors(clippedGeometry, cities, metrica, umbrales, activeFilter)
   }, [clippedGeometry, cities, metrica, umbrales, activeFilter])
 
+  // GeoJSON de puntos para el layer heatmap nativo de Mapbox
+  const heatmapGeo = useMemo(() => {
+    if (!cities?.length || !umbrales.length) return null
+    const sorted = [...umbrales].sort((a, b) => a.nivel - b.nivel)
+    const minVal = sorted[0].valor_min
+    const maxVal = sorted[sorted.length - 1].valor_max
+    const range = maxVal - minVal || 1
+
+    return {
+      type: 'FeatureCollection',
+      features: cities
+        .filter(c => c.longitude != null && c.latitude != null)
+        .map(c => {
+          const val = c.data?.[metrica] ?? 0
+          return {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
+            properties: {
+              weight: Math.max(0.01, Math.min(1, (val - minVal) / range)),
+            },
+          }
+        }),
+    }
+  }, [cities, metrica, umbrales])
+
+  // Expresión de color derivada de los umbrales
+  const heatmapColor = useMemo(() => buildHeatmapDensityColor(umbrales), [umbrales])
+
   if (!voronoiGeo) return null
 
   return (
-    <Source id="voronoi-source" type="geojson" data={voronoiGeo}>
-      <Layer
-        id="voronoi-fill"
-        type="fill"
-        paint={{
-          'fill-color': ['get', 'fillColor'],
-          'fill-opacity': ['get', 'opacity'],
-          'fill-color-transition': { duration: 600, delay: 0 },
-          'fill-opacity-transition': { duration: 300, delay: 0 },
-        }}
-      />
-      <Layer
-        id="voronoi-border"
-        type="line"
-        paint={{
-          'line-color': 'rgba(255,255,255,0.22)',
-          'line-width': 0.8,
-        }}
-      />
-    </Source>
+    <>
+      {/* Base territorial: Voronoi con opacidad reducida */}
+      <Source id="voronoi-source" type="geojson" data={voronoiGeo}>
+        <Layer
+          id="voronoi-fill"
+          type="fill"
+          paint={{
+            'fill-color': ['get', 'fillColor'],
+            'fill-opacity': ['get', 'opacity'],
+            'fill-color-transition': { duration: 600, delay: 0 },
+            'fill-opacity-transition': { duration: 300, delay: 0 },
+          }}
+        />
+        <Layer
+          id="voronoi-border"
+          type="line"
+          paint={{
+            'line-color': 'rgba(255,255,255,0.10)',
+            'line-width': 0.5,
+          }}
+        />
+      </Source>
+
+      {/* Capa heatmap nativa: degrada suavemente entre puntos lejanos */}
+      {heatmapGeo && (
+        <Source id="heatmap-source" type="geojson" data={heatmapGeo}>
+          <Layer
+            id="heatmap-layer"
+            type="heatmap"
+            paint={{
+              /* Radio de influencia por punto — crece al alejar el zoom
+                 para que toda Sudamérica quede cubierta en vista continental */
+              'heatmap-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                2,  320,
+                4,  240,
+                6,  150,
+                8,  90,
+                10, 55,
+              ],
+              /* Intensidad: más alta al hacer zoom para detallar zonas */
+              'heatmap-intensity': [
+                'interpolate', ['linear'], ['zoom'],
+                2,  0.6,
+                5,  1.0,
+                8,  1.6,
+                10, 2.2,
+              ],
+              /* Peso de cada punto según su valor normalizado (0–1) */
+              'heatmap-weight': ['get', 'weight'],
+              /* Paleta de colores construida desde los umbrales de la métrica */
+              'heatmap-color': heatmapColor,
+              /* Opacidad: se funde progresivamente al hacer zoom */
+              'heatmap-opacity': [
+                'interpolate', ['linear'], ['zoom'],
+                2, 0.90,
+                8, 0.82,
+                12, 0.70,
+              ],
+            }}
+          />
+        </Source>
+      )}
+    </>
   )
 }
