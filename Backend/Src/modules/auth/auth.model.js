@@ -2,7 +2,10 @@ const db = require('../../config/db')
 
 const findByEmail = async (email) => {
   const { rows } = await db.query(
-    'SELECT * FROM usuarios WHERE email = $1',
+    `SELECT u.*, r.clave AS rol_clave 
+     FROM usuarios u 
+     JOIN roles r ON u.rol_id = r.id 
+     WHERE u.email = $1`,
     [email]
   )
   return rows[0] || null

@@ -26,4 +26,20 @@ function verificarToken(req, res, next) {
   }
 }
 
-module.exports = { verificarToken }
+function verificarRol(rolesPermitidos) {
+  return (req, res, next) => {
+    if (!req.usuario) {
+      return res.status(401).json({ ok: false, mensaje: 'Usuario no autenticado' })
+    }
+    
+    // Convertir a array si pasaron un string ('admin' -> ['admin'])
+    const rolesArray = Array.isArray(rolesPermitidos) ? rolesPermitidos : [rolesPermitidos]
+    
+    if (!rolesArray.includes(req.usuario.rol)) {
+      return res.status(403).json({ ok: false, mensaje: 'Acceso denegado. No tienes permisos para realizar esta acción.' })
+    }
+    next()
+  }
+}
+
+module.exports = { verificarToken, verificarRol }

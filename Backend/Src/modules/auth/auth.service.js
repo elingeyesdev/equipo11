@@ -28,6 +28,10 @@ const login = async ({ email, password }) => {
     throw new Error('Email o contraseña incorrectos')
   }
 
+  if (!usuario.activo) {
+    throw new Error('Esta cuenta ha sido suspendida por un administrador.')
+  }
+
   // Verificar contraseña
   const passwordCorrecta = await bcrypt.compare(password, usuario.password_hash)
   if (!passwordCorrecta) {
@@ -38,7 +42,7 @@ const login = async ({ email, password }) => {
   const { password_hash, ...usuarioSeguro } = usuario
 
   const token = jwt.sign(
-    { id: usuario.id, email: usuario.email },
+    { id: usuario.id, email: usuario.email, rol: usuario.rol_clave },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   )

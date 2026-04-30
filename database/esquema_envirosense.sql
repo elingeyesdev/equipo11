@@ -726,3 +726,15 @@ CREATE TABLE radar_grid_cache (
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (latitud, longitud)
 );
+
+-- =============================================================================
+-- USUARIO ADMINISTRADOR HARDCODEADO
+-- =============================================================================
+INSERT INTO usuarios (rol_id, nombre, apellido, email, password_hash, email_verificado)
+VALUES (
+  (SELECT id FROM roles WHERE clave = 'admin'),
+  'Admin', 'Sistema', 'luiyimateoencinas@gmail.com',
+  '$2b$10$TPYyzFpx4etM3Da.4zVTXeSAs2sq9QAhWdCQisqAMXW8MvD8JCoGm',
+  TRUE
+);
+
