@@ -1,0 +1,57 @@
+.css-weather-marker {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  pointer-events: none;
+  /* Fade edges to blend smoothly */
+  mask-image: radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%);
+  transform-origin: center;
+}
+
+/* Lluvia */
+.css-weather-marker.rain {
+  /* 4 capas de lluvia de diferentes tamaños para crear la ilusión de aleatoriedad y muchos carriles */
+  background-image: 
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"><rect x="5" y="0" width="1.5" height="15" fill="rgba(0,60,255,0.9)"/></svg>'),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect x="25" y="0" width="1" height="10" fill="rgba(0,80,255,0.7)"/></svg>'),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect x="15" y="0" width="2" height="18" fill="rgba(0,40,255,0.85)"/></svg>'),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect x="20" y="0" width="1.5" height="12" fill="rgba(0,100,255,0.6)"/></svg>');
+  background-repeat: repeat, repeat, repeat, repeat;
+  /* El rotate(-15deg) inclina todo el contenedor, haciendo que la lluvia caiga en diagonal */
+  transform: rotate(-15deg);
+  animation: rain-fall-parallax 0.6s linear infinite;
+}
+
+@keyframes rain-fall-parallax {
+  0% { background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px; }
+  100% { background-position: 0px 100px, 0px 150px, 0px 80px, 0px 200px; }
+}
+
+/* Nieve */
+.css-weather-marker.snow {
+  background-image: 
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"><circle cx="10" cy="10" r="2.5" fill="rgba(255,255,255,0.9)"/></svg>'),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="35" height="35"><circle cx="15" cy="15" r="1.5" fill="rgba(255,255,255,0.6)"/></svg>');
+  background-repeat: repeat, repeat;
+  animation: snow-fall-parallax 3s linear infinite;
+}
+
+@keyframes snow-fall-parallax {
+  0% { background-position: 0px 0px, 0px 0px; }
+  100% { background-position: 0px 100px, 0px 150px; }
+}
+
+/* Niebla */
+.css-weather-marker.fog {
+  background-image: 
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><circle cx="30" cy="30" r="15" fill="rgba(200,200,200,0.15)"/></svg>'),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="10" fill="rgba(200,200,200,0.1)"/></svg>');
+  background-repeat: repeat, repeat;
+  animation: fog-drift 8s ease-in-out infinite alternate;
+}
+
+@keyframes fog-drift {
+  0% { background-position: 0px 0px, 0px 0px; }
+  100% { background-position: 20px 10px, -15px -10px; }
+}

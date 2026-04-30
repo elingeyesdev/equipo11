@@ -10,7 +10,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./src/app')
 const { registerSocketEvents } = require('./src/modules/simulacion/simulacion.socket')
-const alertasService = require('./src/modules/alertas/alertas.service')
+const { runScraper } = require('./src/modules/radar/radar.service')
 
 const PORT = process.env.PORT || 3000
 
@@ -32,6 +32,7 @@ registerSocketEvents(io)
 server.listen(PORT, async () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`🔌 WebSocket activo en el mismo puerto`)
-  // Pre-cargar umbrales y mapping de BD para el servicio de alertas
-  await alertasService.cargarUmbralesCache()
+  
+  // Ejecutar el recopilador global una vez que el servidor arranca
+  runScraper()
 })
