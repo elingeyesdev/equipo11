@@ -13,6 +13,7 @@
  *  - Múltiples emergencias → una sola pantalla con lista, no N modales apilados
  */
 import { useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSimulacion } from '../../context/SimulacionContext'
 import './AlertaNotificacion.css'
 
@@ -57,6 +58,11 @@ const MAX_TOASTS = 5
 
 export default function AlertaNotificacion() {
   const { alertasPendientes, dismissAlerta } = useSimulacion()
+  const navigate = useNavigate()
+
+  const irAlMapa = (alerta) => {
+    navigate('/mapa', { state: { abrirPanel: true, ciudad: String(alerta.localidad_id) } })
+  }
 
   // Separar emergencias del resto
   const emergencias = alertasPendientes.filter(a => a.severidad === 'emergencia')
@@ -82,7 +88,12 @@ export default function AlertaNotificacion() {
 
             <ul className="alerta-modal-lista">
               {emergencias.map(a => (
-                <li key={a._uid} className="alerta-modal-item">
+                <li
+                  key={a._uid}
+                  className="alerta-modal-item alerta-modal-item--clickable"
+                  onClick={() => irAlMapa(a)}
+                  title="Ver en el mapa"
+                >
                   <span className="alerta-modal-ciudad">{a.ciudad_nombre}</span>
                   <span className="alerta-modal-detalle">
                     {ETIQUETAS_METRICA[a.metrica_clave] ?? a.metrica_clave}
@@ -116,7 +127,7 @@ export default function AlertaNotificacion() {
 
           {/* Toasts individuales (en orden inverso para que el más reciente esté abajo) */}
           {[...toastsVisibles].reverse().map(a => (
-            <ToastAlerta key={a._uid} alerta={a} onDismiss={dismissAlerta} />
+            <ToastAlerta key={a._uid} alerta={a} onDismiss={dismissAlerta} onNavigate={irAlMapa} />
           ))}
         </div>
       )}
@@ -125,7 +136,7 @@ export default function AlertaNotificacion() {
 }
 
 // ─── Sub-componente Toast ─────────────────────────────────────────────────────
-function ToastAlerta({ alerta, onDismiss }) {
+function ToastAlerta({ alerta, onDismiss, onNavigate }) {
   const timerRef = useRef(null)
 
   // Auto-dismiss solo para advertencias (8 s)
@@ -142,7 +153,11 @@ function ToastAlerta({ alerta, onDismiss }) {
       role="alert"
     >
       <div className="alerta-toast-icono">{ICONOS[alerta.severidad]}</div>
-      <div className="alerta-toast-cuerpo">
+      <div
+        className="alerta-toast-cuerpo alerta-toast-cuerpo--clickable"
+        onClick={() => onNavigate(alerta)}
+        title="Ver en el mapa"
+      >
         <p className="alerta-toast-ciudad">{alerta.ciudad_nombre}</p>
         <p className="alerta-toast-detalle">
           <span className="alerta-toast-metrica">

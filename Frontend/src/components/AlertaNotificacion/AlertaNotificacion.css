@@ -89,6 +89,14 @@
   padding: 0.6rem 0.9rem;
 }
 
+.alerta-modal-item--clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.alerta-modal-item--clickable:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .alerta-modal-ciudad {
   display: block;
   font-weight: 600;
@@ -177,6 +185,13 @@
 .alerta-toast-cuerpo {
   flex: 1;
   min-width: 0;
+}
+
+.alerta-toast-cuerpo--clickable {
+  cursor: pointer;
+}
+.alerta-toast-cuerpo--clickable:hover .alerta-toast-ciudad {
+  text-decoration: underline;
 }
 
 .alerta-toast-ciudad {
