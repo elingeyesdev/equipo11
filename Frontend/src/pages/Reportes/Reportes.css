@@ -1,0 +1,111 @@
+.reportes-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.reportes-filtros {
+  background: var(--surface-light);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.reportes-filtros-fila {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.reportes-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.reportes-input, .reportes-select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-primary);
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.reportes-actions {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.btn-export {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.2s;
+}
+
+.btn-export:hover {
+  opacity: 0.8;
+}
+
+.btn-pdf {
+  background: #e53935;
+  color: white;
+}
+
+.btn-excel {
+  background: #43a047;
+  color: white;
+}
+
+.reportes-tabla-wrap {
+  background: var(--surface-light);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+
+.reportes-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.reportes-tabla th,
+.reportes-tabla td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.reportes-tabla th {
+  background: var(--surface-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reportes-tabla td {
+  font-size: 14px;
+}
+
+.reportes-estado {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+}

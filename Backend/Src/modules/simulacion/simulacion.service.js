@@ -86,17 +86,21 @@ function createInitialState() {
  * Factor diurno basado en la hora local: valor ∈ [-1, 1].
  * Pico positivo al mediodía (~14:00), negativo en la madrugada (~4:00).
  */
-function getDiurnalFactor() {
-  const hour = new Date().getHours() // 0-23
+/**
+ * Factor diurno basado en una hora específica: valor ∈ [-1, 1].
+ * Pico positivo al mediodía (~14:00), negativo en la madrugada (~4:00).
+ */
+function getDiurnalFactor(date = new Date()) {
+  const hour = date.getHours() // 0-23
   // sin crece desde hora 6 (amanecer) hasta 14 (mediodía) y baja hasta las 2am
   return Math.sin((hour - 6) * Math.PI / 12)
 }
 
 /**
- * Verdadero si es hora punta (7-9am o 17-20pm).
+ * Verdadero si es hora punta (7-9am o 17-20pm) en una fecha específica.
  */
-function isRushHour() {
-  const hour = new Date().getHours()
+function isRushHour(date = new Date()) {
+  const hour = date.getHours()
   return (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20)
 }
 
@@ -107,12 +111,13 @@ function isRushHour() {
  * - Correlaciones entre métricas (humedad ↔ temperatura, ICA ↔ AQI)
  * - Ruido extra en hora punta
  */
-function generateNextTick(previousState) {
-  const diurnal = getDiurnalFactor()  // -1 a +1
-  const rushHour = isRushHour()
+function generateNextTick(previousState, date = new Date()) {
+  const diurnal = getDiurnalFactor(date)  // -1 a +1
+  const rushHour = isRushHour(date)
 
   return previousState.map(city => {
     const dept = LOCALIDADES.find(d => d.id === city.id)
+    if (!dept) return city
     const newData = {}
 
     // --- TEMPERATURA con ciclo diurno ---
@@ -123,10 +128,10 @@ function generateNextTick(previousState) {
     const tempTarget = clamp(tCenter + diurnal * tAmplitude * 0.45, tMin, tMax)
     const tempDelta = generateDelta(METRIC_CONFIG.temperatura.delta)
     // Suave atracción al target diurno (10% por tick) + ruido
-    newData.temperatura = clamp(
-      Math.round(city.data.temperatura + tempDelta + (tempTarget - city.data.temperatura) * 0.10),
+    newData.temperatura = Number(clamp(
+      (city.data.temperatura + tempDelta + (tempTarget - city.data.temperatura) * 0.10),
       tMin, tMax
-    )
+    ).toFixed(2))
 
     // --- HUMEDAD inversamente correlacionada con temperatura ---
     const [hMin, hMax] = dept.ranges.humedad
@@ -134,10 +139,10 @@ function generateNextTick(previousState) {
     const tNorm = (newData.temperatura - tMin) / (tMax - tMin + 0.001)
     const humTarget = clamp(hMax - tNorm * (hMax - hMin) * 0.60, hMin, hMax)
     const humDelta = generateDelta(METRIC_CONFIG.humedad.delta)
-    newData.humedad = clamp(
-      Math.round(city.data.humedad + humDelta + (humTarget - city.data.humedad) * 0.08),
+    newData.humedad = Number(clamp(
+      (city.data.humedad + humDelta + (humTarget - city.data.humedad) * 0.08),
       hMin, hMax
-    )
+    ).toFixed(2))
 
     // --- AQI: sube de día (tráfico, calor) y en hora punta ---
     const [aMin, aMax] = dept.ranges.aqi
@@ -149,10 +154,10 @@ function generateNextTick(previousState) {
       aMin, aMax
     )
     const aqiDelta = generateDelta(METRIC_CONFIG.aqi.delta)
-    newData.aqi = clamp(
-      Math.round(city.data.aqi + aqiDelta + (aqiTarget - city.data.aqi) * 0.07),
+    newData.aqi = Number(clamp(
+      (city.data.aqi + aqiDelta + (aqiTarget - city.data.aqi) * 0.07),
       aMin, aMax
-    )
+    ).toFixed(2))
 
     // --- ICA inversamente correlado con AQI ---
     const [iMin, iMax] = dept.ranges.ica
@@ -160,19 +165,125 @@ function generateNextTick(previousState) {
     const aqiNorm = (newData.aqi - aMin) / (aMax - aMin + 0.001)
     const icaTarget = clamp(iMax - aqiNorm * (iMax - iMin) * 0.50, iMin, iMax)
     const icaDelta = generateDelta(METRIC_CONFIG.ica.delta)
-    newData.ica = clamp(
-      Math.round(city.data.ica + icaDelta + (icaTarget - city.data.ica) * 0.06),
+    newData.ica = Number(clamp(
+      (city.data.ica + icaDelta + (icaTarget - city.data.ica) * 0.06),
       iMin, iMax
-    )
+    ).toFixed(2))
 
     // --- RUIDO: pico en hora punta + variación de fondo ---
     const [rMin, rMax] = dept.ranges.ruido
     const rushBoost = rushHour ? 8 : 0
     const ruidoDelta = generateDelta(METRIC_CONFIG.ruido.delta) + rushBoost
-    newData.ruido = clamp(Math.round(city.data.ruido + ruidoDelta), rMin, rMax)
+    newData.ruido = Number(clamp((city.data.ruido + ruidoDelta), rMin, rMax).toFixed(2))
 
-    return { ...city, data: newData }
+    return { ...city, id: city.id, name: city.name, data: newData }
   })
+}
+
+/**
+ * Simula un rango de tiempo y persiste los datos.
+ */
+async function simulateRange(startTime, endTime, intervalMinutes = 60) {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  const intervalMs = intervalMinutes * 60 * 1000
+
+  // 1. Validaciones básicas
+  if (end <= start) throw new Error('El límite superior debe ser mayor al inferior.')
+  if (end - start < intervalMs) throw new Error('Brecha muy corta para el intervalo seleccionado.')
+
+  // 2. Verificar si ya hay datos en este rango (aproximado)
+  const { rows: existing } = await db.query(
+    'SELECT COUNT(*) FROM lecturas WHERE tiempo BETWEEN $1 AND $2',
+    [start.toISOString(), end.toISOString()]
+  )
+  if (parseInt(existing[0].count) > 0) throw new Error('Dato ya simulado en este rango.')
+
+  await loadDbMapping()
+
+  // 3. Obtener estado inicial (última lectura conocida o inicial aleatoria)
+  let state = await getLastKnownState(start)
+  if (!state) state = createInitialState()
+
+  const allLecturas = []
+  let current = new Date(start)
+
+  // 4. Generar datos por cada intervalo
+  while (current <= end) {
+    state = generateNextTick(state, current)
+    const timestamp = current.toISOString()
+
+    state.forEach(city => {
+      const locId = dbMapping.localidades[city.name.toLowerCase()]
+      if (!locId) return
+      Object.entries(city.data).forEach(([metricKey, val]) => {
+        const metId = dbMapping.metricas[metricKey]
+        if (metId) {
+          allLecturas.push({
+            tiempo: timestamp,
+            localidad_id: locId,
+            metrica_id: metId,
+            valor: val,
+            fuente_id: 1 // simulacion
+          })
+        }
+      })
+    })
+    current = new Date(current.getTime() + intervalMs)
+  }
+
+  // 5. Inserción masiva
+  if (allLecturas.length > 0) {
+    const query = `
+      INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
+      SELECT (unnest($1::text[]))::timestamptz, unnest($2::int[]), unnest($3::int[]), unnest($4::numeric[]), unnest($5::int[])
+      ON CONFLICT DO NOTHING
+    `
+    const params = [
+      allLecturas.map(l => l.tiempo),
+      allLecturas.map(l => l.localidad_id),
+      allLecturas.map(l => l.metrica_id),
+      allLecturas.map(l => l.valor),
+      allLecturas.map(l => l.fuente_id)
+    ]
+    await db.query(query, params)
+  }
+
+  return allLecturas.length / LOCALIDADES.length
+}
+
+async function getLastKnownState(beforeDate) {
+  const { rows } = await db.query(`
+    WITH Ultimas AS (
+      SELECT DISTINCT ON (localidad_id, metrica_id)
+        localidad_id, metrica_id, valor, tiempo
+      FROM lecturas
+      WHERE tiempo < $1
+      ORDER BY localidad_id, metrica_id, tiempo DESC
+    )
+    SELECT u.*, loc.nombre, loc.latitud, loc.longitud, m.clave
+    FROM Ultimas u
+    JOIN localidades loc ON loc.id = u.localidad_id
+    JOIN metricas m ON m.id = u.metrica_id
+  `, [beforeDate.toISOString()])
+
+  if (rows.length === 0) return null
+
+  const cityMap = new Map()
+  rows.forEach(r => {
+    if (!cityMap.has(r.localidad_id)) {
+      cityMap.set(r.localidad_id, {
+        id: String(r.localidad_id),
+        name: r.nombre,
+        latitude: Number(r.latitud),
+        longitude: Number(r.longitud),
+        data: {}
+      })
+    }
+    cityMap.get(r.localidad_id).data[r.clave] = Number(r.valor)
+  })
+
+  return [...cityMap.values()]
 }
 
 // --- Estado interno del servicio ---
@@ -195,8 +306,6 @@ async function loadDbMapping() {
 
     const metRes = await db.query('SELECT id, clave FROM metricas')
     metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
-
-    console.log(`[Simulación] DB mapping cargado: ${Object.keys(dbMapping.localidades).length} localidades, ${Object.keys(dbMapping.metricas).length} métricas`)
   } catch (err) {
     console.error('[Simulación] Error cargando DB mapping:', err.message)
   }
@@ -204,13 +313,12 @@ async function loadDbMapping() {
 
 /**
  * Persiste el estado actual en la tabla lecturas.
- * Solo ejecuta si pasó al menos 1 hora desde el último guardado.
  */
 async function persistReadings(state) {
-  if (!Object.keys(dbMapping.localidades).length) return
+  if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
 
   const now = Date.now()
-  if (now - lastPersistTime < PERSIST_INTERVAL_MS) return  // Throttle horario
+  if (now - lastPersistTime < PERSIST_INTERVAL_MS) return
   lastPersistTime = now
 
   const localidadIds = []
@@ -220,7 +328,6 @@ async function persistReadings(state) {
   state.forEach(city => {
     const locId = dbMapping.localidades[city.name.toLowerCase()]
     if (!locId) return
-
     Object.entries(city.data).forEach(([metricKey, val]) => {
       const metId = dbMapping.metricas[metricKey]
       if (metId && val !== null) {
@@ -239,30 +346,25 @@ async function persistReadings(state) {
       SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
-
-    console.log(`[Simulación] Snapshot horario guardado: ${localidadIds.length} lecturas`)
   } catch (err) {
     console.error('[Simulación] Error guardando snapshot horario:', err.message)
   }
 }
 
 /**
- * Inicia la simulación. Llama a onTick cada `intervalMs` milisegundos.
- * Si ya está corriendo, no hace nada (idempotente).
+ * Inicia la simulación.
  */
 function start(intervalMs, onTick) {
-  if (intervalId) return false // Ya está corriendo
-
-  loadDbMapping() // Carga de IDs para persistencia
-
+  if (intervalId) return false
+  loadDbMapping()
   tickCount = 0
   currentState = createInitialState()
-  lastPersistTime = 0  // Resetear throttle al iniciar
+  lastPersistTime = 0
 
   intervalId = setInterval(() => {
     currentState = generateNextTick(currentState)
     tickCount++
-    persistReadings(currentState) // Throttled — solo cada hora
+    persistReadings(currentState)
     checkCriticalThresholds(currentState)
     onTick({
       cities: currentState,
@@ -270,13 +372,9 @@ function start(intervalMs, onTick) {
       timestamp: new Date().toISOString()
     })
   }, intervalMs)
-
   return true
 }
 
-/**
- * Detiene la simulación y limpia el intervalo.
- */
 function stop() {
   if (!intervalId) return false
   clearInterval(intervalId)
@@ -284,16 +382,8 @@ function stop() {
   return true
 }
 
-/**
- * Indica si la simulación está activa.
- */
-function isRunning() {
-  return intervalId !== null
-}
+function isRunning() { return intervalId !== null }
 
-/**
- * Retorna el estado actual (último snapshot de datos).
- */
 function getCurrentState() {
   return {
     cities: currentState,
@@ -302,50 +392,34 @@ function getCurrentState() {
   }
 }
 
-/**
- * Inyecta datos manuales para una ciudad específica.
- * Los valores reemplazan el estado actual y la simulación continúa desde ahí.
- */
 function injectData(cityId, partialData) {
   const cityIndex = currentState.findIndex(c => c.id === cityId)
   if (cityIndex === -1) return false
-
   const sanitized = {}
   Object.entries(partialData).forEach(([metric, value]) => {
     if (METRIC_KEYS.includes(metric) && typeof value === 'number' && !isNaN(value)) {
       const limits = METRIC_LIMITS[metric]
-      sanitized[metric] = clamp(Math.round(value), limits.min, limits.max)
+      sanitized[metric] = clamp(value, limits.min, limits.max)
     }
   })
-
   if (Object.keys(sanitized).length === 0) return false
-
   currentState[cityIndex] = {
     ...currentState[cityIndex],
     data: { ...currentState[cityIndex].data, ...sanitized }
   }
-
-  // La inyección manual siempre persiste, sin throttle
   persistInjection([currentState[cityIndex]])
   checkCriticalThresholds([currentState[cityIndex]])
-
   return true
 }
 
-/**
- * Persiste una inyección manual inmediatamente (sin throttle).
- */
 async function persistInjection(state) {
-  if (!Object.keys(dbMapping.localidades).length) return
-
+  if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
   const localidadIds = []
   const metricaIds = []
   const valores = []
-
   state.forEach(city => {
     const locId = dbMapping.localidades[city.name.toLowerCase()]
     if (!locId) return
-
     Object.entries(city.data).forEach(([metricKey, val]) => {
       const metId = dbMapping.metricas[metricKey]
       if (metId && val !== null) {
@@ -355,9 +429,7 @@ async function persistInjection(state) {
       }
     })
   })
-
   if (!localidadIds.length) return
-
   try {
     await db.query(`
       INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
@@ -369,29 +441,17 @@ async function persistInjection(state) {
   }
 }
 
-function setAlertEmail(email) {
-  alertEmail = email;
-}
+function setAlertEmail(email) { alertEmail = email; }
 
 function checkCriticalThresholds(state) {
   if (!alertEmail) return;
-
-  const CRITICAL_LIMITS = {
-    aqi: 150,        // > 150 (Dañino/Peligroso)
-    ica: 26,         // < 26 (Muy mala)
-    ruido: 85,       // > 85 (Dañino/Peligroso)
-    temperatura: 40, // > 40 o < -10
-    humedad: 90      // > 90
-  }
-
+  const CRITICAL_LIMITS = { aqi: 150, ica: 26, ruido: 85, temperatura: 40, humedad: 90 }
   const now = Date.now();
-  const ALERT_COOLDOWN = 10 * 60 * 1000; // 10 minutos por métrica y ciudad
-
+  const ALERT_COOLDOWN = 10 * 60 * 1000;
   state.forEach(city => {
     Object.entries(city.data).forEach(([metric, val]) => {
       let isCritical = false;
       let condition = '';
-
       if (metric === 'ica' && val <= CRITICAL_LIMITS.ica) {
         isCritical = true;
         condition = `cayó a ${val} (Crítico: <= ${CRITICAL_LIMITS.ica})`;
@@ -402,13 +462,12 @@ function checkCriticalThresholds(state) {
         isCritical = true;
         condition = `alcanzó ${val} (Crítico: >= ${CRITICAL_LIMITS[metric]})`;
       }
-
       if (isCritical) {
         const key = `${city.id}-${metric}`;
         if (!lastAlertTimes[key] || now - lastAlertTimes[key] > ALERT_COOLDOWN) {
           lastAlertTimes[key] = now;
-
-          const msg = `Alerta: En la ciudad de <b>${city.name}</b>, el indicador <b>${metric.toUpperCase()}</b> ${condition}. Se requiere acción inmediata.`;
+          const msg = `Alerta: En la ciudad de <b>${city.name}</b>, el indicador <b>${metric.toUpperCase()}</b> ${condition}.`;
+          const { sendEmail } = require('../../utils/mailer')
           sendEmail(alertEmail, `Alerta Crítica: ${metric.toUpperCase()} en ${city.name}`, 'Alerta de Umbral Crítico', msg, 'Ver Mapa', `http://localhost:5173/mapa?city=${city.id}`)
             .catch(err => console.error('Error enviando alerta:', err));
         }
@@ -417,4 +476,5 @@ function checkCriticalThresholds(state) {
   });
 }
 
-module.exports = { start, stop, isRunning, getCurrentState, injectData, setAlertEmail }
+module.exports = { start, stop, isRunning, getCurrentState, injectData, setAlertEmail, simulateRange }
+

@@ -101,6 +101,17 @@ export function SimulacionProvider({ children }) {
     socketRef.current?.emit('simulacion:alertas', { email })
   }, [])
 
+  const simularRango = useCallback(async (startTime, endTime, intervalMinutes) => {
+    const res = await fetch(`${SOCKET_URL}/api/simulacion/range`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startTime, endTime, intervalMinutes })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Error en la simulación por rango')
+    return data
+  }, [])
+
   const value = {
     isConnected,
     isRunning,
@@ -115,6 +126,7 @@ export function SimulacionProvider({ children }) {
     alertasPendientes,
     dismissAlerta,
     suscribirAlertas,
+    simularRango,
   }
 
   return (

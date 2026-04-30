@@ -7,7 +7,7 @@
  * - KISS: Estructura plana y legible, sin abstracciones innecesarias.
  * - YAGNI: Solo muestra lo que el MVP necesita, sin features extras.
  */
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSimulacion } from '../../context/SimulacionContext'
 import { useUnidades } from '../../hooks/useUnidades'
@@ -72,7 +72,43 @@ const EMPTY_INJECT = { temperatura: '', aqi: '', ica: '', ruido: '', humedad: ''
 
 function PanelSimulacion() {
   const navigate = useNavigate()
-  const { isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas, iniciar, detener, inyectar, suscribirAlertas } = useSimulacion()
+  const { 
+    isRunning, 
+    isConnected, 
+    cities, 
+    tickCount, 
+    lastUpdate, 
+    interval, 
+    iniciar, 
+    detener,
+    simularRango,
+    inyectar, 
+    suscribirAlertas,
+    emailAlertas 
+  } = useSimulacion()
+
+  // Estados para simulación por lotes
+  const [batchStart, setBatchStart] = useState('')
+  const [batchEnd, setBatchEnd] = useState('')
+  const [batchInterval, setBatchInterval] = useState(60)
+  const [isBatchRunning, setIsBatchRunning] = useState(false)
+
+  const handleBatchSimulate = async () => {
+    if (!batchStart || !batchEnd) {
+      alert('Por favor selecciona fecha de inicio y fin.')
+      return
+    }
+    setIsBatchRunning(true)
+    try {
+      const res = await simularRango(batchStart, batchEnd, batchInterval)
+      alert(`✅ Éxito: Se generaron ${Math.round(res.dataPointsPerCity)} puntos de datos por ciudad.`)
+    } catch (err) {
+      alert(`❌ Error: ${err.message}`)
+    } finally {
+      setIsBatchRunning(false)
+    }
+  }
+
   const { unidades, cambiarUnidad } = useUnidades()
 
   const [alertEmailInput, setAlertEmailInput] = useState('')
@@ -178,7 +214,7 @@ function PanelSimulacion() {
             }}
             disabled={isRunning || !isConnected}
           >
-            ▶ Iniciar
+            ▶ Iniciar Tiempo Real
           </button>
           <button
             className="sim-btn sim-btn--stop"
@@ -188,7 +224,7 @@ function PanelSimulacion() {
             ⏹ Detener
           </button>
           <div className="sim-interval-selector">
-            <label htmlFor="interval-select">Intervalo:</label>
+            <label htmlFor="interval-select">Tick:</label>
             <select
               id="interval-select"
               value={interval}
@@ -205,6 +241,49 @@ function PanelSimulacion() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="sim-batch-card">
+          <div className="sim-batch-header">
+            <p className="sim-batch-title">⚡ Simulación por Lotes (Histórico/Futuro)</p>
+            <p className="sim-batch-hint">Genera datos masivos instantáneamente</p>
+          </div>
+          <div className="sim-batch-body">
+            <div className="sim-batch-row">
+              <div className="sim-batch-field">
+                <label>Inicio</label>
+                <input 
+                  type="datetime-local" 
+                  value={batchStart} 
+                  onChange={e => setBatchStart(e.target.value)}
+                />
+              </div>
+              <div className="sim-batch-field">
+                <label>Fin</label>
+                <input 
+                  type="datetime-local" 
+                  value={batchEnd} 
+                  onChange={e => setBatchEnd(e.target.value)}
+                />
+              </div>
+              <div className="sim-batch-field">
+                <label>Intervalo</label>
+                <select value={batchInterval} onChange={e => setBatchInterval(Number(e.target.value))}>
+                  <option value={30}>Media hora</option>
+                  <option value={60}>1 hora</option>
+                  <option value={120}>2 horas</option>
+                  <option value={240}>4 horas</option>
+                </select>
+              </div>
+            </div>
+            <button 
+              className="sim-btn sim-btn--batch"
+              onClick={handleBatchSimulate}
+              disabled={!isConnected || isBatchRunning}
+            >
+              {isBatchRunning ? '⏳ Procesando...' : '🚀 Generar Datos'}
+            </button>
           </div>
         </div>
       </div>

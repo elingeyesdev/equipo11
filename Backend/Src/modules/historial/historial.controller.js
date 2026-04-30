@@ -109,7 +109,7 @@ const historialController = {
       }
 
       await db.query(`
-        INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_datos_id)
+        INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
         VALUES ${inserts.join(',')}
         ON CONFLICT DO NOTHING
       `)

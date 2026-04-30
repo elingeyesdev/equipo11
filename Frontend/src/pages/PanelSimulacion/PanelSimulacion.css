@@ -248,6 +248,83 @@
 }
 .sim-interval-selector select:focus { border-color: var(--moss-ink); }
 
+/* ─── Card de simulación por lotes ─── */
+.sim-batch-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-sm);
+  margin-top: 14px;
+}
+
+.sim-batch-header {
+  margin-bottom: 16px;
+}
+
+.sim-batch-title {
+  font: 600 12px/1 var(--font-sans);
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 4px 0;
+}
+
+.sim-batch-hint {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  margin: 0;
+}
+
+.sim-batch-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sim-batch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.sim-batch-field label {
+  font: 600 10px/1 var(--font-mono);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sim-batch-field input,
+.sim-batch-field select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: 500 12px var(--font-mono);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+}
+
+.sim-batch-field input:focus,
+.sim-batch-field select:focus {
+  border-color: var(--moss-ink);
+}
+
+.sim-btn--batch {
+  width: 100%;
+  justify-content: center;
+  background: var(--moss-ink);
+  border-color: var(--moss-ink);
+  padding: 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 /* ─── Card de unidades ─── */
 .sim-units-card {
   background: var(--card);

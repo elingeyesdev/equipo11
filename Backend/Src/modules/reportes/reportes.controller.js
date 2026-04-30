@@ -21,32 +21,47 @@ const generarReporte = async (req, res) => {
 
       let y = doc.y;
       const startX = 30;
-      // Calcular ancho de columnas uniformemente
-      const colWidth = (doc.page.width - startX * 2) / columnas.length;
+      const pageWidth = doc.page.width - startX * 2;
+      
+      // Definir anchos proporcionales: Fecha (28%), Ciudad (20%), Métricas (resto)
+      const colWidths = columnas.map((col, i) => {
+        if (i === 0) return pageWidth * 0.28; // Fecha y Hora
+        if (i === 1) return pageWidth * 0.18; // Ciudad
+        return (pageWidth * 0.54) / (columnas.length - 2); // Métricas
+      });
 
       // Dibujar cabeceras
-      doc.fontSize(10).font('Helvetica-Bold');
+      doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333');
+      let currentX = startX;
       columnas.forEach((col, i) => {
-        doc.text(col.header, startX + i * colWidth, y, { width: colWidth, align: 'left' });
+        doc.text(col.header, currentX, y, { width: colWidths[i], align: 'left' });
+        currentX += colWidths[i];
       });
       
-      y += 15;
-      doc.moveTo(startX, y).lineTo(doc.page.width - startX, y).stroke();
+      y += 18;
+      doc.moveTo(startX, y).lineTo(doc.page.width - startX, y).strokeColor('#dddddd').stroke();
       y += 10;
 
       // Dibujar filas
-      doc.font('Helvetica').fontSize(9);
+      doc.font('Helvetica').fontSize(8.5).fillColor('#444444');
       datos.forEach(row => {
-        if (y > doc.page.height - 50) {
+        // Calcular el alto máximo de la fila actual
+        const rowHeights = columnas.map((col, i) => doc.heightOfString(String(row[col.key] || '—'), { width: colWidths[i] }));
+        const maxHeight = Math.max(...rowHeights, 14);
+
+        if (y + maxHeight > doc.page.height - 50) {
           doc.addPage();
           y = 30;
         }
+
+        let rowX = startX;
         columnas.forEach((col, i) => {
           let val = row[col.key];
           if (val === null || val === undefined) val = '—';
-          doc.text(String(val), startX + i * colWidth, y, { width: colWidth, align: 'left' });
+          doc.text(String(val), rowX, y, { width: colWidths[i], align: 'left' });
+          rowX += colWidths[i];
         });
-        y += 15;
+        y += maxHeight + 4; // Espacio entre filas
       });
 
       doc.end();
