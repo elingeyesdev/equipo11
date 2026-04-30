@@ -96,6 +96,7 @@ function MapaMonitoreo() {
   const [isControlsOpen, setIsControlsOpen] = useState(false);
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
+  const [showSensors, setShowSensors] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
   const [timelineIndex, setTimelineIndex] = useState(0);
 
@@ -465,7 +466,7 @@ function MapaMonitoreo() {
   };
 
   // Contar cuántos controles están activos para el badge
-  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode].filter(Boolean).length;
+  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode, showSensors].filter(Boolean).length;
 
   return (
     <div className="mapa-page-container">
@@ -605,48 +606,49 @@ function MapaMonitoreo() {
             <GridRadarLayer scannedGrid={scannedGrid.data} currentZoom={viewState.zoom} />
           )}
 
-          {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
-          {isHeatmapActive ? (
-            <MarkersLayer
-              cities={citiesData}
-              metrica={heatmapMetric}
-              umbrales={umbrales}
-              getFuenteLabel={getFuenteLabel}
-              onCityClick={async (city) => {
-                setSelectedCity(city);
-                try {
-                  const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                  if (weather && weather.current) setWeatherCode(weather.current.weather_code);
-                } catch (err) { console.error(err); }
-              }}
-            />
-          ) : (
-            /* Marcadores PIN — en modo heatmap OFF */
-            citiesData.map((city) => (
-              <Marker
-                key={city.id}
-                longitude={city.longitude}
-                latitude={city.latitude}
-                anchor="bottom"
-                onClick={async (e) => {
-                  e.originalEvent.stopPropagation();
+          {/* Marcadores — solo visibles si "Ver Sensores" está activo */}
+          {showSensors && (
+            isHeatmapActive ? (
+              <MarkersLayer
+                cities={citiesData}
+                metrica={heatmapMetric}
+                umbrales={umbrales}
+                getFuenteLabel={getFuenteLabel}
+                onCityClick={async (city) => {
                   setSelectedCity(city);
                   try {
                     const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                    if (weather?.current) setWeatherCode(weather.current.weather_code);
+                    if (weather && weather.current) setWeatherCode(weather.current.weather_code);
                   } catch (err) { console.error(err); }
                 }}
-              >
-                <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                  <span role="img" aria-label="pin">📍</span>
-                  {getFuenteLabel(city) && (
-                    <span className={`marker-source-badge${isRunning ? ' marker-source-badge--sim' : ' marker-source-badge--real'}`}>
-                      {getFuenteLabel(city)}
-                    </span>
-                  )}
-                </div>
-              </Marker>
-            ))
+              />
+            ) : (
+              citiesData.map((city) => (
+                <Marker
+                  key={city.id}
+                  longitude={city.longitude}
+                  latitude={city.latitude}
+                  anchor="bottom"
+                  onClick={async (e) => {
+                    e.originalEvent.stopPropagation();
+                    setSelectedCity(city);
+                    try {
+                      const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                      if (weather?.current) setWeatherCode(weather.current.weather_code);
+                    } catch (err) { console.error(err); }
+                  }}
+                >
+                  <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
+                    <span role="img" aria-label="pin">📍</span>
+                    {getFuenteLabel(city) && (
+                      <span className={`marker-source-badge${isRunning ? ' marker-source-badge--sim' : ' marker-source-badge--real'}`}>
+                        {getFuenteLabel(city)}
+                      </span>
+                    )}
+                  </div>
+                </Marker>
+              ))
+            )
           )}
 
         </Map>
@@ -828,7 +830,10 @@ function MapaMonitoreo() {
                     checked={isHeatmapActive}
                     onChange={(e) => {
                       setIsHeatmapActive(e.target.checked);
-                      if (e.target.checked) setSelectedCity(null);
+                      if (e.target.checked) {
+                        setSelectedCity(null);
+                        setShowSensors(false);
+                      }
                     }}
                   />
                   <span className="slider round"></span>
@@ -852,6 +857,25 @@ function MapaMonitoreo() {
                   </select>
                 </div>
               )}
+
+              {/* Ver Sensores */}
+              <div className="control-row">
+                <div className="control-row-label">
+                  <span className="control-icon">📍</span>
+                  <span className="control-text">Ver Sensores</span>
+                  <span className={`control-status ${showSensors ? 'on' : 'off'}`}>
+                    {showSensors ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+                <label className="ios-switch">
+                  <input
+                    type="checkbox"
+                    checked={showSensors}
+                    onChange={(e) => setShowSensors(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
 
               {/* Histórico */}
               <div className="control-row">
