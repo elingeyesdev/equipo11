@@ -3,7 +3,7 @@ import { Source, Layer } from 'react-map-gl/mapbox'
 import voronoi from '@turf/voronoi'
 import { intersect } from '@turf/intersect'
 import { featureCollection, point } from '@turf/helpers'
-import { colorPorValor } from '../../../hooks/useUmbrales'
+import { colorPorValor, umbralPorValor } from '../../../hooks/useUmbrales'
 
 /**
  * VoronoiLayer — Manto territorial coloreado por umbral.
@@ -88,16 +88,17 @@ function addColors(clippedGeometry, cities, metrica, umbrales, activeFilter) {
     features: clippedGeometry.features.map(f => {
       const city = cityMap[f.properties.cityId]
       const value = city?.data?.[metrica] ?? 0
+      const umbral = umbralPorValor(umbrales, value)
       const inRange =
         !activeFilter ||
-        (value >= activeFilter.valor_min && value <= activeFilter.valor_max)
+        (umbral?.nivel === activeFilter.nivel)
       return {
         ...f,
         properties: {
           ...f.properties,
-          fillColor: colorPorValor(umbrales, value),
+          fillColor: umbral?.color_hex ?? '#666',
           value,
-          opacity: inRange ? 0.78 : 0.1,
+          opacity: inRange ? 0.78 : 0,
         },
       }
     }),

@@ -37,6 +37,7 @@ export function useUmbrales(metrica) {
       })
       .catch(err => {
         setError(err.message)
+        setUmbrales([])
         setLoading(false)
       })
   }, [metrica])
@@ -51,7 +52,14 @@ export function useUmbrales(metrica) {
  * @returns {Object|null}
  */
 export function umbralPorValor(umbrales, valor) {
-  return umbrales.find(u => valor >= u.valor_min && valor <= u.valor_max) ?? null
+  const sorted = [...umbrales].sort((a, b) => a.nivel - b.nivel);
+  return sorted.find((u, i) => {
+    const next = sorted[i + 1];
+    if (next) {
+      return valor >= u.valor_min && valor < next.valor_min;
+    }
+    return valor >= u.valor_min && valor <= u.valor_max;
+  }) ?? null;
 }
 
 /**

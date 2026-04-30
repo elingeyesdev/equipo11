@@ -81,12 +81,12 @@ export function formatearValor(metricKey, rawValue, unitKey) {
 
 export function convertirValor(metricKey, rawValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
-  if (!unit || rawValue == null) return rawValue
-  return unit.convertir(rawValue)
+  if (!unit || rawValue == null || rawValue === '') return rawValue
+  return unit.convertir(Number(rawValue))
 }
 
 export function invertirValor(metricKey, displayValue, unitKey) {
   const unit = resolverUnidad(metricKey, unitKey)
-  if (!unit || displayValue == null) return displayValue
-  return unit.invertir(displayValue)
+  if (!unit || displayValue == null || displayValue === '') return displayValue
+  return unit.invertir(Number(displayValue))
 }

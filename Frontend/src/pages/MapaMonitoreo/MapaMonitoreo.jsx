@@ -609,6 +609,9 @@ function MapaMonitoreo() {
               cities={citiesData}
               metrica={heatmapMetric}
               umbrales={umbrales}
+              activeFilter={activeUmbralFilter}
+              unidad={unidades[heatmapMetric]}
+              currentZoom={viewState.zoom}
               onCityClick={async (city) => {
                 setSelectedCity(city);
                 try {
@@ -634,8 +637,13 @@ function MapaMonitoreo() {
                   } catch (err) { console.error(err); }
                 }}
               >
-                <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                  <span role="img" aria-label="pin">📍</span>
+                <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`} style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                  <span role="img" aria-label="pin" style={{ fontSize: '24px' }}>📍</span>
+                  {viewState.zoom >= 5.5 && (
+                    <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '2px', color: 'white', textShadow: '0px 0px 3px black, 1px 1px 2px black', fontSize: '12px', whiteSpace: 'nowrap', fontWeight: 600, pointerEvents: 'none' }}>
+                      {city.name}
+                    </div>
+                  )}
                 </div>
               </Marker>
             ))
