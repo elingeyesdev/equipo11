@@ -235,8 +235,8 @@ async function persistReadings(state) {
 
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
-      SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
+      INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
+      SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
 
@@ -360,8 +360,8 @@ async function persistInjection(state) {
 
   try {
     await db.query(`
-      INSERT INTO lecturas (localidad_id, metrica_id, valor, fuente_id, tiempo)
-      SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1, NOW()
+      INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
+      SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 2
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
   } catch (err) {

@@ -1,0 +1,263 @@
+/* ==========================================================
+   Alertas.css — Página de historial de alertas
+   Usa los tokens de index.css + clases de PagePlaceholder.css
+   ========================================================== */
+
+.alertas-page {
+  padding: 28px 24px 40px;
+}
+
+/* ─── Filtros ─────────────────────────────────────────────── */
+.alertas-filtros {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.alertas-filtros-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.alertas-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font: 600 11px/1 var(--font-sans);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.alertas-input,
+.alertas-select {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 140px;
+}
+
+.alertas-input:focus,
+.alertas-select:focus {
+  border-color: var(--moss);
+}
+
+.alertas-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding-bottom: 2px;
+}
+
+.alertas-checkbox-label input[type="checkbox"] {
+  accent-color: var(--moss);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* ─── Tabla wrap ──────────────────────────────────────────── */
+.alertas-tabla-wrap {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.alertas-estado {
+  padding: 48px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.alertas-estado--error {
+  color: var(--rust, #dc2626);
+}
+
+/* ─── Tabla ───────────────────────────────────────────────── */
+.alertas-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.alertas-tabla thead tr {
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.alertas-tabla th {
+  text-align: left;
+  padding: 10px 14px;
+  font: 600 11px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.alertas-tabla tbody tr {
+  border-bottom: 1px solid var(--line-soft);
+  transition: background 0.12s;
+}
+
+.alertas-tabla tbody tr:last-child {
+  border-bottom: none;
+}
+
+.alertas-tabla tbody tr:hover {
+  background: var(--paper);
+}
+
+.alertas-tabla td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+
+.alertas-fila--reconocida td {
+  opacity: 0.55;
+}
+
+.alertas-td-fecha {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.alertas-td-ciudad {
+  font-weight: 600;
+}
+
+.alertas-td-metrica {
+  color: var(--text-secondary);
+}
+
+.alertas-td-valor {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.alertas-unidad {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.alertas-td-label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* ─── Badges de severidad ─────────────────────────────────── */
+.alertas-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 10.5px/1.4 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.alertas-badge--advertencia {
+  background: var(--amber-soft, #fef3c7);
+  color: var(--amber, #d97706);
+}
+
+.alertas-badge--critica {
+  background: var(--rust-soft, #fee2e2);
+  color: var(--rust, #dc2626);
+}
+
+.alertas-badge--emergencia {
+  background: #3b0000;
+  color: #ff6666;
+}
+
+/* ─── Acciones ────────────────────────────────────────────── */
+.alertas-reconocida-txt {
+  font-size: 12px;
+  color: var(--moss-ink);
+  font-weight: 500;
+}
+
+.alertas-btn-reconocer {
+  font: 600 11.5px/1 var(--font-sans);
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+
+.alertas-btn-reconocer:hover {
+  background: var(--moss-soft);
+  border-color: var(--moss);
+  color: var(--moss-ink);
+  transform: scale(1.02);
+}
+
+.alertas-btn-reconocer:active {
+  transform: scale(0.97);
+}
+
+/* ─── Paginación ──────────────────────────────────────────── */
+.alertas-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.alertas-pag-btn {
+  font: 600 12px/1 var(--font-sans);
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.alertas-pag-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.alertas-pag-btn:not(:disabled):hover {
+  background: var(--paper-2);
+  border-color: var(--moss);
+}
+
+.alertas-pag-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ─── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .alertas-page { padding: 16px 12px 32px; }
+  .alertas-tabla-wrap { overflow-x: auto; }
+  .alertas-tabla { min-width: 640px; }
+  .alertas-filtros-fila { flex-direction: column; }
+}

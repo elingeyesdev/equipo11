@@ -591,7 +591,67 @@ FROM metricas m,
         (5, 'Muy no saludable',       201, 300, '#8f3f97', 'critica'),
         (6, 'Peligroso',              301, 500, '#7e0023', 'emergencia')
      ) AS v(nivel, label, vmin, vmax, color, sev)
-WHERE m.clave = 'aqi';
+WHERE m.clave = 'aqi'
+ON CONFLICT (metrica_id, nivel) DO NOTHING;
+
+-- Umbrales Temperatura (°C) — ciclo completo de riesgo climático
+INSERT INTO umbrales (metrica_id, nivel, label, valor_min, valor_max, color_hex, severidad)
+SELECT m.id, v.nivel, v.label, v.vmin, v.vmax, v.color, v.sev
+FROM metricas m,
+     (VALUES
+        (1, 'Peligro de congelación',    -40, -20, '#1a237e', 'emergencia'),
+        (2, 'Frío extremo',              -20, -10, '#1565c0', 'critica'),
+        (3, 'Frío',                      -10,   5, '#42a5f5', 'advertencia'),
+        (4, 'Templado',                    5,  25, '#00e676', 'informativa'),
+        (5, 'Cálido',                     25,  35, '#ffff00', 'informativa'),
+        (6, 'Calor extremo',              35,  42, '#ff7e00', 'advertencia'),
+        (7, 'Peligro golpe de calor',     42,  60, '#b71c1c', 'emergencia')
+     ) AS v(nivel, label, vmin, vmax, color, sev)
+WHERE m.clave = 'temperatura'
+ON CONFLICT (metrica_id, nivel) DO NOTHING;
+
+-- Umbrales ICA — Calidad del Agua (NSF/CCME 0–100, mayor = mejor)
+INSERT INTO umbrales (metrica_id, nivel, label, valor_min, valor_max, color_hex, severidad)
+SELECT m.id, v.nivel, v.label, v.vmin, v.vmax, v.color, v.sev
+FROM metricas m,
+     (VALUES
+        (1, 'Peligrosa',   0,  20, '#7e0023', 'emergencia'),
+        (2, 'Mala',       20,  40, '#ff0000', 'critica'),
+        (3, 'Aceptable',  40,  60, '#ff7e00', 'advertencia'),
+        (4, 'Buena',      60,  80, '#a0e400', 'informativa'),
+        (5, 'Excelente',  80, 100, '#00e400', 'informativa')
+     ) AS v(nivel, label, vmin, vmax, color, sev)
+WHERE m.clave = 'ica'
+ON CONFLICT (metrica_id, nivel) DO NOTHING;
+
+-- Umbrales Ruido ambiental (dB) — estándares NIOSH + OMS 2018
+INSERT INTO umbrales (metrica_id, nivel, label, valor_min, valor_max, color_hex, severidad)
+SELECT m.id, v.nivel, v.label, v.vmin, v.vmax, v.color, v.sev
+FROM metricas m,
+     (VALUES
+        (1, 'Silencioso',               0,  45, '#00e400', 'informativa'),
+        (2, 'Ambiente normal',          45,  65, '#a0e400', 'informativa'),
+        (3, 'Ruidoso',                  65,  80, '#ffff00', 'advertencia'),
+        (4, 'Muy ruidoso',              80,  95, '#ff7e00', 'critica'),
+        (5, 'Peligroso para audición',  95, 110, '#ff0000', 'critica'),
+        (6, 'Zona de exclusión',       110, 140, '#7e0023', 'emergencia')
+     ) AS v(nivel, label, vmin, vmax, color, sev)
+WHERE m.clave = 'ruido'
+ON CONFLICT (metrica_id, nivel) DO NOTHING;
+
+-- Umbrales Humedad relativa (%)
+INSERT INTO umbrales (metrica_id, nivel, label, valor_min, valor_max, color_hex, severidad)
+SELECT m.id, v.nivel, v.label, v.vmin, v.vmax, v.color, v.sev
+FROM metricas m,
+     (VALUES
+        (1, 'Muy seca (riesgo incendio)',  0,  15, '#d4a017', 'advertencia'),
+        (2, 'Seca',                       15,  30, '#a8c5da', 'informativa'),
+        (3, 'Confort óptimo',             30,  60, '#00e400', 'informativa'),
+        (4, 'Húmedo',                     60,  80, '#4fc3f7', 'informativa'),
+        (5, 'Muy húmedo (riesgo moho)',   80, 100, '#0d47a1', 'advertencia')
+     ) AS v(nivel, label, vmin, vmax, color, sev)
+WHERE m.clave = 'humedad'
+ON CONFLICT (metrica_id, nivel) DO NOTHING;
 
 
 -- =============================================================================
