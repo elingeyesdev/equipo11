@@ -45,11 +45,11 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
+    environment:
+      - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
     depends_on:
       - backend
-    # IMPORTANTE: Vite por defecto solo escucha en localhost. 
-    # Con --host le decimos que exponga la app hacia afuera del contenedor.
-    command: npm run dev -- --host 
+    command: npm run dev -- --host
 
 # Volumen nombrado para persistir los datos de PostgreSQL
 volumes:
