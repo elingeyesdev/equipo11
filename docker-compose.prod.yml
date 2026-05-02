@@ -1,0 +1,58 @@
+services:
+  # ─── Base de datos PostgreSQL ───
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sistema_ambiental
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./database/esquema_envirosense.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/02_sudamerica.sql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d sistema_ambiental"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─── Backend (API Node.js + Express) ───
+  backend:
+    build: ./Backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: sistema_ambiental
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      JWT_SECRET: enviro_sense_jwt_secret_2026
+      JWT_EXPIRES_IN: 24h
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ─── Frontend (React + Vite) ───
+  frontend:
+    build: ./Frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    # IMPORTANTE: Vite por defecto solo escucha en localhost. 
+    # Con --host le decimos que exponga la app hacia afuera del contenedor.
+    command: npm run dev -- --host 
+
+# Volumen nombrado para persistir los datos de PostgreSQL
+volumes:
+  pgdata:
+
+#Si alguien lee esto, solo estoy haciendo una prueba con algo pa ver si funca
