@@ -492,41 +492,15 @@ function PanelSimulacion() {
         </form>
       </div>
 
-      {/* Suscripción a Alertas */}
-      <div className="inject-card" style={{ marginTop: '2rem' }}>
-        <div className="inject-card-header">
-          <div>
-            <h3 className="inject-title">Alertas por <em>Umbrales</em></h3>
-            <p className="inject-subtitle">Recibe un correo si los indicadores de cualquier ciudad alcanzan niveles críticos</p>
-          </div>
-        </div>
-
-        <form className="inject-form" onSubmit={handleAlertSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-          <div className="inject-field" style={{ flex: 1 }}>
-            <label className="inject-label">Correo electrónico</label>
-            <input
-              type="email"
-              className="inject-input"
-              value={alertEmailInput}
-              onChange={(e) => setAlertEmailInput(e.target.value)}
-              placeholder="admin@envirosense.bo"
-              disabled={!isConnected}
-            />
-          </div>
-          <button
-            type="submit"
-            className="sim-btn inject-btn-send"
-            disabled={!alertEmailInput || !isConnected}
-            style={{ marginBottom: '10px' }}
-          >
-            Suscribirse
-          </button>
-        </form>
-        {emailAlertas && (
-          <p style={{ marginTop: '1rem', color: '#10ac84', fontSize: '0.9rem' }}>
-            ✓ Enviando alertas a: <b>{emailAlertas}</b>
-          </p>
-        )}
+      {/* Enlace a Notificaciones */}
+      <div className="sim-footer-link" style={{ marginTop: '2rem', textAlign: 'center' }}>
+        <button 
+          className="sim-btn" 
+          onClick={() => navigate('/notificaciones')}
+          style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', border: '1px solid rgba(99, 102, 241, 0.2)' }}
+        >
+          ⚙️ Configurar canales de notificación (Email, WhatsApp, Telegram)
+        </button>
       </div>
 
       {/* Footer informativo */}

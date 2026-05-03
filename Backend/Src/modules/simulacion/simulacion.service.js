@@ -16,7 +16,6 @@
 const LOCALIDADES = require('./localidades.data')
 const { sendEmail } = require('../../utils/mailer')
 
-let alertEmail = null;
 let lastAlertTimes = {}; // Para no spamear { "lapaz-aqi": timestamp }
 
 // Configuración de variación por métrica (delta máximo por tick)
@@ -365,7 +364,6 @@ function start(intervalMs, onTick) {
     currentState = generateNextTick(currentState)
     tickCount++
     persistReadings(currentState)
-    checkCriticalThresholds(currentState)
     onTick({
       cities: currentState,
       tickCount,
@@ -408,7 +406,6 @@ function injectData(cityId, partialData) {
     data: { ...currentState[cityIndex].data, ...sanitized }
   }
   persistInjection([currentState[cityIndex]])
-  checkCriticalThresholds([currentState[cityIndex]])
   return true
 }
 
@@ -441,40 +438,5 @@ async function persistInjection(state) {
   }
 }
 
-function setAlertEmail(email) { alertEmail = email; }
-
-function checkCriticalThresholds(state) {
-  if (!alertEmail) return;
-  const CRITICAL_LIMITS = { aqi: 150, ica: 26, ruido: 85, temperatura: 40, humedad: 90 }
-  const now = Date.now();
-  const ALERT_COOLDOWN = 10 * 60 * 1000;
-  state.forEach(city => {
-    Object.entries(city.data).forEach(([metric, val]) => {
-      let isCritical = false;
-      let condition = '';
-      if (metric === 'ica' && val <= CRITICAL_LIMITS.ica) {
-        isCritical = true;
-        condition = `cayó a ${val} (Crítico: <= ${CRITICAL_LIMITS.ica})`;
-      } else if (metric === 'temperatura' && (val >= CRITICAL_LIMITS.temperatura || val <= -10)) {
-        isCritical = true;
-        condition = `alcanzó ${val}°C (Crítico: >= 40 o <= -10)`;
-      } else if (metric !== 'ica' && metric !== 'temperatura' && val >= CRITICAL_LIMITS[metric]) {
-        isCritical = true;
-        condition = `alcanzó ${val} (Crítico: >= ${CRITICAL_LIMITS[metric]})`;
-      }
-      if (isCritical) {
-        const key = `${city.id}-${metric}`;
-        if (!lastAlertTimes[key] || now - lastAlertTimes[key] > ALERT_COOLDOWN) {
-          lastAlertTimes[key] = now;
-          const msg = `Alerta: En la ciudad de <b>${city.name}</b>, el indicador <b>${metric.toUpperCase()}</b> ${condition}.`;
-          const { sendEmail } = require('../../utils/mailer')
-          sendEmail(alertEmail, `Alerta Crítica: ${metric.toUpperCase()} en ${city.name}`, 'Alerta de Umbral Crítico', msg, 'Ver Mapa', `http://localhost:5173/mapa?city=${city.id}`)
-            .catch(err => console.error('Error enviando alerta:', err));
-        }
-      }
-    });
-  });
-}
-
-module.exports = { start, stop, isRunning, getCurrentState, injectData, setAlertEmail, simulateRange }
+module.exports = { start, stop, isRunning, getCurrentState, injectData, simulateRange }
 

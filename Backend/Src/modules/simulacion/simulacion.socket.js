@@ -1,5 +1,6 @@
 const simulacionService = require('./simulacion.service')
 const alertasService   = require('../alertas/alertas.service')
+const notificacionesService = require('../notificaciones/notificaciones.service')
 
 const DEFAULT_INTERVAL = 3000
 
@@ -28,7 +29,11 @@ function registerSocketEvents(io) {
         if (alertasNuevas.length > 0) {
           await alertasService.guardarAlertas(alertasNuevas)
           const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
-          if (paraEmitir.length > 0) io.emit('alertas:nueva', paraEmitir)
+          if (paraEmitir.length > 0) {
+            io.emit('alertas:nueva', paraEmitir)
+            // Enviar notificaciones externas (email, wa, tg)
+            paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta))
+          }
         }
       })
 
@@ -66,17 +71,14 @@ function registerSocketEvents(io) {
           if (alertasNuevas.length > 0) {
             await alertasService.guardarAlertas(alertasNuevas)
             const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
-            if (paraEmitir.length > 0) io.emit('alertas:nueva', paraEmitir)
+            if (paraEmitir.length > 0) {
+              io.emit('alertas:nueva', paraEmitir)
+              // Enviar notificaciones externas (email, wa, tg)
+              paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta))
+            }
           }
         }
       }
-    })
-
-    socket.on('simulacion:alertas', ({ email }) => {
-      if (!email) return;
-      simulacionService.setAlertEmail(email);
-      console.log(`📧 Alertas configuradas para: ${email}`);
-      socket.emit('simulacion:alertas:ok', { email });
     })
 
     socket.on('disconnect', () => {

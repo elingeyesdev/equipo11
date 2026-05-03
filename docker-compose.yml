@@ -44,6 +44,7 @@ services:
     volumes:
       - ./Backend:/app
       - /app/node_modules
+      - whatsapp_session:/app/.wwebjs_auth
 
   # ─── Frontend (React + Vite) ───
   frontend:
@@ -61,3 +62,4 @@ services:
 # Volumen nombrado para persistir los datos de PostgreSQL
 volumes:
   pgdata:
+  whatsapp_session:

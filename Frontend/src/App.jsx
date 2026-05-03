@@ -5,6 +5,7 @@ import PanelSimulacion from './pages/PanelSimulacion/PanelSimulacion'
 import Reportes from './pages/Reportes/Reportes'
 import Usuarios from './pages/Usuarios/Usuarios'
 import Alertas from './pages/Alertas/Alertas'
+import Notificaciones from './pages/Notificaciones/Notificaciones'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
@@ -37,6 +38,7 @@ function App() {
         <Route path="reportes"   element={<Reportes />} />
         <Route path="usuarios"   element={<Usuarios />} />
         <Route path="alertas"    element={<Alertas />} />
+        <Route path="notificaciones" element={<Notificaciones />} />
       </Route>
 
       {/* Ruta fallback: Si la url no existe, o entramos en localhost directamente, vamos al mapa */}

@@ -738,3 +738,21 @@ VALUES (
   TRUE
 );
 
+-- =============================================================================
+-- BLOQUE 11 — CONFIGURACIÓN DE NOTIFICACIONES EXTERNAS
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS configuracion_notificaciones (
+  id SERIAL PRIMARY KEY,
+  tipo VARCHAR(50) UNIQUE NOT NULL, -- 'email', 'whatsapp', 'telegram'
+  habilitado BOOLEAN DEFAULT FALSE,
+  destino VARCHAR(255), -- email, phone number, or chat_id
+  config_extra JSONB DEFAULT '{}',
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO configuracion_notificaciones (tipo, habilitado, destino) VALUES
+  ('email', false, ''),
+  ('whatsapp', false, ''),
+  ('telegram', false, '')
+ON CONFLICT (tipo) DO NOTHING;
+

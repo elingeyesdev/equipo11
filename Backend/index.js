@@ -8,10 +8,11 @@
 require('dotenv').config()
 const http = require('http')
 const { Server } = require('socket.io')
-const app = require('./src/app')
-const { registerSocketEvents } = require('./src/modules/simulacion/simulacion.socket')
-const { runScraper } = require('./src/modules/radar/radar.service')
-const alertasService = require('./src/modules/alertas/alertas.service')
+const app = require('./Src/app')
+const { registerSocketEvents } = require('./Src/modules/simulacion/simulacion.socket')
+const { runScraper } = require('./Src/modules/radar/radar.service')
+const alertasService = require('./Src/modules/alertas/alertas.service')
+const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
 
 const PORT = process.env.PORT || 3000
 
@@ -38,4 +39,6 @@ server.listen(PORT, async () => {
   runScraper()
   // Pre-cargar umbrales y mapping de BD para el servicio de alertas
   await alertasService.cargarUmbralesCache()
+  // Iniciar el bot de Telegram en modo escucha
+  startTelegramListener()
 })
