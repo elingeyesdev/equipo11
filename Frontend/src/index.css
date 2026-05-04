@@ -79,6 +79,7 @@ html, body {
   background-color: var(--paper);
   color: var(--ink);
   min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

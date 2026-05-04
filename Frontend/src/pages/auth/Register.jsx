@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthHero from './AuthHero'
+import { API_BASE } from '../../config/api'
 import './Auth.css'
 
 const VALIDACIONES = {
@@ -48,7 +49,7 @@ function Register() {
 
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:3000/api/auth/register', {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

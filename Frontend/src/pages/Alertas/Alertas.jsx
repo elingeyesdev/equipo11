@@ -9,10 +9,9 @@
  *  - Paginación simple (anterior / siguiente)
  */
 import { useState, useEffect, useCallback } from 'react'
+import { API_BASE } from '../../config/api'
 import './Alertas.css'
 import '../PagePlaceholder.css'
-
-const API_BASE = 'http://localhost:3000/api'
 
 const METRICAS = [
   { value: '',            label: 'Todas las métricas' },

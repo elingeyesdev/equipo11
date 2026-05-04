@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_BASE } from '../../config/api'
 import '../PagePlaceholder.css'
 import './Usuarios.css'
 
@@ -42,8 +43,8 @@ function Usuarios() {
       const headers = { 'Authorization': `Bearer ${token}` }
       
       const [resUsers, resRoles] = await Promise.all([
-        fetch('http://localhost:3000/api/usuarios', { headers }),
-        fetch('http://localhost:3000/api/usuarios/roles', { headers })
+        fetch(`${API_BASE}/usuarios`, { headers }),
+        fetch(`${API_BASE}/usuarios/roles`, { headers })
       ])
       
       const dataUsers = await resUsers.json()
@@ -61,7 +62,7 @@ function Usuarios() {
   const handleRoleChange = async (userId, newRoleId) => {
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch(`http://localhost:3000/api/usuarios/${userId}/rol`, {
+      const res = await fetch(`${API_BASE}/usuarios/${userId}/rol`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -83,7 +84,7 @@ function Usuarios() {
   const handleEstadoChange = async (userId, newEstado) => {
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch(`http://localhost:3000/api/usuarios/${userId}/estado`, {
+      const res = await fetch(`${API_BASE}/usuarios/${userId}/estado`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${token}`,

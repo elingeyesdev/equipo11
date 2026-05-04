@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUnidades } from '../../hooks/useUnidades'
 import { formatearValor } from '../../utils/unidades'
+import { API_BASE } from '../../config/api'
 import './Reportes.css'
 
 export default function Reportes() {
@@ -14,7 +15,7 @@ export default function Reportes() {
   const [fechaFin, setFechaFin] = useState('')
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/historial')
+    fetch(`${API_BASE}/historial`)
       .then(res => res.json())
       .then(data => {
         // Aplanar la estructura de timeline a filas para la tabla
@@ -70,7 +71,7 @@ export default function Reportes() {
         }))
       };
 
-      const res = await fetch('http://localhost:3000/api/reportes/generar', {
+      const res = await fetch(`${API_BASE}/reportes/generar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

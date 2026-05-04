@@ -10,10 +10,11 @@
  */
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
+import { API_URL } from '../config/api'
 
 const SimulacionContext = createContext(null)
 
-const SOCKET_URL = 'http://localhost:3000'
+const SOCKET_URL = API_URL
 
 export function SimulacionProvider({ children }) {
   const socketRef = useRef(null)

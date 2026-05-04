@@ -12,6 +12,7 @@ import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
+import { API_BASE } from '../../config/api';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import Timeline from '../../components/Timeline/Timeline';
@@ -119,7 +120,7 @@ function MapaMonitoreo() {
         // 1. Intentar historial en BD local (datos del simulador)
         try {
           // Buscar localidad_id en la BD por nombre
-          const locRes = await fetch(`http://localhost:3000/api/historial`);
+          const locRes = await fetch(`${API_BASE}/historial`);
           const allData = await locRes.json();
 
           // Intentar con el nuevo endpoint por ciudad si tiene id numérico de BD
@@ -351,7 +352,7 @@ function MapaMonitoreo() {
       const fetchRadar = async () => {
         try {
           // Consultar el backend local
-          const res = await axios.get('http://localhost:3000/api/radar/bolivia');
+          const res = await axios.get(`${API_BASE}/radar/bolivia`);
           setScannedGrid(res.data);
           
           // Si ya terminó de cargar, detenemos el polling

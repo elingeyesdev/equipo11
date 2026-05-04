@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../../config/api';
 import './Notificaciones.css';
 
 const Notificaciones = () => {
@@ -14,7 +15,7 @@ const Notificaciones = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/notificaciones');
+      const res = await axios.get(`${API_BASE}/notificaciones`);
       setSettings(res.data);
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -39,7 +40,7 @@ const Notificaciones = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await axios.put('http://localhost:3000/api/notificaciones', { settings });
+      await axios.put(`${API_BASE}/notificaciones`, { settings });
       setMessage({ text: 'Configuración guardada con éxito', type: 'success' });
       setTimeout(() => setMessage({ text: '', type: '' }), 3000);
     } catch (err) {
