@@ -26,8 +26,6 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    env_file:
-      - .env
     environment:
       PORT: 3000
       DB_HOST: db
@@ -35,9 +33,16 @@ services:
       DB_NAME: sistema_ambiental
       DB_USER: admin
       DB_PASSWORD: admin123
-      JWT_SECRET: enviro_sense_jwt_secret_2026
+      JWT_SECRET: ${JWT_SECRET:-secret_para_tokens_envirosense_2026}
       JWT_EXPIRES_IN: 24h
       CORS_ORIGIN: "*"
+      # Variables de Notificación (Sincronizadas con tu .env)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
     volumes:
       - ./Backend/.whatsapp_session:/usr/src/app/.whatsapp_session
     depends_on:
