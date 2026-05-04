@@ -17,18 +17,36 @@
 
 .navbar-left {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
+  flex: 1;
+}
+
+.navbar-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 4px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .navbar-title {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--ink-faint);
   font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar-title b {
@@ -124,6 +142,11 @@
   .navbar-badge { display: none; }
 }
 
+@media (max-width: 768px) {
+  .navbar-menu-btn { display: flex; }
+}
+
 @media (max-width: 600px) {
   .navbar { padding: 0 12px; gap: 10px; }
+  .navbar-title span { display: none; }
 }

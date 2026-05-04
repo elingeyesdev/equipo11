@@ -362,3 +362,16 @@ input:checked + .notif-slider:before {
   border-radius: 8px;
   border-left: 3px solid #6366f1;
 }
+
+@media screen and (max-width: 768px) {
+  .notif-container { padding: 1rem; }
+  .notif-title { font-size: 1.8rem; }
+  .notif-subtitle { font-size: 1rem; }
+  .notif-grid { grid-template-columns: 1fr; }
+  .notif-actions { justify-content: center; }
+  .notif-btn-save { width: 100%; }
+}
+
+@media screen and (max-width: 480px) {
+  .notif-qr-container { flex-direction: column; text-align: center; }
+}

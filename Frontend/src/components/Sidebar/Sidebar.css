@@ -206,5 +206,15 @@
 }
 
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
+  .sidebar { 
+    transform: translateX(-100%); 
+    z-index: 1000;
+    width: 280px;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.mobile-open { 
+    transform: translateX(0);
+    box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+  }
+  .sidebar-toggle-btn { display: none; }
 }

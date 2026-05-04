@@ -8,7 +8,7 @@ const pageCrumbs = {
   '/usuarios':   { group: 'Operación',   leaf: 'Usuarios' },
 }
 
-function Navbar() {
+function Navbar({ onMenuToggle }) {
   const location = useLocation()
   const navigate  = useNavigate()
   const current = pageCrumbs[location.pathname] || { group: 'EnviroSense', leaf: '—' }
@@ -21,8 +21,15 @@ function Navbar() {
   return (
     <header className="navbar">
       <div className="navbar-left">
+        <button className="navbar-menu-btn" onClick={onMenuToggle} aria-label="Abrir menú">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         <p className="navbar-title">
-          EnviroSense · Bolivia / {current.group} / <b>{current.leaf}</b>
+          <span>EnviroSense · Bolivia</span> / {current.group} / <b>{current.leaf}</b>
         </p>
       </div>
       <div className="navbar-right">

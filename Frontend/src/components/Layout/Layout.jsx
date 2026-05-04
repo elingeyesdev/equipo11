@@ -8,12 +8,24 @@ import { useState } from 'react'
 
 function Layout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen)
+  const closeMobileMenu = () => setIsMobileMenuOpen(false)
 
   return (
-    <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+    <div className={`layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+      {/* Backdrop para cerrar menú en móvil */}
+      {isMobileMenuOpen && <div className="layout-backdrop" onClick={closeMobileMenu} />}
+      
+      <Sidebar 
+        isCollapsed={isSidebarCollapsed} 
+        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={closeMobileMenu}
+      />
       <div className="layout-main">
-        <Navbar />
+        <Navbar onMenuToggle={toggleMobileMenu} />
         <main className="layout-content">
           <Outlet />
         </main>

@@ -154,15 +154,18 @@ const styles = {
     bottom: '2rem',
     left: '1rem',
     // Diseño tipo "glass" integrado en el mapa (sin el cuadro negro opaco)
-    background: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(2px)',
+    background: 'rgba(255, 255, 255, 0.15)',
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
     borderRadius: '8px',
     padding: '0.8rem 1rem',
-    minWidth: '380px',
+    minWidth: 'auto',
+    width: 'calc(100vw - 2rem)',
+    maxWidth: '380px',
     zIndex: 10,
     fontFamily: 'inherit',
     border: 'none',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
   },
   topBar: {
     display: 'flex',

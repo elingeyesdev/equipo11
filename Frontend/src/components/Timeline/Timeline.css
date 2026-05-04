@@ -98,3 +98,20 @@
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+@media screen and (max-width: 600px) {
+  .forecast-widget-container {
+    width: 96%;
+    padding: 8px;
+    bottom: 10px;
+    gap: 8px;
+  }
+  
+  .history-card {
+    padding: 6px 10px;
+    min-width: 50px;
+  }
+  
+  .history-card-temp { font-size: 14px; }
+  .history-card-time { font-size: 10px; }
+}

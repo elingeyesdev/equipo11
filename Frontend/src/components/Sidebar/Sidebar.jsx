@@ -69,9 +69,9 @@ const navItems = [
   },
 ]
 
-function Sidebar({ isCollapsed, onToggle }) {
+function Sidebar({ isCollapsed, onToggle, isMobileOpen, onCloseMobile }) {
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobileOpen ? 'mobile-open' : ''}`}>
       <button 
         className="sidebar-toggle-btn"
         onClick={onToggle}
@@ -100,6 +100,9 @@ function Sidebar({ isCollapsed, onToggle }) {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => {
+              if (window.innerWidth <= 768) onCloseMobile();
+            }}
             className={({ isActive }) =>
               `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`
             }

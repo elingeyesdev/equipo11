@@ -338,3 +338,11 @@
   color: var(--text-muted);
   text-align: center;
 }
+
+@media screen and (max-width: 600px) {
+  .modal-box { padding: 18px 20px; max-width: 95vw; }
+  .modal-title { font-size: 19px; }
+  .modal-metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-stat { padding: 8px 12px; }
+  .modal-box--mini { display: none !important; } /* Desactivar mini en móviles para evitar colisión visual */
+}

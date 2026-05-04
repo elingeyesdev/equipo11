@@ -26,6 +26,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       PORT: 3000
       DB_HOST: db
@@ -35,18 +37,25 @@ services:
       DB_PASSWORD: admin123
       JWT_SECRET: enviro_sense_jwt_secret_2026
       JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: "*"
+    volumes:
+      - ./Backend/.whatsapp_session:/usr/src/app/.whatsapp_session
     depends_on:
       db:
         condition: service_healthy
 
   # ─── Frontend (React + Vite) ───
   frontend:
-    build: ./Frontend
+    build: 
+      context: ./Frontend
+      args:
+        - VITE_API_URL=http://${SERVER_IP:-localhost}:3000
     restart: unless-stopped
     ports:
       - "5173:5173"
     environment:
       - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
+      - VITE_API_URL=http://${SERVER_IP:-localhost}:3000
     depends_on:
       - backend
     command: npm run dev -- --host
@@ -54,5 +63,6 @@ services:
 # Volumen nombrado para persistir los datos de PostgreSQL
 volumes:
   pgdata:
+  whatsapp_session:
 
 #Si alguien lee esto, solo estoy haciendo una prueba con algo pa ver si funca
