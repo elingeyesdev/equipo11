@@ -707,102 +707,28 @@ function MapaMonitoreo() {
           </Draggable>
         )}
 
-
-        {/* Panel Unificado de Leyendas y Unidades */}
-        <Draggable className={`unified-legend-panel ${!isLegendOpen ? 'collapsed' : ''}`}>
-          <div className="unified-legend-header">
-            <div className="unified-legend-tabs">
-              <button
-                className={`legend-tab ${activeLegendTab === 'unidades' ? 'active' : ''}`}
-                onClick={() => setActiveLegendTab('unidades')}
-              >
-                Unidades
-              </button>
-              <button
-                className={`legend-tab ${activeLegendTab === 'clima' ? 'active' : ''}`}
-                onClick={() => setActiveLegendTab('clima')}
-              >
-                Clima 3D
-              </button>
-            </div>
-            <button
-              className="legend-toggle-btn"
-              onClick={() => setIsLegendOpen(!isLegendOpen)}
-              title={isLegendOpen ? "Ocultar panel" : "Mostrar panel"}
-            >
-              {isLegendOpen ? '▼' : '▲'}
-            </button>
-          </div>
-
-          {isLegendOpen && (
-            <div className="unified-legend-body">
-              {activeLegendTab === 'unidades' && (
-                <div className="units-content">
-                  {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
-                    <div key={key} className="units-row">
-                      <span className="units-row-icon">{cfg.icon}</span>
-                      {cfg.unidades.length > 1 ? (
-                        <select
-                          className="units-select"
-                          value={unidades[key]}
-                          onChange={e => cambiarUnidad(key, e.target.value)}
-                        >
-                          {cfg.unidades.map(u => (
-                            <option key={u.key} value={u.key}>{u.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="units-fixed-label">{cfg.unidades[0].label}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeLegendTab === 'clima' && (
-                <div className="clima-legend-content">
-                  <div className="clima-legend-item">
-                    <span className="clima-dot" style={{ background: '#0984e3', border: '1px solid #74b9ff' }}></span> Lluvia
-                  </div>
-                  <div className="clima-legend-item">
-                    <span className="clima-dot" style={{ background: '#ffffff', border: '1px solid #74b9ff' }}></span> Nieve
-                  </div>
-                  <div className="clima-legend-item">
-                    <span className="clima-dot" style={{ background: '#b2bec3', border: '1px solid #636e72' }}></span> Niebla
-                  </div>
-                  <div className="clima-legend-item">
-                    <span className="clima-dot" style={{ background: '#ffeaa7', border: '1px solid #e17055' }}></span> Despejado
-                  </div>
-                  <p className="clima-legend-hint">Actualización automática al arrastrar el mapa.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </Draggable>
-
-        {/* ═══ Toolbar Unificado de Controles (Superior Derecha) ═══ */}
+        {/* ═══ Toolbar Unificado de Controles (Ajustes) ═══ */}
         <Draggable className="map-controls-toolbar">
           <button
             className="controls-toggle-btn"
             onClick={() => setIsControlsOpen(!isControlsOpen)}
+            title="Ajustes del mapa"
           >
             <span className={`controls-toggle-icon ${isControlsOpen ? 'open' : ''}`}>⚙️</span>
-            Capas
-            {activeControlsCount > 0 && (
-              <span className="control-status on">{activeControlsCount}</span>
+            {activeControlsCount > 0 && !isControlsOpen && (
+              <span className="control-status-badge">{activeControlsCount}</span>
             )}
           </button>
 
           {isControlsOpen && (
             <div className="controls-dropdown">
+              <div className="controls-section-title">Capas Visuales</div>
+              
               {/* Clima 3D */}
               <div className="control-row">
                 <div className="control-row-label">
                   <span className="control-icon">🌦️</span>
-                  <span className="control-text">Clima</span>
-                  <span className={`control-status ${isParticlesActive ? 'on' : 'off'}`}>
-                    {isParticlesActive ? 'ON' : 'OFF'}
-                  </span>
+                  <span className="control-text">Clima dinámico</span>
                 </div>
                 <label className="ios-switch">
                   <input
@@ -819,9 +745,6 @@ function MapaMonitoreo() {
                 <div className="control-row-label">
                   <span className="control-icon">🗺️</span>
                   <span className="control-text">Mapa de calor</span>
-                  <span className={`control-status ${isHeatmapActive ? 'on' : 'off'}`}>
-                    {isHeatmapActive ? 'ON' : 'OFF'}
-                  </span>
                 </div>
                 <label className="ios-switch">
                   <input
@@ -839,7 +762,7 @@ function MapaMonitoreo() {
               {/* Selector de métrica — solo visible cuando el heatmap está activo */}
               {isHeatmapActive && (
                 <div className="heatmap-expanded-section">
-                  <div className="heatmap-metric-label">Métrica a evaluar</div>
+                  <div className="heatmap-metric-label">Métrica activa</div>
                   <select
                     className="heatmap-metric-select"
                     value={heatmapMetric}
@@ -848,11 +771,36 @@ function MapaMonitoreo() {
                     <option value="aqi">Calidad de Aire (AQI)</option>
                     <option value="ica">Calidad del Agua (ICA)</option>
                     <option value="temperatura">Temperatura</option>
-                    <option value="ruido">Ruido</option>
+                    <option value="ruido">Nivel de Ruido</option>
                     <option value="humedad">Humedad</option>
                   </select>
                 </div>
               )}
+
+              <div className="controls-divider"></div>
+              <div className="controls-section-title">Preferencias de Unidad</div>
+              
+              <div className="units-content-dropdown">
+                {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
+                  <div key={key} className="units-row-dropdown">
+                    <span className="units-icon">{cfg.icon}</span>
+                    <span className="units-label">{key === 'aqi' ? 'Aire' : key === 'ica' ? 'Agua' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                    {cfg.unidades.length > 1 ? (
+                      <select
+                        className="units-select-mini"
+                        value={unidades[key]}
+                        onChange={e => cambiarUnidad(key, e.target.value)}
+                      >
+                        {cfg.unidades.map(u => (
+                          <option key={u.key} value={u.key}>{u.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="units-fixed-mini">{cfg.unidades[0].label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
 
               {/* Histórico */}
               <div className="control-row">
