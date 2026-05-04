@@ -822,7 +822,7 @@ function MapaMonitoreo() {
               </div>
             </div>
           )}
-        </Draggable>
+        </div>
       </div>
 
       {isHistoricalMode && !activeCity && (
