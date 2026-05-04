@@ -561,18 +561,18 @@
 }
 
 /* ==========================================================
-   Toolbar de controles (inferior izquierda)
+   Toolbar de controles (inferior derecha)
    ========================================================== */
 .map-controls-toolbar {
   position: absolute;
-  bottom: 120px; /* Sobre los controles de zoom que ahora están en bottom-left */
-  left: 15px;
-  right: auto;
+  bottom: 25px; /* Altura cómoda sobre el timeline si existe */
+  right: 15px;
+  left: auto;
   z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 0;
-  align-items: flex-start; /* Alineado a la izquierda */
+  align-items: flex-end; /* Alineado a la derecha */
 }
 
 .controls-toggle-btn {
@@ -616,8 +616,8 @@
 .controls-dropdown {
   position: absolute;
   bottom: 54px; /* Siempre hacia arriba */
-  left: 0;
-  right: auto;
+  right: 0;
+  left: auto;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);

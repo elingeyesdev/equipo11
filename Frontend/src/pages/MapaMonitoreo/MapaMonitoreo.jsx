@@ -708,7 +708,7 @@ function MapaMonitoreo() {
         )}
 
         {/* ═══ Toolbar Unificado de Controles (Ajustes) ═══ */}
-        <Draggable className="map-controls-toolbar">
+        <div className="map-controls-toolbar">
           <button
             className="controls-toggle-btn"
             onClick={() => setIsControlsOpen(!isControlsOpen)}
