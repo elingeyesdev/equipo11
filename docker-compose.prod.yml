@@ -55,6 +55,7 @@ services:
       context: ./Frontend
       args:
         - VITE_API_URL=http://${SERVER_IP:-localhost}:3000
+        - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
     restart: unless-stopped
     ports:
       - "5173:5173"
