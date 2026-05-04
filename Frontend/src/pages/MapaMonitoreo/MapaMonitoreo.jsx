@@ -578,9 +578,9 @@ function MapaMonitoreo() {
           dragRotate={false}
           touchPitch={false}
         >
-          <GeolocateControl position="bottom-right" />
-          <FullscreenControl position="bottom-right" />
-          <NavigationControl position="bottom-right" />
+          <GeolocateControl position="bottom-left" />
+          <FullscreenControl position="bottom-left" />
+          <NavigationControl position="bottom-left" />
 
           {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
