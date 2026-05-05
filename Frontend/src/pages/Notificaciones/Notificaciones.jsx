@@ -14,17 +14,17 @@ const Notificaciones = () => {
 
   const CODES = [
     { code: '+591', name: 'Bolivia 🇧🇴' },
-    { code: '+54',  name: 'Argentina 🇦🇷' },
-    { code: '+55',  name: 'Brasil 🇧🇷' },
-    { code: '+56',  name: 'Chile 🇨🇱' },
-    { code: '+57',  name: 'Colombia 🇨🇴' },
-    { code: '+51',  name: 'Perú 🇵🇪' },
+    { code: '+54', name: 'Argentina 🇦🇷' },
+    { code: '+55', name: 'Brasil 🇧🇷' },
+    { code: '+56', name: 'Chile 🇨🇱' },
+    { code: '+57', name: 'Colombia 🇨🇴' },
+    { code: '+51', name: 'Perú 🇵🇪' },
     { code: '+593', name: 'Ecuador 🇪🇨' },
     { code: '+595', name: 'Paraguay 🇵y' },
     { code: '+598', name: 'Uruguay 🇺🇾' },
-    { code: '+58',  name: 'Venezuela 🇻🇪' },
-    { code: '+52',  name: 'México 🇲🇽' },
-    { code: '+34',  name: 'España 🇪🇸' },
+    { code: '+58', name: 'Venezuela 🇻🇪' },
+    { code: '+52', name: 'México 🇲🇽' },
+    { code: '+34', name: 'España 🇪🇸' },
   ];
 
   // Detectar si hay cambios comparando con el estado original
@@ -82,20 +82,20 @@ const Notificaciones = () => {
   };
 
   const handleToggle = (tipo) => {
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.tipo === tipo ? { ...s, habilitado: !s.habilitado } : s
     ));
   };
 
   const handleDestinoChange = (tipo, valor) => {
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.tipo === tipo ? { ...s, destino: valor } : s
     ));
   };
 
   const handleWhatsAppChange = (tipo, prefix, number) => {
     const cleanNumber = number.replace(/\D/g, '');
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.tipo === tipo ? { ...s, destino: prefix + cleanNumber } : s
     ));
   };
@@ -169,9 +169,9 @@ const Notificaciones = () => {
             Configura los canales externos donde el sistema enviará las alertas críticas en tiempo real.
           </p>
         </div>
-        
+
         <div className="notif-header-actions">
-          <button 
+          <button
             className={`notif-btn-save-header ${hasChanges ? 'notif-btn-save--pending' : ''}`}
             onClick={saveSettings}
             disabled={saving || !hasChanges}
@@ -207,15 +207,15 @@ const Notificaciones = () => {
                 </span>
               </div>
               <label className="notif-switch">
-                <input 
-                  type="checkbox" 
-                  checked={s.habilitado} 
+                <input
+                  type="checkbox"
+                  checked={s.habilitado}
                   onChange={() => handleToggle(s.tipo)}
                 />
                 <span className="notif-slider"></span>
               </label>
             </div>
-            
+
             <div className="notif-card-body">
               <div className="notif-input-group">
                 <label>Destino de alertas</label>
@@ -226,7 +226,7 @@ const Notificaciones = () => {
                         {splitWhatsApp(s.destino).prefix}
                         <span className="notif-select-arrow">▼</span>
                       </div>
-                      <select 
+                      <select
                         className="notif-country-select"
                         value={splitWhatsApp(s.destino).prefix}
                         onChange={(e) => handleWhatsAppChange(s.tipo, e.target.value, splitWhatsApp(s.destino).number)}
@@ -237,18 +237,18 @@ const Notificaciones = () => {
                         ))}
                       </select>
                     </div>
-                    <input 
-                      type="text" 
-                      value={splitWhatsApp(s.destino).number} 
+                    <input
+                      type="text"
+                      value={splitWhatsApp(s.destino).number}
                       onChange={(e) => handleWhatsAppChange(s.tipo, splitWhatsApp(s.destino).prefix, e.target.value)}
                       placeholder="70000000"
                       disabled={!s.habilitado}
                     />
                   </div>
                 ) : (
-                  <input 
-                    type="text" 
-                    value={s.destino || ''} 
+                  <input
+                    type="text"
+                    value={s.destino || ''}
                     onChange={(e) => handleDestinoChange(s.tipo, e.target.value)}
                     placeholder={getPlaceholder(s.tipo)}
                     disabled={!s.habilitado}
@@ -259,8 +259,8 @@ const Notificaciones = () => {
                 <div className="notif-telegram-help">
                   <div className="notif-qr-container">
                     <div className="notif-qr-wrapper" onClick={() => setIsQrZoomed(true)} title="Click para agrandar">
-                      <img 
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://t.me/envirosense_e11_bot" 
+                      <img
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://t.me/envirosense_e11_bot"
                         alt="QR Telegram"
                         className="notif-qr-image"
                       />
@@ -280,7 +280,7 @@ const Notificaciones = () => {
           </div>
         ))}
       </div>
-      
+
       <div className="notif-info-box">
         <div className="notif-info-icon">💡</div>
         <div className="notif-info-text">
@@ -293,8 +293,8 @@ const Notificaciones = () => {
         <div className="notif-zoom-overlay" onClick={() => setIsQrZoomed(false)}>
           <div className="notif-zoom-content" onClick={e => e.stopPropagation()}>
             <button className="notif-zoom-close" onClick={() => setIsQrZoomed(false)}>×</button>
-            <img 
-              src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://t.me/envirosense_e11_bot" 
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://t.me/envirosense_e11_bot"
               alt="QR Telegram Enorme"
             />
             <h3>Bot de Telegram EnviroSense</h3>
