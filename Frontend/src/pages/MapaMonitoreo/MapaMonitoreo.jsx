@@ -26,6 +26,8 @@ import Draggable from '../../components/Draggable/Draggable';
 import VoronoiLayer from './layers/VoronoiLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
+import SimulationZoneLayer from './layers/SimulationZoneLayer';
+import { computeConvexHull, hullToGeoJSON, calcAreaKm2 } from '../../utils/convexHull';
 // Fallback estático con cobertura de Sudamérica (usado cuando la simulación NO está activa)
 const FALLBACK_DATA = [
   // Bolivia
@@ -94,6 +96,42 @@ function MapaMonitoreo() {
   const [showSensors, setShowSensors] = useState(true);
   const [iotLoading, setIotLoading] = useState(true);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
+
+  // ─── Modo Simulación ─────────────────────────────────────────────────────
+  // isSimMode: el usuario está colocando puntos manualmente para definir el área
+  const [isSimMode, setIsSimMode] = useState(false);
+  const [simPoints, setSimPoints] = useState([]); // [{id, lng, lat}]
+
+  // Convex hull y GeoJSON del área — recalcula solo cuando cambian los puntos
+  const simHull = useMemo(() => computeConvexHull(simPoints), [simPoints]);
+  const simZoneGeoJSON = useMemo(() => hullToGeoJSON(simHull), [simHull]);
+  const simAreaKm2 = useMemo(() => calcAreaKm2(simHull), [simHull]);
+
+  // Agregar punto en el mapa cuando el modo simulación está activo
+  const handleAddSimPoint = useCallback((lng, lat) => {
+    setSimPoints(prev => [
+      ...prev,
+      { id: `sp_${Date.now()}_${Math.random().toString(36).slice(2)}`, lng, lat }
+    ]);
+  }, []);
+
+  // Eliminar punto individual
+  const handleRemoveSimPoint = useCallback((id) => {
+    setSimPoints(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  // Limpiar todos los puntos
+  const handleClearSimPoints = useCallback(() => {
+    setSimPoints([]);
+  }, []);
+
+  // Desactivar modo simulación — pregunta si hay puntos
+  const handleToggleSimMode = useCallback((active) => {
+    setIsSimMode(active);
+    if (!active) {
+      setSimPoints([]);
+    }
+  }, []);
 
   const handleLegendRangeClick = useCallback((umbral) => {
     setActiveUmbralFilter(umbral);
@@ -413,6 +451,12 @@ function MapaMonitoreo() {
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
 
+    // ─── Modo Simulación: agregar punto y salir ───────────────────────────
+    if (isSimMode) {
+      handleAddSimPoint(lng, lat);
+      return;
+    }
+
     // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
     const nearest = citiesData.reduce(
       (best, city) => {
@@ -479,7 +523,7 @@ function MapaMonitoreo() {
   };
 
   // Contar cuántos controles están activos para el badge
-  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode, showSensors].filter(Boolean).length;
+  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   return (
     <div className="mapa-page-container">
@@ -504,7 +548,7 @@ function MapaMonitoreo() {
         </div>
       )}
 
-      <div className="map-container">
+      <div className={`map-container${isSimMode ? ' sim-mode' : ''}`}>
         {/* ========== Buscador Geocoder Global ========== */}
         <Draggable className="geocoder-search-container">
           <div ref={searchRef}>
@@ -596,6 +640,32 @@ function MapaMonitoreo() {
           <GeolocateControl position="bottom-left" />
           <FullscreenControl position="bottom-left" />
           <NavigationControl position="bottom-left" />
+
+          {/* ─── Zona de simulación (polígono convex hull) ──────────────── */}
+          {isSimMode && simZoneGeoJSON && (
+            <SimulationZoneLayer geojson={simZoneGeoJSON} />
+          )}
+
+          {/* ─── Marcadores de puntos de simulación (numerados) ────────── */}
+          {isSimMode && simPoints.map((pt, idx) => (
+            <Marker
+              key={pt.id}
+              longitude={pt.lng}
+              latitude={pt.lat}
+              anchor="center"
+            >
+              <div className="sim-point-marker" onClick={(e) => e.stopPropagation()}>
+                <span className="sim-point-number">{idx + 1}</span>
+                <button
+                  className="sim-point-remove"
+                  onClick={(e) => { e.stopPropagation(); handleRemoveSimPoint(pt.id); }}
+                  title="Eliminar punto"
+                >
+                  ×
+                </button>
+              </div>
+            </Marker>
+          ))}
 
           {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
@@ -766,7 +836,28 @@ function MapaMonitoreo() {
               {activeControlsTab === 'capas' ? (
                 <div className="controls-tab-content">
                   <div className="controls-section-title">Capas Visuales</div>
-                  
+
+                  {/* ─── Modo Simulación ─── */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">🔬</span>
+                      <span className="control-text">Modo Simulación</span>
+                      {isSimMode && (
+                        <span className="control-status on">ON</span>
+                      )}
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isSimMode}
+                        onChange={(e) => handleToggleSimMode(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  <div className="controls-divider"></div>
+
                   {/* Clima 3D */}
                   <div className="control-row">
                     <div className="control-row-label">
@@ -892,6 +983,64 @@ function MapaMonitoreo() {
           )}
         </div>
       </div>
+
+      {/* ─── Panel flotante del Modo Simulación ─────────────────────────── */}
+      {isSimMode && (
+        <div className="sim-toolbar-panel">
+          <div className="sim-toolbar-header">
+            <span className="sim-toolbar-icon">🔬</span>
+            <span className="sim-toolbar-title">Modo Simulación</span>
+            <span className="sim-toolbar-badge">{simPoints.length} pts</span>
+          </div>
+
+          {simPoints.length === 0 && (
+            <p className="sim-toolbar-hint">Haz clic en el mapa para agregar puntos</p>
+          )}
+
+          {simPoints.length > 0 && simPoints.length < 3 && (
+            <p className="sim-toolbar-hint">
+              Agrega {3 - simPoints.length} punto{3 - simPoints.length !== 1 ? 's' : ''} más para generar el área
+            </p>
+          )}
+
+          {simPoints.length >= 3 && (
+            <div className="sim-toolbar-stats">
+              <div className="sim-stat">
+                <span className="sim-stat-label">Área aprox.</span>
+                <span className="sim-stat-value">
+                  {simAreaKm2 < 1
+                    ? `${(simAreaKm2 * 1000).toFixed(1)} km²`
+                    : `${simAreaKm2.toFixed(1)} km²`}
+                </span>
+              </div>
+              <div className="sim-stat">
+                <span className="sim-stat-label">Vértices</span>
+                <span className="sim-stat-value">{simHull.length - 1}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="sim-toolbar-actions">
+            {simPoints.length > 0 && (
+              <button
+                className="sim-action-btn sim-action-clear"
+                onClick={handleClearSimPoints}
+              >
+                🗑️ Limpiar
+              </button>
+            )}
+            {simPoints.length >= 3 && (
+              <button
+                className="sim-action-btn sim-action-start"
+                onClick={() => setIsModalOpen(true)}
+                title="Iniciar simulación en el área definida (Fase 2)"
+              >
+                ▶ Iniciar Simulación
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {isHistoricalMode && !activeCity && (
         <div className="historical-prompt">
