@@ -251,6 +251,81 @@ input:checked + .notif-slider:before {
   color: #475569;
 }
 
+.notif-header {
+  margin-bottom: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 1.5rem;
+}
+
+.notif-header-content {
+  flex: 1;
+}
+
+.notif-header-actions {
+  flex-shrink: 0;
+}
+
+.notif-btn-save-header {
+  padding: 0.85rem 1.5rem;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-btn-save-header:disabled {
+  cursor: default;
+}
+
+.notif-btn-save--pending {
+  background: #1e293b;
+  color: white;
+  border-color: #1e293b;
+  box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.25);
+  animation: pulseSaveBtn 2s infinite;
+}
+
+@keyframes pulseSaveBtn {
+  0% { transform: scale(1); box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.25); }
+  50% { transform: scale(1.03); box-shadow: 0 15px 25px -5px rgba(30, 41, 59, 0.35); }
+  100% { transform: scale(1); box-shadow: 0 10px 15px -3px rgba(30, 41, 59, 0.25); }
+}
+
+.notif-btn-save--pending:hover {
+  background: #0f172a;
+  transform: translateY(-2px);
+}
+
+.notif-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spinNotif 0.8s linear infinite;
+}
+
+@keyframes spinNotif {
+  to { transform: rotate(360deg); }
+}
+
 .notif-actions {
   display: flex;
   justify-content: flex-end;
@@ -363,6 +438,188 @@ input:checked + .notif-slider:before {
   border-left: 3px solid #6366f1;
 }
 
+/* Phone input group with country selector (Phantom Select approach) */
+.notif-phone-group {
+  display: flex;
+  gap: 8px;
+}
+
+.notif-country-wrapper {
+  position: relative;
+  width: 85px;
+  flex-shrink: 0;
+}
+
+.notif-country-display {
+  width: 100%;
+  height: 100%;
+  padding: 0.75rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+  pointer-events: none; /* Let clicks pass through to the select */
+}
+
+.notif-select-arrow {
+  font-size: 8px;
+  color: #94a3b8;
+}
+
+.notif-country-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0; /* Invisible but clickable */
+  cursor: pointer;
+  z-index: 2;
+}
+
+.notif-country-wrapper:hover .notif-country-display {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.notif-country-select:focus + .notif-country-display {
+  border-color: #6366f1;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Ensure the native options are visible when clicked */
+.notif-country-select option {
+  opacity: 1;
+  background: white;
+  color: black;
+}
+
+.notif-phone-group input {
+  flex: 1;
+}
+
+/* Telegram QR Wrapper and Overlay */
+.notif-qr-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.notif-qr-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.notif-qr-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.notif-qr-wrapper:hover .notif-qr-overlay {
+  opacity: 1;
+}
+
+/* Zoom Modal Styles */
+.notif-zoom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.notif-zoom-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 32px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalScaleUp {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.notif-zoom-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.notif-zoom-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.notif-zoom-content img {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.notif-zoom-content h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.notif-zoom-content p {
+  color: #64748b;
+  line-height: 1.5;
+}
+
 @media screen and (max-width: 768px) {
   .notif-container { padding: 1rem; }
   .notif-title { font-size: 1.8rem; }
@@ -374,4 +631,5 @@ input:checked + .notif-slider:before {
 
 @media screen and (max-width: 480px) {
   .notif-qr-container { flex-direction: column; text-align: center; }
+  .notif-zoom-content { padding: 1.5rem; }
 }

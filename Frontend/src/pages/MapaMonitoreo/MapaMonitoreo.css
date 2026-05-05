@@ -632,6 +632,47 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+.controls-tabs {
+  display: flex;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line-soft);
+  padding: 4px;
+}
+
+.controls-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px;
+  font: 700 10px/1 var(--font-sans);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.controls-tab:hover {
+  color: var(--ink);
+  background: rgba(20, 26, 22, 0.04);
+}
+
+.controls-tab.active {
+  background: var(--card);
+  color: var(--moss-ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.controls-tab-content {
+  animation: tabFadeIn 0.2s ease-out;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateX(5px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 .controls-section-title {
   padding: 12px 14px 4px;
   font: 700 9px/1 var(--font-mono);

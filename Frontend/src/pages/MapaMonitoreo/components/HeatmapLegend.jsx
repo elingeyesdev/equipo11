@@ -152,7 +152,7 @@ const styles = {
   container: {
     position: 'absolute',
     bottom: '2rem',
-    left: '1rem',
+    left: '4rem',
     // Diseño tipo "glass" integrado en el mapa (sin el cuadro negro opaco)
     background: 'rgba(255, 255, 255, 0.15)',
     backdropFilter: 'blur(4px)',

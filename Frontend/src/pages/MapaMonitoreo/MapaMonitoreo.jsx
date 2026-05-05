@@ -108,6 +108,7 @@ function MapaMonitoreo() {
   const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
   const [weatherCanvases, setWeatherCanvases] = useState({});
   const [isControlsOpen, setIsControlsOpen] = useState(false);
+  const [activeControlsTab, setActiveControlsTab] = useState('capas'); // 'capas' | 'preferencias'
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
@@ -722,104 +723,125 @@ function MapaMonitoreo() {
 
           {isControlsOpen && (
             <div className="controls-dropdown">
-              <div className="controls-section-title">Capas Visuales</div>
-              
-              {/* Clima 3D */}
-              <div className="control-row">
-                <div className="control-row-label">
-                  <span className="control-icon">🌦️</span>
-                  <span className="control-text">Clima dinámico</span>
-                </div>
-                <label className="ios-switch">
-                  <input
-                    type="checkbox"
-                    checked={isParticlesActive}
-                    onChange={(e) => setIsParticlesActive(e.target.checked)}
-                  />
-                  <span className="slider round"></span>
-                </label>
+              <div className="controls-tabs">
+                <button 
+                  className={`controls-tab ${activeControlsTab === 'capas' ? 'active' : ''}`}
+                  onClick={() => setActiveControlsTab('capas')}
+                >
+                  Capas
+                </button>
+                <button 
+                  className={`controls-tab ${activeControlsTab === 'preferencias' ? 'active' : ''}`}
+                  onClick={() => setActiveControlsTab('preferencias')}
+                >
+                  Preferencias
+                </button>
               </div>
 
-              {/* Mapa de calor */}
-              <div className="control-row">
-                <div className="control-row-label">
-                  <span className="control-icon">🗺️</span>
-                  <span className="control-text">Mapa de calor</span>
-                </div>
-                <label className="ios-switch">
-                  <input
-                    type="checkbox"
-                    checked={isHeatmapActive}
-                    onChange={(e) => {
-                      setIsHeatmapActive(e.target.checked);
-                      if (e.target.checked) setSelectedCity(null);
-                    }}
-                  />
-                  <span className="slider round"></span>
-                </label>
-              </div>
+              {activeControlsTab === 'capas' ? (
+                <div className="controls-tab-content">
+                  <div className="controls-section-title">Capas Visuales</div>
+                  
+                  {/* Clima 3D */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">🌦️</span>
+                      <span className="control-text">Clima dinámico</span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isParticlesActive}
+                        onChange={(e) => setIsParticlesActive(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
 
-              {/* Selector de métrica — solo visible cuando el heatmap está activo */}
-              {isHeatmapActive && (
-                <div className="heatmap-expanded-section">
-                  <div className="heatmap-metric-label">Métrica activa</div>
-                  <select
-                    className="heatmap-metric-select"
-                    value={heatmapMetric}
-                    onChange={(e) => setHeatmapMetric(e.target.value)}
-                  >
-                    <option value="aqi">Calidad de Aire (AQI)</option>
-                    <option value="ica">Calidad del Agua (ICA)</option>
-                    <option value="temperatura">Temperatura</option>
-                    <option value="ruido">Nivel de Ruido</option>
-                    <option value="humedad">Humedad</option>
-                  </select>
+                  {/* Mapa de calor */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">🗺️</span>
+                      <span className="control-text">Mapa de calor</span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isHeatmapActive}
+                        onChange={(e) => {
+                          setIsHeatmapActive(e.target.checked);
+                          if (e.target.checked) setSelectedCity(null);
+                        }}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  {/* Selector de métrica — solo visible cuando el heatmap está activo */}
+                  {isHeatmapActive && (
+                    <div className="heatmap-expanded-section">
+                      <div className="heatmap-metric-label">Métrica activa</div>
+                      <select
+                        className="heatmap-metric-select"
+                        value={heatmapMetric}
+                        onChange={(e) => setHeatmapMetric(e.target.value)}
+                      >
+                        <option value="aqi">Calidad de Aire (AQI)</option>
+                        <option value="ica">Calidad del Agua (ICA)</option>
+                        <option value="temperatura">Temperatura</option>
+                        <option value="ruido">Nivel de Ruido</option>
+                        <option value="humedad">Humedad</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="controls-divider"></div>
+                  
+                  {/* Histórico */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">⏳</span>
+                      <span className="control-text">Histórico</span>
+                      <span className={`control-status ${isHistoricalMode ? 'on' : 'off'}`}>
+                        {isHistoricalMode ? 'ON' : 'OFF'}
+                      </span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isHistoricalMode}
+                        onChange={(e) => setIsHistoricalMode(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="controls-tab-content">
+                  <div className="controls-section-title">Preferencias de Usuario</div>
+                  <div className="units-content-dropdown">
+                    {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
+                      <div key={key} className="units-row-dropdown">
+                        <span className="units-icon">{cfg.icon}</span>
+                        <span className="units-label">{key === 'aqi' ? 'Aire' : key === 'ica' ? 'Agua' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                        {cfg.unidades.length > 1 ? (
+                          <select
+                            className="units-select-mini"
+                            value={unidades[key]}
+                            onChange={e => cambiarUnidad(key, e.target.value)}
+                          >
+                            {cfg.unidades.map(u => (
+                              <option key={u.key} value={u.key}>{u.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="units-fixed-mini">{cfg.unidades[0].label}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-
-              <div className="controls-divider"></div>
-              <div className="controls-section-title">Preferencias de Unidad</div>
-              
-              <div className="units-content-dropdown">
-                {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
-                  <div key={key} className="units-row-dropdown">
-                    <span className="units-icon">{cfg.icon}</span>
-                    <span className="units-label">{key === 'aqi' ? 'Aire' : key === 'ica' ? 'Agua' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
-                    {cfg.unidades.length > 1 ? (
-                      <select
-                        className="units-select-mini"
-                        value={unidades[key]}
-                        onChange={e => cambiarUnidad(key, e.target.value)}
-                      >
-                        {cfg.unidades.map(u => (
-                          <option key={u.key} value={u.key}>{u.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="units-fixed-mini">{cfg.unidades[0].label}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Histórico */}
-              <div className="control-row">
-                <div className="control-row-label">
-                  <span className="control-icon">⏳</span>
-                  <span className="control-text">Histórico</span>
-                  <span className={`control-status ${isHistoricalMode ? 'on' : 'off'}`}>
-                    {isHistoricalMode ? 'ON' : 'OFF'}
-                  </span>
-                </div>
-                <label className="ios-switch">
-                  <input
-                    type="checkbox"
-                    checked={isHistoricalMode}
-                    onChange={(e) => setIsHistoricalMode(e.target.checked)}
-                  />
-                  <span className="slider round"></span>
-                </label>
-              </div>
             </div>
           )}
         </div>
