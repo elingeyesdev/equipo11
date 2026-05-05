@@ -82,11 +82,16 @@ const FALLBACK_DATA = [
 
 function MapaMonitoreo() {
   const location = useLocation();
-  const { isRunning, cities: simulatedCities } = useSimulacion();
+  const { isRunning, cities: simulatedCities,
+    zonaSimActiva, zonaSimValor, zonaSimColor, zonaSimMetrica,
+    zonaSimUnidad, zonaSimUmbralLabel, zonaSimSeveridad, zonaSimEscNombre,
+    zonaSimProgreso, zonaSimSesionId, zonaSimTotalLecturas, zonaSimCentroide,
+    detenerZona
+  } = useSimulacion();
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
-  const [heatmapMetric, setHeatmapMetric] = useState('aqi'); // clave en español (BD)
+  const [heatmapMetric, setHeatmapMetric] = useState('aqi');
   // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
   const { umbrales } = useUmbrales(heatmapMetric);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -106,6 +111,10 @@ function MapaMonitoreo() {
   const simHull = useMemo(() => computeConvexHull(simPoints), [simPoints]);
   const simZoneGeoJSON = useMemo(() => hullToGeoJSON(simHull), [simHull]);
   const simAreaKm2 = useMemo(() => calcAreaKm2(simHull), [simHull]);
+
+  // Color del área viene directo del backend (calculado a partir de umbrales en BD)
+  // No se necesita useUmbrales aquí — elimina la condición de carrera async
+  const zonaColor = zonaSimColor;
 
   // Agregar punto en el mapa cuando el modo simulación está activo
   const handleAddSimPoint = useCallback((lng, lat) => {
@@ -527,7 +536,7 @@ function MapaMonitoreo() {
 
   return (
     <div className="mapa-page-container">
-      <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} simPoints={simPoints} />
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -641,9 +650,13 @@ function MapaMonitoreo() {
           <FullscreenControl position="bottom-left" />
           <NavigationControl position="bottom-left" />
 
-          {/* ─── Zona de simulación (polígono convex hull) ──────────────── */}
-          {isSimMode && simZoneGeoJSON && (
-            <SimulationZoneLayer geojson={simZoneGeoJSON} />
+          {/* ─── Zona de simulación — visible en modo sim O durante simulación activa */}
+          {(isSimMode || zonaSimActiva) && simZoneGeoJSON && (
+            <SimulationZoneLayer
+              geojson={simZoneGeoJSON}
+              color={zonaColor}
+              simActiva={zonaSimActiva}
+            />
           )}
 
           {/* ─── Marcadores de puntos de simulación (numerados) ────────── */}
@@ -666,6 +679,26 @@ function MapaMonitoreo() {
               </div>
             </Marker>
           ))}
+
+          {/* ─── Marcador en el centroide — muestra el valor actual ─────── */}
+          {zonaSimActiva && zonaSimCentroide && zonaSimValor !== null && (
+            <Marker
+              longitude={zonaSimCentroide.lng}
+              latitude={zonaSimCentroide.lat}
+              anchor="center"
+            >
+              <div
+                className="zona-valor-marker"
+                style={{ borderColor: zonaSimColor || '#38bdf8', boxShadow: `0 0 12px ${zonaSimColor || '#38bdf8'}66` }}
+              >
+                <span className="zona-valor-num" style={{ color: zonaSimColor || '#38bdf8' }}>
+                  {zonaSimValor}
+                </span>
+                <span className="zona-valor-unit">{zonaSimUnidad}</span>
+                <span className="zona-valor-label">{zonaSimUmbralLabel}</span>
+              </div>
+            </Marker>
+          )}
 
           {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
@@ -1021,7 +1054,7 @@ function MapaMonitoreo() {
           )}
 
           <div className="sim-toolbar-actions">
-            {simPoints.length > 0 && (
+            {simPoints.length > 0 && !zonaSimActiva && (
               <button
                 className="sim-action-btn sim-action-clear"
                 onClick={handleClearSimPoints}
@@ -1029,13 +1062,21 @@ function MapaMonitoreo() {
                 🗑️ Limpiar
               </button>
             )}
-            {simPoints.length >= 3 && (
+            {simPoints.length >= 3 && !zonaSimActiva && (
               <button
                 className="sim-action-btn sim-action-start"
                 onClick={() => setIsModalOpen(true)}
-                title="Iniciar simulación en el área definida (Fase 2)"
+                title="Iniciar simulación en el área definida"
               >
                 ▶ Iniciar Simulación
+              </button>
+            )}
+            {zonaSimActiva && (
+              <button
+                className="sim-action-btn sim-action-stop"
+                onClick={detenerZona}
+              >
+                ⏹ Detener
               </button>
             )}
           </div>
@@ -1055,6 +1096,79 @@ function MapaMonitoreo() {
           currentIndex={timelineIndex}
           onIndexChange={(idx) => setTimelineIndex(idx)}
         />
+      )}
+
+      {/* ─── Panel flotante de estado de simulación de zona ────────── */}
+      {zonaSimActiva && (
+        <div className="zona-sim-status-panel">
+          {/* Header */}
+          <div className="zona-sim-header">
+            <div className="zona-sim-pulse">
+              <span className="zona-sim-dot" style={{ background: zonaSimColor || '#38bdf8' }} />
+            </div>
+            <span className="zona-sim-title">Simulación Activa</span>
+            <button className="zona-sim-close-btn" onClick={detenerZona} title="Detener simulación">
+              ⏹
+            </button>
+          </div>
+
+          {/* Valor actual */}
+          <div className="zona-sim-valor-row">
+            <div
+              className="zona-sim-valor-big"
+              style={{ color: zonaSimColor || '#38bdf8' }}
+            >
+              {zonaSimValor !== null ? zonaSimValor : '—'}
+              <span className="zona-sim-unidad">{zonaSimUnidad}</span>
+            </div>
+            <div className="zona-sim-badge-wrap">
+              <span
+                className="zona-sim-severity-badge"
+                style={{ background: `${zonaSimColor || '#38bdf8'}22`, color: zonaSimColor || '#38bdf8', borderColor: `${zonaSimColor || '#38bdf8'}55` }}
+              >
+                {zonaSimUmbralLabel || '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Info del escenario */}
+          <div className="zona-sim-info-row">
+            <span className="zona-sim-info-label">Escenario</span>
+            <span className="zona-sim-info-val">{zonaSimEscNombre || '—'}</span>
+          </div>
+          <div className="zona-sim-info-row">
+            <span className="zona-sim-info-label">Métrica</span>
+            <span className="zona-sim-info-val">{zonaSimMetrica} ({zonaSimUnidad})</span>
+          </div>
+
+          {/* Barra de progreso */}
+          <div className="zona-sim-progress-wrap">
+            <div className="zona-sim-progress-label">
+              <span>Progreso</span>
+              <span>{zonaSimProgreso}%</span>
+            </div>
+            <div className="zona-sim-progress-bar">
+              <div
+                className="zona-sim-progress-fill"
+                style={{
+                  width: `${zonaSimProgreso}%`,
+                  background: zonaSimColor || '#38bdf8',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Confirmación BD */}
+          {zonaSimSesionId && (
+            <div className="zona-sim-db-badge">
+              <span className="zona-sim-db-icon">✓</span>
+              <span>
+                <strong>{zonaSimTotalLecturas}</strong> lecturas guardadas en BD
+                &nbsp;·&nbsp; sesión #{zonaSimSesionId}
+              </span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -10,6 +10,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./Src/app')
 const { registerSocketEvents } = require('./Src/modules/simulacion/simulacion.socket')
+const { registerZonaSocketEvents } = require('./Src/modules/simulacion-zona/simulacion-zona.socket')
 const { runScraper } = require('./Src/modules/radar/radar.service')
 const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
@@ -28,8 +29,10 @@ const io = new Server(server, {
   }
 })
 
-// Registrar los eventos de simulación
+// Registrar los eventos de simulación global
 registerSocketEvents(io)
+// Registrar los eventos de simulación por zona (nueva lógica)
+registerZonaSocketEvents(io)
 
 // Iniciar el servidor
 server.listen(PORT, async () => {

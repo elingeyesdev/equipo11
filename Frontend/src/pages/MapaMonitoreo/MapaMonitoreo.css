@@ -1189,6 +1189,17 @@ input:checked + .slider:before { transform: translateX(16px); }
   transform: translateY(-1px);
 }
 
+.sim-action-stop {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  flex: 1;
+}
+.sim-action-stop:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
 @media screen and (max-width: 600px) {
   .sim-toolbar-panel {
     bottom: 85px;
@@ -1196,3 +1207,228 @@ input:checked + .slider:before { transform: translateX(16px); }
     border-radius: 10px;
   }
 }
+
+/* ================================================================
+   MARCADOR DE VALOR EN EL CENTROIDE DEL ÁREA
+   ================================================================ */
+.zona-valor-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(15, 20, 18, 0.92);
+  backdrop-filter: blur(8px);
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 8px 14px;
+  gap: 2px;
+  pointer-events: none;
+  animation: zonaPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-width: 80px;
+  text-align: center;
+}
+
+@keyframes zonaPop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.zona-valor-num {
+  font: 700 1.6rem/1 'JetBrains Mono', 'Courier New', monospace;
+  letter-spacing: -0.02em;
+}
+
+.zona-valor-unit {
+  font: 600 0.7rem/1 sans-serif;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.zona-valor-label {
+  font: 500 0.65rem/1.2 sans-serif;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+  text-align: center;
+  max-width: 90px;
+}
+
+/* ================================================================
+   PANEL FLOTANTE DE ESTADO DE SIMULACIÓN
+   ================================================================ */
+.zona-sim-status-panel {
+  position: absolute;
+  top: 80px;
+  right: 16px;
+  z-index: 200;
+  width: 280px;
+  background: rgba(12, 17, 14, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.08);
+  animation: panelSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes panelSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Header */
+.zona-sim-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zona-sim-pulse {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.zona-sim-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: zonaDotPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes zonaDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+.zona-sim-title {
+  flex: 1;
+  font: 700 11px/1 sans-serif;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.zona-sim-close-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.zona-sim-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Valor grande */
+.zona-sim-valor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.zona-sim-valor-big {
+  font: 700 2.2rem/1 'JetBrains Mono', monospace;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.zona-sim-unidad {
+  font: 600 0.8rem/1 sans-serif;
+  opacity: 0.6;
+  letter-spacing: 0.04em;
+}
+
+.zona-sim-badge-wrap { display: flex; align-items: center; }
+
+.zona-sim-severity-badge {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  font: 600 10px/1 sans-serif;
+  letter-spacing: 0.06em;
+  text-align: center;
+  max-width: 100px;
+}
+
+/* Filas de info */
+.zona-sim-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.zona-sim-info-label {
+  font: 600 9.5px/1 sans-serif;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.zona-sim-info-val {
+  font: 500 11px/1 sans-serif;
+  color: rgba(255,255,255,0.75);
+  text-align: right;
+}
+
+/* Barra de progreso */
+.zona-sim-progress-wrap { display: flex; flex-direction: column; gap: 4px; }
+
+.zona-sim-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font: 600 9.5px/1 sans-serif;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.zona-sim-progress-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.zona-sim-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Badge confirmación BD */
+.zona-sim-db-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: 500 10.5px/1.3 sans-serif;
+  color: rgba(255,255,255,0.55);
+}
+
+.zona-sim-db-icon {
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.zona-sim-db-badge strong { color: #86efac; }

@@ -1,348 +1,464 @@
-/* ========================================================
-   ModalSimulacion — Estilos (Expandido + Mini escalado draggable)
-   Hereda variables de index.css
-   ======================================================== */
+/* =============================================================
+   ModalSimulacion — Nueva UI de configuración de escenarios
+   Estilo editorial científico, coherente con el resto del sistema
+   ============================================================= */
 
-/* ─── Overlay (modal expandido) ─── */
-.modal-overlay {
+/* ── Overlay ────────────────────────────────────────────────── */
+.msim-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
   z-index: 1000;
+  background: rgba(20, 26, 22, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  animation: modal-fade-in 0.18s ease;
+  animation: msimFadeIn 0.2s ease-out;
 }
 
-.modal-overlay--fading {
-  animation: modal-overlay-fade-out 0.5s ease forwards;
-  pointer-events: none;
-}
-
-@keyframes modal-fade-in {
+@keyframes msimFadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-@keyframes modal-overlay-fade-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+/* ── Caja principal ─────────────────────────────────────────── */
+.msim-box {
+  background: var(--card, #fafaf8);
+  border: 1px solid var(--line, #e5e2da);
+  border-radius: 16px;
+  width: min(600px, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(20,26,22,0.22);
+  animation: msimSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
 }
 
-/* ─── Caja principal del modal ─── */
-.modal-box {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 60px rgba(20,26,22,0.18);
-  width: 100%;
-  max-width: 560px;
-  padding: 26px 30px;
-  animation: modal-slide-up 0.2s ease;
+@keyframes msimSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
-.modal-box--shrinking {
-  animation: shrinkToCorner 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes modal-slide-up {
-  from { transform: translateY(12px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-@keyframes shrinkToCorner {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(calc(50vw - 180px), calc(50vh - 100px)) scale(0.55);
-    opacity: 0.3;
-  }
-}
-
-/* ─── Modo Mini (mismo modal escalado + draggable) ─── */
-.modal-box--mini {
-  position: absolute;
-  z-index: 8;
-  transform-origin: top left;
-  animation: miniAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: box-shadow 0.2s;
-}
-
-.modal-box--mini:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
-}
-
-.modal-box--dragging {
-  cursor: grabbing;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-  opacity: 0.92;
-  transition: none;
-}
-
-@keyframes miniAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  to {
-    opacity: 1;
-    transform: scale(0.55);
-  }
-}
-
-/* ─── Cabecera ─── */
-.modal-header {
+/* ── Header ─────────────────────────────────────────────────── */
+.msim-box-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.modal-header--draggable {
-  cursor: grab;
-  user-select: none;
-  border-radius: 12px;
-  padding: 4px 4px 4px 0;
-  margin: -4px -4px 16px 0;
-  transition: background 0.15s;
-}
-
-.modal-header--draggable:hover {
-  background: rgba(0, 0, 0, 0.03);
-}
-
-.modal-header--draggable:active {
-  cursor: grabbing;
-}
-
-.modal-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.modal-title-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.modal-title {
-  font-family: var(--font-serif);
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  line-height: 1;
-}
-
-.modal-status-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--border-strong);
+  padding: 16px 20px 0;
   flex-shrink: 0;
 }
 
-.modal-status-dot--active {
-  background: var(--moss);
-  box-shadow: 0 0 0 3px rgba(87, 160, 98, 0.25);
-  animation: pulse-modal 2s infinite;
+.msim-box-title {
+  font: 700 11px/1 var(--font-sans, sans-serif);
+  color: var(--ink-faint, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
-@keyframes pulse-modal {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(87, 160, 98, 0.25); }
-  50%       { box-shadow: 0 0 0 6px rgba(87, 160, 98, 0.1);  }
-}
-
-.modal-close-btn {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  font-size: 18px;
-  line-height: 1;
+.msim-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: var(--ink-faint, #999);
   cursor: pointer;
-  color: var(--text-secondary);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.msim-close-btn:hover { color: var(--ink, #141a16); background: var(--paper, #f5f4f0); }
+
+/* ── Dots de navegación ─────────────────────────────────────── */
+.msim-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+  flex-shrink: 0;
+}
+
+.msim-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line, #e5e2da);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.msim-dot:hover { transform: scale(1.3); }
+.msim-dot--active { width: 22px; border-radius: 4px; }
+
+/* ── Card principal ─────────────────────────────────────────── */
+.msim-card {
+  padding: 14px 24px 12px;
+  flex: 1;
+}
+
+/* Número + badge */
+.msim-card-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.modal-close-btn:hover {
-  background: var(--bg-hover);
-  color: var(--primary);
+.msim-card-num {
+  font: 700 11px/1 var(--font-mono, monospace);
+  color: var(--ink-faint, #999);
+  background: var(--paper, #f5f4f0);
+  border: 1px solid var(--line, #e5e2da);
+  border-radius: 4px;
+  padding: 3px 7px;
 }
 
-.modal-expand-btn {
-  background: var(--primary-extra-light);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--primary);
+.msim-card-num-label {
+  font: 600 9.5px/1 var(--font-sans, sans-serif);
+  color: var(--ink-faint, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  flex: 1;
+}
+
+.msim-badge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  font: 600 10px/1 var(--font-sans, sans-serif);
+  letter-spacing: 0.06em;
 }
 
-.modal-expand-btn:hover {
-  background: var(--line);
+.msim-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-/* ─── Stats generales ─── */
-.modal-stats-row {
+/* Título de métrica */
+.msim-metric-title {
+  font-family: var(--font-serif, serif);
+  font-weight: 400;
+  font-size: 2rem;
+  line-height: 1.05;
+  color: var(--ink, #141a16);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.msim-metric-italic {
+  font-style: italic;
+  color: var(--ink-mute, #666);
+}
+
+.msim-metric-desc {
+  margin: 0 0 16px;
+  font: 400 12.5px/1.5 var(--font-sans, sans-serif);
+  color: var(--ink-mute, #555);
+}
+
+/* ── Sección escenarios ─────────────────────────────────────── */
+.msim-section-label {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  align-items: center;
+  justify-content: space-between;
+  font: 700 9.5px/1 var(--font-sans, sans-serif);
+  color: var(--ink-faint, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
 }
 
-.modal-stat {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+.msim-section-hint {
+  font-weight: 500;
+  color: var(--ink-faint, #aaa);
+}
+
+.msim-escenarios-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* Cards de escenario */
+.msim-escenario-card {
+  border: 1.5px solid var(--line, #e5e2da);
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 14px 12px 12px;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 90px;
+  align-items: center;
+  gap: 6px;
+  background: var(--white, #fff);
 }
 
-.modal-stat-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-muted);
+.msim-escenario-card:hover {
+  background: var(--paper, #f5f4f0);
+  box-shadow: 0 2px 8px rgba(20,26,22,0.08);
+}
+
+.msim-escenario-card--active {
+  box-shadow: 0 0 0 1px currentColor, 0 3px 12px rgba(20,26,22,0.1);
+}
+
+.msim-escenario-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+}
+
+.msim-escenario-nombre {
+  font: 600 13px/1.2 var(--font-serif, serif);
+  color: var(--ink, #141a16);
+}
+
+.msim-escenario-desc {
+  font: 400 10.5px/1.4 var(--font-sans, sans-serif);
+  color: var(--ink-mute, #666);
+}
+
+.msim-escenario-rango {
+  font: 700 10px/1 var(--font-mono, monospace);
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+
+/* ── Preview sparkline ──────────────────────────────────────── */
+.msim-preview-chart {
+  background: var(--paper, #f5f4f0);
+  border: 1px solid var(--line-soft, #ece9e0);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: msimFadeIn 0.2s ease;
+}
+
+.msim-preview-label {
+  font: 500 10.5px/1 var(--font-mono, monospace);
+  color: var(--ink-faint, #999);
+  letter-spacing: 0.03em;
+}
+
+/* ── Controles ──────────────────────────────────────────────── */
+.msim-controls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 14px 0 6px;
+  border-top: 1px solid var(--line-soft, #ece9e0);
+}
+
+.msim-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.msim-ctrl-label {
+  font: 700 9px/1 var(--font-sans, sans-serif);
+  color: var(--ink-faint, #999);
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.msim-ctrl-hint {
+  font: 500 9.5px/1 var(--font-mono, monospace);
+  color: var(--ink-faint, #bbb);
+  letter-spacing: 0.02em;
+}
+
+/* Spinner numérico */
+.msim-spinner {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line, #e5e2da);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--white, #fff);
+}
+
+.msim-spinner-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 7px 8px;
+  font: 600 14px/1 var(--font-mono, monospace);
+  color: var(--ink, #141a16);
+  background: transparent;
+  width: 0;
+  min-width: 0;
+}
+
+/* hide native spinner arrows */
+.msim-spinner-input::-webkit-outer-spin-button,
+.msim-spinner-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.msim-spinner-input[type=number] { -moz-appearance: textfield; }
+
+.msim-spinner-unit {
+  font: 500 10px/1 var(--font-mono, monospace);
+  color: var(--ink-faint, #999);
+  padding: 0 6px 0 2px;
+  border-left: 1px solid var(--line-soft, #ece9e0);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.msim-spinner-arrows {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--line-soft, #ece9e0);
+}
+
+.msim-spinner-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 5px;
+  font-size: 7px;
+  color: var(--ink-faint, #999);
+  flex: 1;
+  line-height: 1;
+  transition: background 0.1s;
+}
+.msim-spinner-btn:hover { background: var(--paper, #f5f4f0); color: var(--ink, #141a16); }
+
+/* Select reemplaza el spinner-input cuando hay opciones fijas */
+.msim-select {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 7px 4px;
+  font: 600 13px/1 var(--font-mono, monospace);
+  color: var(--ink, #141a16);
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.msim-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px 10px;
+  border-top: 1px solid var(--line-soft, #ece9e0);
+  background: var(--paper, #f5f4f0);
+  border-radius: 0 0 16px 16px;
+  flex-shrink: 0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.msim-footer-resumen {
+  flex: 1;
+  margin: 0;
+  font: 500 11px/1.4 var(--font-sans, sans-serif);
+  color: var(--ink-faint, #888);
+  min-width: 0;
+}
+
+.msim-footer-resumen strong { color: var(--ink, #141a16); font-weight: 700; }
+
+.msim-footer-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.msim-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font: 700 12px/1 var(--font-sans, sans-serif);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+}
+
+.msim-btn-preview {
+  background: var(--white, #fff);
+  color: var(--ink, #141a16);
+  border-color: var(--line, #e5e2da);
+}
+.msim-btn-preview:hover { background: var(--paper, #f5f4f0); }
+
+.msim-btn-start {
+  background: var(--ink, #141a16);
+  color: var(--paper, #f5f4f0);
+}
+.msim-btn-start:hover { background: #2a3430; transform: translateY(-1px); }
+.msim-btn-start:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.msim-btn-stop {
+  background: #ef4444;
+  color: #fff;
+  border-color: #dc2626;
+}
+.msim-btn-stop:hover { background: #dc2626; }
+
+/* ── Navegación inferior ────────────────────────────────────── */
+.msim-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 24px 14px;
+  flex-shrink: 0;
+}
+
+.msim-nav-btn {
+  background: none;
+  border: 1px solid var(--line, #e5e2da);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: 600 11px/1 var(--font-sans, sans-serif);
+  color: var(--ink-mute, #666);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.msim-nav-btn:hover:not(:disabled) {
+  background: var(--paper, #f5f4f0);
+  color: var(--ink, #141a16);
+}
+.msim-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+.msim-nav-counter {
+  font: 600 11px/1 var(--font-mono, monospace);
+  color: var(--ink-faint, #aaa);
   letter-spacing: 0.04em;
 }
 
-.modal-stat-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.modal-stat--active  { color: var(--moss-ink); }
-.modal-stat--stopped { color: var(--text-secondary); }
-
-/* ─── Controles de simulación ─── */
-.modal-controls-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.modal-ctrl-btn {
-  flex: 1;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
-  font-family: 'Inter', sans-serif;
-}
-
-.modal-ctrl-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.modal-ctrl-btn--start {
-  background: var(--moss-ink);
-  color: var(--paper);
-}
-
-.modal-ctrl-btn--start:hover:not(:disabled) {
-  background: var(--ink);
-}
-
-.modal-ctrl-btn--stop {
-  background: transparent;
-  color: var(--rust);
-  border: 1px solid var(--rust);
-}
-
-.modal-ctrl-btn--stop:hover:not(:disabled) {
-  background: var(--rust-soft);
-}
-
-/* ─── Sección métricas ─── */
-.modal-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-}
-
-.modal-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.modal-metric-card {
-  background: var(--primary-extra-light);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.modal-metric-icon {
-  font-size: 20px;
-}
-
-.modal-metric-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.modal-metric-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--primary-dark);
-}
-
-.modal-metric-unit {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-
-/* ─── Hint ─── */
-.modal-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-@media screen and (max-width: 600px) {
-  .modal-box { padding: 18px 20px; max-width: 95vw; }
-  .modal-title { font-size: 19px; }
-  .modal-metrics-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .modal-stat { padding: 8px 12px; }
-  .modal-box--mini { display: none !important; } /* Desactivar mini en móviles para evitar colisión visual */
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .msim-box { border-radius: 12px; }
+  .msim-card { padding: 12px 16px 10px; }
+  .msim-escenarios-grid { grid-template-columns: 1fr; }
+  .msim-controls-row { grid-template-columns: 1fr 1fr; }
+  .msim-footer { flex-direction: column; align-items: flex-start; }
+  .msim-metric-title { font-size: 1.6rem; }
 }

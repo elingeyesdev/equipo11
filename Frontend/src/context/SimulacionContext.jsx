@@ -1,13 +1,3 @@
-/**
- * SimulacionContext — Estado global compartido para datos simulados.
- * 
- * Principios aplicados:
- * - SRP: Solo gestiona la conexión WebSocket y el estado de simulación.
- * - DRY: Toda la lógica de Socket.IO vive aquí; MapaMonitoreo y PanelSimulacion
- *        solo consumen datos, nunca duplican la conexión.
- * - KISS: API mínima expuesta (datos, estado, iniciar, detener).
- * - OCP: Si se agrega un nuevo evento, se añade aquí sin tocar los consumidores.
- */
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
 import { API_URL } from '../config/api'
@@ -27,9 +17,21 @@ export function SimulacionProvider({ children }) {
   const [emailAlertas, setEmailAlertas] = useState('')
 
   // ─── Alertas en tiempo real ───────────────────────────────────────────────
-  // Cada elemento: { localidad_id, metrica_id, umbral_id, valor, severidad,
-  //                  label, ciudad_nombre, metrica_clave, _uid }
   const [alertasPendientes, setAlertasPendientes] = useState([])
+
+  // ─── Estado de la simulación de ZONA ──────────────────────────────────────
+  const [zonaSimActiva, setZonaSimActiva]           = useState(false)
+  const [zonaSimValor, setZonaSimValor]             = useState(null)
+  const [zonaSimColor, setZonaSimColor]             = useState(null)  // ← color directo del backend
+  const [zonaSimMetrica, setZonaSimMetrica]         = useState(null)
+  const [zonaSimUnidad, setZonaSimUnidad]           = useState('')
+  const [zonaSimUmbralLabel, setZonaSimUmbralLabel] = useState('')
+  const [zonaSimSeveridad, setZonaSimSeveridad]     = useState('')
+  const [zonaSimEscNombre, setZonaSimEscNombre]     = useState('')
+  const [zonaSimProgreso, setZonaSimProgreso]       = useState(0)
+  const [zonaSimSesionId, setZonaSimSesionId]       = useState(null)
+  const [zonaSimTotalLecturas, setZonaSimTotalLecturas] = useState(0)
+  const [zonaSimCentroide, setZonaSimCentroide]     = useState(null)  // {lat, lng}
 
   // Conectar al montar, desconectar al desmontar
   useEffect(() => {
@@ -66,9 +68,43 @@ export function SimulacionProvider({ children }) {
 
     // Recibir alertas nuevas del servidor
     socket.on('alertas:nueva', (nuevas) => {
-      // Añadir un _uid único para poder hacer dismiss sin depender del id de BD
       const withUid = nuevas.map(a => ({ ...a, _uid: `${Date.now()}-${Math.random()}` }))
       setAlertasPendientes(prev => [...prev, ...withUid])
+    })
+
+    // ─── Eventos de simulación de ZONA ────────────────────────────────────
+    socket.on('zona:estado', (payload) => {
+      setZonaSimActiva(payload.running)
+      if (!payload.running) {
+        setZonaSimValor(null)
+        setZonaSimColor(null)
+        setZonaSimMetrica(null)
+        setZonaSimUnidad('')
+        setZonaSimUmbralLabel('')
+        setZonaSimSeveridad('')
+        setZonaSimEscNombre('')
+        setZonaSimProgreso(0)
+        setZonaSimSesionId(null)
+        setZonaSimCentroide(null)
+      } else {
+        if (payload.sesionId)     setZonaSimSesionId(payload.sesionId)
+        if (payload.metricaClave) setZonaSimMetrica(payload.metricaClave)
+        if (payload.centroide)    setZonaSimCentroide(payload.centroide)
+        if (payload.totalLecturas) setZonaSimTotalLecturas(payload.totalLecturas)
+      }
+    })
+
+    socket.on('zona:tick', (payload) => {
+      setZonaSimActiva(true)
+      setZonaSimValor(payload.valor)
+      setZonaSimColor(payload.color)              // color directo del backend
+      setZonaSimMetrica(payload.metricaClave)
+      setZonaSimUnidad(payload.unidad || '')
+      setZonaSimUmbralLabel(payload.umbralLabel || '')
+      setZonaSimSeveridad(payload.severidad || '')
+      setZonaSimEscNombre(payload.escenarioNombre || '')
+      setZonaSimProgreso(payload.progreso || 0)
+      if (payload.sesionId) setZonaSimSesionId(payload.sesionId)
     })
 
     return () => {
@@ -113,21 +149,33 @@ export function SimulacionProvider({ children }) {
     return data
   }, [])
 
+  // ─── Control de simulación de ZONA ──────────────────────────────────────
+  const iniciarZona = useCallback((payload) => {
+    socketRef.current?.emit('zona:iniciar', payload)
+  }, [])
+
+  const detenerZona = useCallback(() => {
+    socketRef.current?.emit('zona:detener')
+  }, [])
+
   const value = {
-    isConnected,
-    isRunning,
-    cities,
-    tickCount,
-    lastUpdate,
-    interval,
-    emailAlertas,
-    iniciar,
-    detener,
-    inyectar,
-    alertasPendientes,
-    dismissAlerta,
-    suscribirAlertas,
-    simularRango,
+    isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas,
+    iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
+    // Zona sim
+    zonaSimActiva,
+    zonaSimValor,
+    zonaSimColor,          // hex directo del backend
+    zonaSimMetrica,
+    zonaSimUnidad,
+    zonaSimUmbralLabel,
+    zonaSimSeveridad,
+    zonaSimEscNombre,
+    zonaSimProgreso,
+    zonaSimSesionId,
+    zonaSimTotalLecturas,
+    zonaSimCentroide,
+    iniciarZona,
+    detenerZona,
   }
 
   return (
