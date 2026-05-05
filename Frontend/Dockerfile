@@ -13,12 +13,9 @@ RUN rm -f package-lock.json && npm install
 # Copiar el resto del código fuente
 COPY . .
 
-# Argumentos para inyectar variables en tiempo de construcción/ejecución
+# Argumentos opcionales para inyectar variables en producción
 ARG VITE_MAPBOX_TOKEN
 ARG VITE_API_URL
-
-ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
-ENV VITE_API_URL=$VITE_API_URL
 
 # Puerto del servidor de desarrollo de Vite
 EXPOSE 5173
