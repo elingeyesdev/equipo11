@@ -13,6 +13,7 @@ const { registerSocketEvents } = require('./Src/modules/simulacion/simulacion.so
 const { runScraper } = require('./Src/modules/radar/radar.service')
 const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
+const { startSensorCron } = require('./Src/modules/sensores/sensores.service')
 
 const PORT = process.env.PORT || 3000
 
@@ -37,6 +38,8 @@ server.listen(PORT, async () => {
   
   // Ejecutar el recopilador global una vez que el servidor arranca
   runScraper()
+  // Iniciar sensores IoT — datos reales de Open-Meteo cada 15 minutos
+  startSensorCron()
   // Pre-cargar umbrales y mapping de BD para el servicio de alertas
   await alertasService.cargarUmbralesCache()
   // Iniciar el bot de Telegram en modo escucha

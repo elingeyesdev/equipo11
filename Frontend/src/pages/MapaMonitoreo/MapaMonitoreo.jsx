@@ -16,7 +16,7 @@ import { API_BASE } from '../../config/api';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import Timeline from '../../components/Timeline/Timeline';
-import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation } from '../../utils/weatherApi';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
 import axios from 'axios';
 import GridRadarLayer from '../../components/GridRadarLayer/GridRadarLayer';
 import { useUnidades } from '../../hooks/useUnidades';
@@ -89,6 +89,10 @@ function MapaMonitoreo() {
   const { umbrales } = useUmbrales(heatmapMetric);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [injectedCityId, setInjectedCityId] = useState(null);
+  // Sensores IoT — datos reales de la API externa
+  const [iotSensors, setIotSensors] = useState([]);
+  const [showSensors, setShowSensors] = useState(true);
+  const [iotLoading, setIotLoading] = useState(true);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
 
   const handleLegendRangeClick = useCallback((umbral) => {
@@ -291,8 +295,21 @@ function MapaMonitoreo() {
     setShowResults(false);
   };
 
-  // Usar datos del contexto si existen (simulación activa o datos inyectados), sino fallback estático
-  let citiesData = simulatedCities.length > 0 ? simulatedCities : FALLBACK_DATA;
+  // Cargar sensores IoT al montar el componente y refrescar cada 15 min
+  useEffect(() => {
+    const loadSensors = async () => {
+      setIotLoading(true);
+      const data = await getSensoresIoT();
+      if (data && data.length > 0) setIotSensors(data);
+      setIotLoading(false);
+    };
+    loadSensors();
+    const interval = setInterval(loadSensors, 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Usar datos del contexto si existen (simulación activa), sino sensores IoT reales, sino fallback estático
+  let citiesData = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
 
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
   let activeCity = selectedCity
@@ -406,10 +423,11 @@ function MapaMonitoreo() {
     );
 
     if (nearest.city && nearest.dist < 2.5) {
-      // Usar datos del simulador directamente
+      // Usar datos del sensor IoT / simulador más cercano
+      const sourceLabel = isRunning ? 'simulación' : '📡 Sensor IoT';
       setSelectedCity({
         ...nearest.city,
-        subtitle: `Área de ${nearest.city.name} (simulación)`,
+        subtitle: `Área de ${nearest.city.name} — ${sourceLabel}`,
       });
       try {
         const weather = await getWeatherAtLocation(lat, lng);
@@ -418,7 +436,7 @@ function MapaMonitoreo() {
       return;
     }
 
-    // Fuera del radio del simulador → consultar APIs externas
+    // Fuera del radio de sensores → consultar backend (datos reales completos)
     const clickCity = {
       id: `click_${Date.now()}`,
       name: 'Buscando zona...',
@@ -432,29 +450,25 @@ function MapaMonitoreo() {
     setWeatherCode(null);
 
     try {
-      const [weather, aqiData, placeName] = await Promise.all([
-        getWeatherAtLocation(lat, lng),
-        getAqiAtLocation(lat, lng),
+      // getFullDataForPoint devuelve temperatura, humedad, aqi, ica y ruido
+      const [fullData, placeName] = await Promise.all([
+        getFullDataForPoint(lat, lng),
         getPlaceName(lat, lng, MAPBOX_TOKEN)
       ]);
 
-      let wCode = null;
-      const newCityData = { ...clickCity.data };
+      const newCityData = {
+        temperatura: fullData?.temperatura ?? null,
+        humedad:     fullData?.humedad     ?? null,
+        aqi:         fullData?.aqi         ?? null,
+        ica:         fullData?.ica         ?? null,
+        ruido:       fullData?.ruido       ?? null,
+      };
 
-      if (weather && weather.current) {
-        newCityData.temperatura = weather.current.temperature_2m;
-        newCityData.humedad = weather.current.relative_humidity_2m;
-        wCode = weather.current.weather_code;
-      }
-      if (aqiData && aqiData.current) {
-        newCityData.aqi = aqiData.current.european_aqi;
-      }
-
-      setWeatherCode(wCode);
+      setWeatherCode(fullData?.weatherCode ?? null);
       setSelectedCity({
         ...clickCity,
         name: placeName || 'Ubicación Desconocida',
-        subtitle: `📡 API externa — Lat: ${lat.toFixed(3)}, Lng: ${lng.toFixed(3)}`,
+        subtitle: `📡 Sensor IoT — Lat: ${lat.toFixed(3)}, Lng: ${lng.toFixed(3)}`,
         data: newCityData,
         isLoading: false
       });
@@ -465,7 +479,7 @@ function MapaMonitoreo() {
   };
 
   // Contar cuántos controles están activos para el badge
-  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode].filter(Boolean).length;
+  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode, showSensors].filter(Boolean).length;
 
   return (
     <div className="mapa-page-container">
@@ -607,24 +621,26 @@ function MapaMonitoreo() {
 
           {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
           {isHeatmapActive ? (
-            <MarkersLayer
-              cities={citiesData}
-              metrica={heatmapMetric}
-              umbrales={umbrales}
-              activeFilter={activeUmbralFilter}
-              unidad={unidades[heatmapMetric]}
-              currentZoom={viewState.zoom}
-              onCityClick={async (city) => {
-                setSelectedCity(city);
-                try {
-                  const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                  if (weather && weather.current) setWeatherCode(weather.current.weather_code);
-                } catch (err) { console.error(err); }
-              }}
-            />
+            showSensors && (
+              <MarkersLayer
+                cities={citiesData}
+                metrica={heatmapMetric}
+                umbrales={umbrales}
+                activeFilter={activeUmbralFilter}
+                unidad={unidades[heatmapMetric]}
+                currentZoom={viewState.zoom}
+                onCityClick={async (city) => {
+                  setSelectedCity(city);
+                  try {
+                    const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                    if (weather && weather.current) setWeatherCode(weather.current.weather_code);
+                  } catch (err) { console.error(err); }
+                }}
+              />
+            )
           ) : (
-            /* Marcadores PIN — en modo heatmap OFF */
-            citiesData.map((city) => (
+            /* Marcadores Sensor IoT — en modo heatmap OFF */
+            showSensors && citiesData.map((city) => (
               <Marker
                 key={city.id}
                 longitude={city.longitude}
@@ -639,10 +655,19 @@ function MapaMonitoreo() {
                   } catch (err) { console.error(err); }
                 }}
               >
-                <div className={`custom-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`} style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                  <span role="img" aria-label="pin" style={{ fontSize: '24px' }}>📍</span>
+                <div
+                  className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}
+                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                >
+                  <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
                   {viewState.zoom >= 5.5 && (
-                    <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '2px', color: 'white', textShadow: '0px 0px 3px black, 1px 1px 2px black', fontSize: '12px', whiteSpace: 'nowrap', fontWeight: 600, pointerEvents: 'none' }}>
+                    <div style={{
+                      position: 'absolute', top: '100%', left: '50%',
+                      transform: 'translateX(-50%)', marginTop: '2px',
+                      color: 'white', textShadow: '0 0 4px rgba(0,229,255,0.9), 0 1px 3px black',
+                      fontSize: '11px', whiteSpace: 'nowrap', fontWeight: 700, pointerEvents: 'none',
+                      background: 'rgba(0,0,0,0.45)', borderRadius: '4px', padding: '1px 5px'
+                    }}>
                       {city.name}
                     </div>
                   )}
@@ -758,6 +783,23 @@ function MapaMonitoreo() {
                     </label>
                   </div>
 
+                  {/* Sensores IoT */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">📡</span>
+                      <span className="control-text">Sensores IoT</span>
+                      {iotLoading && <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>cargando…</span>}
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={showSensors}
+                        onChange={(e) => setShowSensors(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
                   {/* Mapa de calor */}
                   <div className="control-row">
                     <div className="control-row-label">
@@ -770,7 +812,11 @@ function MapaMonitoreo() {
                         checked={isHeatmapActive}
                         onChange={(e) => {
                           setIsHeatmapActive(e.target.checked);
-                          if (e.target.checked) setSelectedCity(null);
+                          // Al activar heatmap → auto-activar sensores para ver los grupos
+                          if (e.target.checked) {
+                            setSelectedCity(null);
+                            setShowSensors(true);
+                          }
                         }}
                       />
                       <span className="slider round"></span>
