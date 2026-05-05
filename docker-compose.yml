@@ -28,15 +28,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      PORT: 3000
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: sistema_ambiental
-      DB_USER: admin
-      DB_PASSWORD: admin123
-      JWT_SECRET: enviro_sense_jwt_secret_2026
-      JWT_EXPIRES_IN: 24h
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
