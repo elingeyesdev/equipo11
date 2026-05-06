@@ -153,6 +153,7 @@ function MapaMonitoreo() {
   const [showResults, setShowResults] = useState(false);
 
   const [isParticlesActive, setIsParticlesActive] = useState(false);
+  const [particleFilters, setParticleFilters] = useState({ rain: true, snow: true, wind: true, fog: true });
   const [weatherCode, setWeatherCode] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
@@ -642,6 +643,7 @@ function MapaMonitoreo() {
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={handleMapClick}
           projection="mercator"
+          maxZoom={9}
           maxPitch={0}
           dragRotate={false}
           touchPitch={false}
@@ -719,7 +721,7 @@ function MapaMonitoreo() {
 
           {/* Radar Meteorológico Orgánico (3000 puntos desde BD local) */}
           {isParticlesActive && scannedGrid.status === 'ready' && (
-            <GridRadarLayer scannedGrid={scannedGrid.data} currentZoom={viewState.zoom} />
+            <GridRadarLayer scannedGrid={scannedGrid.data} currentZoom={viewState.zoom} particleFilters={particleFilters} />
           )}
 
           {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
@@ -906,6 +908,33 @@ function MapaMonitoreo() {
                       <span className="slider round"></span>
                     </label>
                   </div>
+
+                  {/* Subfiltros de partículas (visible si Clima dinámico está ON) */}
+                  {isParticlesActive && (
+                    <div style={{ paddingLeft: '20px', marginTop: '-5px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {[
+                        { key: 'rain', icon: '🌧️', label: 'Lluvia' },
+                        { key: 'snow', icon: '❄️', label: 'Nieve' },
+                        { key: 'wind', icon: '💨', label: 'Viento' },
+                        { key: 'fog',  icon: '🌫️', label: 'Niebla' }
+                      ].map(f => (
+                        <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
+                          <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
+                            <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
+                            <span className="control-text">{f.label}</span>
+                          </div>
+                          <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
+                            <input
+                              type="checkbox"
+                              checked={particleFilters[f.key]}
+                              onChange={(e) => setParticleFilters(prev => ({ ...prev, [f.key]: e.target.checked }))}
+                            />
+                            <span className="slider round"></span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Sensores IoT */}
                   <div className="control-row">
