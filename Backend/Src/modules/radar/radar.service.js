@@ -95,13 +95,31 @@ const runScraper = async () => {
       // Ignorar, ya existen
     }
 
-    // Comprobar caché de 1 hora
+    // Comprobar caché para recolectar solo cada madrugada a las 3 AM
     const result = await pool.query('SELECT MAX(actualizado_en) as last_update FROM radar_grid_cache');
     const lastUpdate = result.rows[0]?.last_update;
+    let needsUpdate = true;
+
     if (lastUpdate) {
-      const hoursSinceUpdate = (new Date() - new Date(lastUpdate)) / (1000 * 60 * 60);
-      if (hoursSinceUpdate < 1) {
-        console.log(`[Radar Scraper] Datos de radar recientes encontrados (hace ${hoursSinceUpdate.toFixed(2)}h). Omitiendo scraping para ahorrar cuota API.`);
+      const lastUpdateDate = new Date(lastUpdate);
+      const now = new Date();
+      
+      // Fecha actual configurada a las 3:00 AM
+      const today3AM = new Date();
+      today3AM.setHours(3, 0, 0, 0);
+      
+      if (now < today3AM) {
+        // Si aún no son las 3 AM de hoy, validamos si se recolectó ayer después de las 3 AM
+        const yesterday3AM = new Date(today3AM);
+        yesterday3AM.setDate(yesterday3AM.getDate() - 1);
+        if (lastUpdateDate >= yesterday3AM) needsUpdate = false;
+      } else {
+        // Si ya pasaron las 3 AM de hoy, validamos si se recolectó hoy después de las 3 AM
+        if (lastUpdateDate >= today3AM) needsUpdate = false;
+      }
+      
+      if (!needsUpdate) {
+        console.log(`[Radar Scraper] Datos de radar vigentes (última vez: ${lastUpdateDate.toLocaleString()}). Próxima recolección será a las 03:00 AM. Omitiendo scraping...`);
         isScraping = false;
         scrapeProgress = 100;
         return;
@@ -144,8 +162,8 @@ const runScraper = async () => {
       }
       
       scrapeProgress = Math.round(((i + 1) / totalBatches) * 100);
-      // Retraso de 3.5 segundos para evitar límite HTTP 429
-      await new Promise(res => setTimeout(res, 3500));
+      // Retraso de 5.5 segundos para evitar límite HTTP 429 (Ligeramente más lento)
+      await new Promise(res => setTimeout(res, 5500));
     }
     
     console.log('[Radar Scraper] Recolección completada con éxito. Datos almacenados en BD.');

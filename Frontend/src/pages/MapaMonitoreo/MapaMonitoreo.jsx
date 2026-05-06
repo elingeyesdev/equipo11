@@ -643,6 +643,7 @@ function MapaMonitoreo() {
           mapboxAccessToken={MAPBOX_TOKEN}
           onClick={handleMapClick}
           projection="mercator"
+          maxZoom={9}
           maxPitch={0}
           dragRotate={false}
           touchPitch={false}
