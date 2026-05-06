@@ -17,10 +17,11 @@ const getWeatherColor = (type) => {
   if (type === 'rain') return '#3b82f6';
   if (type === 'snow') return '#ffffff';
   if (type === 'fog') return '#9ca3af';
+  if (type === 'wind') return '#a7f3d0'; // Un verde/cyan translúcido ligero
   return null;
 };
 
-const GridRadarLayer = ({ scannedGrid, currentZoom = 6 }) => {
+const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain: true, snow: true, wind: true, fog: true } }) => {
   // Generamos tanto los features de GeoJSON (para las manchas invisibles de momento)
   // como los datos para los Marcadores CSS
   const { geojson, activeMarkers } = useMemo(() => {
@@ -29,8 +30,14 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6 }) => {
     
     if (scannedGrid && scannedGrid.length > 0) {
       scannedGrid.forEach((cell, index) => {
-        const type = getWeatherType(cell.weather_code);
-        if (type && cell.latitud && cell.longitud) {
+        let type = getWeatherType(cell.weather_code);
+        
+        // Si no hay lluvia/nieve/niebla, pero hay mucho viento, lo marcamos como viento
+        if (!type && cell.wind_speed > 15) {
+          type = 'wind';
+        }
+
+        if (type && cell.latitud && cell.longitud && particleFilters[type] !== false) {
           const color = getWeatherColor(type);
           
           features.push({
@@ -46,7 +53,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6 }) => {
             id: `weather-marker-${index}`,
             longitude: cell.longitud,
             latitude: cell.latitud,
-            type: type
+            type: type,
+            direction: cell.wind_direction || 0
           });
         }
       });
@@ -56,7 +64,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6 }) => {
       geojson: { type: 'FeatureCollection', features },
       activeMarkers: markers
     };
-  }, [scannedGrid]);
+  }, [scannedGrid, particleFilters]);
 
   const organicLayer = {
     id: 'radar-organic-layer',
@@ -102,7 +110,10 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6 }) => {
           anchor="center"
           // Se quitó pitchAlignment para que caigan verticalmente de frente al usuario
         >
-          <div className={`css-weather-marker ${m.type}`}></div>
+          <div 
+            className={`css-weather-marker ${m.type}`}
+            style={m.type === 'wind' ? { transform: `rotate(${m.direction}deg)` } : {}}
+          ></div>
         </Marker>
       ))}
     </>
