@@ -62,4 +62,52 @@ router.get('/localidades', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/geografia/regiones-geojson
+ *
+ * Devuelve un FeatureCollection de GeoJSON con los polígonos de todas las
+ * regiones (ADM1) que tengan geometría definida en la base de datos.
+ *
+ * Cada Feature contiene:
+ *   - geometry: polígono/multipolígono de la región (desde la columna geojson)
+ *   - properties: { id, nombre, pais_codigo, nivel }
+ */
+router.get('/regiones-geojson', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        r.id,
+        r.nombre,
+        r.nivel,
+        p.codigo  AS pais_codigo,
+        r.geojson
+      FROM regiones r
+      JOIN paises p ON p.id = r.pais_id
+      WHERE r.geojson IS NOT NULL
+      ORDER BY p.codigo, r.nombre
+    `
+
+    const { rows } = await db.query(sql)
+
+    const features = rows.map(row => ({
+      type: 'Feature',
+      geometry: row.geojson,
+      properties: {
+        id: row.id,
+        nombre: row.nombre,
+        pais_codigo: row.pais_codigo,
+        nivel: row.nivel,
+      },
+    }))
+
+    res.json({
+      type: 'FeatureCollection',
+      features,
+    })
+  } catch (err) {
+    console.error('[geografia] Error en /regiones-geojson:', err)
+    res.status(500).json({ error: 'Error al obtener regiones GeoJSON' })
+  }
+})
+
 module.exports = router
