@@ -35,60 +35,111 @@ function calcStats(datos, key) {
 }
 
 // ─── Line Chart (SVG) ─────────────────────────────────────────────────────────
-function LineChart({ datos, metrica, colorVar }) {
-  const filtered = useMemo(() =>
-    [...datos]
-      .filter(d => d[metrica] != null && !isNaN(d[metrica]))
-      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha)),
-    [datos, metrica]
-  )
+function LineChart({ series, metrica }) {
+  const todasLasFechas = useMemo(() => {
+    const s = new Set()
+    series.forEach(serie => serie.datos.forEach(d => {
+      if (d[metrica] != null && !isNaN(d[metrica])) {
+        s.add(new Date(d.fecha).getTime())
+      }
+    }))
+    return Array.from(s).sort((a, b) => a - b)
+  }, [series, metrica])
 
-  if (filtered.length < 2) {
+  if (todasLasFechas.length < 2) {
     return <div className="rep-chart-empty">Datos insuficientes para la serie temporal</div>
   }
 
-  const W = 560, H = 150, PX = 38, PY = 18
-  const step = Math.max(1, Math.floor(filtered.length / 60))
-  const pts = filtered.filter((_, i) => i % step === 0)
+  const H = 180, PX = 40, PY = 20
+  // Dinámico para evitar que se apriete la gráfica a la derecha e izquierda
+  const numPuntos = Math.max(...series.map(s => s.datos.length))
+  const W = Math.max(560, numPuntos * 10 + PX * 2)
+  
+  const minT = todasLasFechas[0]
+  const maxT = todasLasFechas[todasLasFechas.length - 1]
+  const rangeT = maxT - minT || 1
 
-  const vals = pts.map(d => d[metrica])
-  const minV = Math.min(...vals)
-  const maxV = Math.max(...vals)
-  const range = maxV - minV || 1
+  let minV = Infinity, maxV = -Infinity
+  series.forEach(serie => {
+    serie.datos.forEach(d => {
+      const v = d[metrica]
+      if (v != null && !isNaN(v)) {
+        if (v < minV) minV = v
+        if (v > maxV) maxV = v
+      }
+    })
+  })
+  if (minV === Infinity) minV = 0
+  if (maxV === -Infinity) maxV = 100
+  // Margen superior/inferior para no tocar los bordes
+  const extraV = (maxV - minV) * 0.1 || 1
+  minV = minV - extraV
+  maxV = maxV + extraV
+  const rangeV = maxV - minV || 1
 
-  const cx = i => PX + (i / (pts.length - 1)) * (W - PX * 2)
-  const cy = v => PY + ((maxV - v) / range) * (H - PY * 2)
+  const cx = t => PX + ((t - minT) / rangeT) * (W - PX * 2)
+  const cy = v => PY + ((maxV - v) / rangeV) * (H - PY * 2)
 
-  const linePath = pts.map((d, i) =>
-    `${i === 0 ? 'M' : 'L'}${cx(i).toFixed(1)},${cy(d[metrica]).toFixed(1)}`
-  ).join(' ')
-
-  const areaPath = `${linePath} L${cx(pts.length - 1).toFixed(1)},${(H - PY + 1).toFixed(1)} L${PX},${(H - PY + 1).toFixed(1)} Z`
-
-  const ticks = [minV, minV + range / 2, maxV]
-  const stroke = `var(--${colorVar})`
+  const ticks = [minV, minV + rangeV / 2, maxV]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
-      {ticks.map((v, i) => {
-        const y = cy(v)
-        return (
-          <g key={i}>
-            <line x1={PX} x2={W - PX} y1={y} y2={y}
-              stroke="var(--line)" strokeDasharray="3,3" strokeWidth={0.8} />
-            <text x={PX - 5} y={y + 3.5} textAnchor="end" fontSize={9} fill="var(--ink-faint)">
-              {v.toFixed(1)}
-            </text>
-          </g>
-        )
-      })}
-      <path d={areaPath} fill={stroke} fillOpacity={0.08} />
-      <path d={linePath} fill="none" stroke={stroke} strokeWidth={1.8}
-        strokeLinejoin="round" strokeLinecap="round" />
-      {pts.length <= 30 && pts.map((d, i) => (
-        <circle key={i} cx={cx(i)} cy={cy(d[metrica])} r={2.5} fill={stroke} />
-      ))}
-    </svg>
+    <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px', width: '100%' }} className="rep-chart-scrollable">
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: W, height: H, display: 'block' }} aria-hidden="true">
+        {/* Eje Y */}
+        {ticks.map((v, i) => {
+          const y = cy(v)
+          return (
+            <g key={i}>
+              <line x1={PX} x2={W - PX} y1={y} y2={y}
+                stroke="var(--line)" strokeDasharray="3,3" strokeWidth={0.8} />
+              <text x={PX - 5} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-faint)">
+                {isFinite(v) ? v.toFixed(1) : ''}
+              </text>
+            </g>
+          )
+        })}
+        
+        {/* Eje X (Fechas) */}
+        <text x={PX} y={H - 2} textAnchor="start" fontSize={10} fill="var(--ink-mute)">
+          {new Date(minT).toLocaleString('es-BO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        </text>
+        <text x={W - PX} y={H - 2} textAnchor="end" fontSize={10} fill="var(--ink-mute)">
+          {new Date(maxT).toLocaleString('es-BO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        </text>
+        
+        {/* Series */}
+        {series.map((serie, sIdx) => {
+          let pts = serie.datos
+            .filter(d => d[metrica] != null && !isNaN(d[metrica]))
+            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+          
+          if (pts.length === 0) return null
+          
+          const step = Math.max(1, Math.floor(pts.length / 60))
+          pts = pts.filter((_, i) => i % step === 0)
+          
+          const linePath = pts.map((d, i) =>
+            `${i === 0 ? 'M' : 'L'}${cx(new Date(d.fecha).getTime()).toFixed(1)},${cy(d[metrica]).toFixed(1)}`
+          ).join(' ')
+          
+          const stroke = `var(--${serie.colorVar})`
+          const areaPath = series.length === 1 
+            ? `${linePath} L${cx(new Date(pts[pts.length - 1].fecha).getTime()).toFixed(1)},${(H - PY + 1).toFixed(1)} L${cx(new Date(pts[0].fecha).getTime()).toFixed(1)},${(H - PY + 1).toFixed(1)} Z`
+            : null
+            
+          return (
+            <g key={sIdx}>
+              {areaPath && <path d={areaPath} fill={stroke} fillOpacity={0.08} />}
+              <path d={linePath} fill="none" stroke={stroke} strokeWidth={2}
+                strokeLinejoin="round" strokeLinecap="round" />
+              {pts.length <= 40 && pts.map((d, i) => (
+                <circle key={i} cx={cx(new Date(d.fecha).getTime())} cy={cy(d[metrica])} r={3} fill={stroke} />
+              ))}
+            </g>
+          )
+        })}
+      </svg>
+    </div>
   )
 }
 
@@ -110,46 +161,49 @@ function BarChart({ datos, metrica, colorVar }) {
 
   if (!cities.length) return <div className="rep-chart-empty">Sin datos para comparar</div>
 
-  const W = 560, H = 150
-  const PAD = { t: 20, r: 12, b: 38, l: 38 }
+  const H = 180
+  const PAD = { t: 20, r: 12, b: 50, l: 38 }
+  const W = Math.max(560, cities.length * 40 + PAD.l + PAD.r)
   const cW = W - PAD.l - PAD.r
   const cH = H - PAD.t - PAD.b
   const maxV = Math.max(...cities.map(c => c.avg))
   const gap = cW / cities.length
-  const bW = gap * 0.55
+  const bW = Math.min(gap * 0.7, 30)
   const stroke = `var(--${colorVar})`
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} aria-hidden="true">
-      {[0, 0.5, 1].map((t, i) => {
-        const y = PAD.t + cH * (1 - t)
-        return (
-          <g key={i}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={y} y2={y}
-              stroke="var(--line)" strokeDasharray="3,3" strokeWidth={0.8} />
-            <text x={PAD.l - 4} y={y + 3.5} textAnchor="end" fontSize={9} fill="var(--ink-faint)">
-              {(maxV * t).toFixed(0)}
-            </text>
-          </g>
-        )
-      })}
-      {cities.map((c, i) => {
-        const x = PAD.l + i * gap + gap / 2 - bW / 2
-        const bH = Math.max(2, (c.avg / maxV) * cH)
-        const y = PAD.t + cH - bH
-        return (
-          <g key={c.name}>
-            <rect x={x} y={y} width={bW} height={bH} fill={stroke} fillOpacity={0.65} rx={3} />
-            <text x={x + bW / 2} y={H - PAD.b + 13} textAnchor="middle" fontSize={8} fill="var(--ink-mute)">
-              {c.name.slice(0, 8)}
-            </text>
-            <text x={x + bW / 2} y={y - 4} textAnchor="middle" fontSize={8} fill="var(--ink-mute)" fontWeight="600">
-              {c.avg.toFixed(1)}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
+    <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px', width: '100%' }} className="rep-chart-scrollable">
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: W, height: H, display: 'block' }} aria-hidden="true">
+        {[0, 0.5, 1].map((t, i) => {
+          const y = PAD.t + cH * (1 - t)
+          return (
+            <g key={i}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={y} y2={y}
+                stroke="var(--line)" strokeDasharray="3,3" strokeWidth={0.8} />
+              <text x={PAD.l - 4} y={y + 3.5} textAnchor="end" fontSize={9} fill="var(--ink-faint)">
+                {(maxV * t).toFixed(0)}
+              </text>
+            </g>
+          )
+        })}
+        {cities.map((c, i) => {
+          const x = PAD.l + i * gap + gap / 2 - bW / 2
+          const bH = Math.max(2, (c.avg / maxV) * cH)
+          const y = PAD.t + cH - bH
+          return (
+            <g key={c.name}>
+              <rect x={x} y={y} width={bW} height={bH} fill={stroke} fillOpacity={0.65} rx={3} />
+              <text x={x + bW / 2 + 4} y={H - PAD.b + 16} textAnchor="end" fontSize={9} fill="var(--ink-mute)" transform={`rotate(-45, ${x + bW / 2 + 4}, ${H - PAD.b + 16})`}>
+                {c.name.length > 15 ? c.name.slice(0, 13) + '…' : c.name}
+              </text>
+              <text x={x + bW / 2} y={y - 4} textAnchor="middle" fontSize={8} fill="var(--ink-mute)" fontWeight="600">
+                {c.avg.toFixed(1)}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
   )
 }
 
@@ -183,6 +237,7 @@ export default function Reportes() {
   const [historial, setHistorial]           = useState([])
   const [loading, setLoading]               = useState(true)
   const [ciudadFiltro, setCiudadFiltro]     = useState('')
+  const [ciudadFiltro2, setCiudadFiltro2]   = useState('')
   const [fechaInicio, setFechaInicio]       = useState('')
   const [fechaFin, setFechaFin]             = useState('')
   const [metricaGrafico, setMetricaGrafico] = useState('temperatura')
@@ -212,6 +267,12 @@ export default function Reportes() {
       .finally(() => setLoading(false))
   }, [])
 
+  const ciudadesDisponibles = useMemo(() => {
+    const s = new Set(CIUDADES)
+    historial.forEach(d => s.add(d.ciudad))
+    return Array.from(s).sort()
+  }, [historial])
+
   const aplicarRango = dias => {
     if (dias === null) {
       setFechaInicio('')
@@ -228,35 +289,51 @@ export default function Reportes() {
 
   const datosFiltrados = useMemo(() =>
     historial.filter(row => {
-      if (ciudadFiltro && row.ciudad !== ciudadFiltro) return false
+      if (ciudadFiltro || ciudadFiltro2) {
+        if (row.ciudad !== ciudadFiltro && row.ciudad !== ciudadFiltro2) return false
+      }
       if (fechaInicio && new Date(row.fecha) < new Date(fechaInicio)) return false
       if (fechaFin && new Date(row.fecha) > new Date(fechaFin + 'T23:59:59')) return false
       return true
     }),
-    [historial, ciudadFiltro, fechaInicio, fechaFin]
+    [historial, ciudadFiltro, ciudadFiltro2, fechaInicio, fechaFin]
   )
 
-  // Aggregate by timestamp when no city is selected (avg across cities)
-  const datosLinea = useMemo(() => {
-    if (ciudadFiltro) return datosFiltrados
-    const byTime = {}
-    datosFiltrados.forEach(d => {
-      if (!byTime[d.fecha]) byTime[d.fecha] = { fecha: d.fecha, _n: 0, temperatura: 0, aqi: 0, humedad: 0, ruido: 0, ica: 0 }
-      const t = byTime[d.fecha]
-      t._n++
-      ;['temperatura','aqi','humedad','ruido','ica'].forEach(k => {
-        if (d[k] != null && !isNaN(d[k])) t[k] += d[k]
+  const metricaActual = METRICAS_OPTS.find(m => m.value === metricaGrafico) ?? METRICAS_OPTS[0]
+
+  const seriesLinea = useMemo(() => {
+    const s = []
+    if (ciudadFiltro) {
+       s.push({
+         name: ciudadFiltro,
+         datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro),
+         colorVar: metricaActual.color
+       })
+    }
+    if (ciudadFiltro2) {
+       s.push({
+         name: ciudadFiltro2,
+         datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro2),
+         colorVar: metricaActual.color === 'river' ? 'moss' : 'river'
+       })
+    }
+    if (s.length === 0) {
+      const byTime = {}
+      datosFiltrados.forEach(d => {
+        if (!byTime[d.fecha]) byTime[d.fecha] = { fecha: d.fecha, _n: 0, v: 0 }
+        const t = byTime[d.fecha]
+        if (d[metricaGrafico] != null && !isNaN(d[metricaGrafico])) {
+          t.v += d[metricaGrafico]
+          t._n++
+        }
       })
-    })
-    return Object.values(byTime).map(t => ({
-      fecha:       t.fecha,
-      temperatura: t._n ? t.temperatura / t._n : null,
-      aqi:         t._n ? t.aqi / t._n : null,
-      humedad:     t._n ? t.humedad / t._n : null,
-      ruido:       t._n ? t.ruido / t._n : null,
-      ica:         t._n ? t.ica / t._n : null,
-    }))
-  }, [datosFiltrados, ciudadFiltro])
+      const prom = Object.values(byTime)
+        .map(t => ({ fecha: t.fecha, [metricaGrafico]: t._n ? t.v / t._n : null }))
+        .sort((a,b) => new Date(a.fecha) - new Date(b.fecha))
+      s.push({ name: 'Promedio general', datos: prom, colorVar: metricaActual.color })
+    }
+    return s
+  }, [datosFiltrados, ciudadFiltro, ciudadFiltro2, metricaActual, metricaGrafico])
 
   const stats = useMemo(() => ({
     temperatura: calcStats(datosFiltrados, 'temperatura'),
@@ -267,13 +344,12 @@ export default function Reportes() {
 
   const totalPaginas = Math.ceil(datosFiltrados.length / PAGE_SIZE)
   const datosPagina  = datosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const metricaActual = METRICAS_OPTS.find(m => m.value === metricaGrafico) ?? METRICAS_OPTS[0]
 
   const descargarReporte = async formato => {
     try {
       const payload = {
         formato,
-        titulo: `Reporte Ambiental${ciudadFiltro ? ` — ${ciudadFiltro}` : ' — Todas las ciudades'}`,
+        titulo: `Reporte Ambiental${ciudadFiltro ? (ciudadFiltro2 ? ` — ${ciudadFiltro} vs ${ciudadFiltro2}` : ` — ${ciudadFiltro}`) : ' — Todas las ciudades'}`,
         columnas: [
           { header: 'Fecha y Hora',  key: 'fechaFmt' },
           { header: 'Ciudad',        key: 'ciudad' },
@@ -348,12 +424,30 @@ export default function Reportes() {
             <select
               className="rep-select"
               value={ciudadFiltro}
-              onChange={e => { setCiudadFiltro(e.target.value); setPage(1) }}
+              onChange={e => { 
+                setCiudadFiltro(e.target.value)
+                if (!e.target.value) setCiudadFiltro2('')
+                setPage(1) 
+              }}
             >
               <option value="">Todas las ciudades</option>
-              {CIUDADES.map(c => <option key={c} value={c}>{c}</option>)}
+              {ciudadesDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </label>
+
+          {ciudadFiltro && (
+            <label className="rep-label" style={{ animation: 'fadeIn 0.2s' }}>
+              Comparar con
+              <select
+                className="rep-select"
+                value={ciudadFiltro2}
+                onChange={e => { setCiudadFiltro2(e.target.value); setPage(1) }}
+              >
+                <option value="">Ninguna</option>
+                {ciudadesDisponibles.map(c => (c !== ciudadFiltro) && <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+          )}
 
           <label className="rep-label">
             Desde
@@ -423,12 +517,12 @@ export default function Reportes() {
             <div className="rep-chart-title">
               Evolución temporal
               <span className="rep-chart-sub">
-                {ciudadFiltro ? ciudadFiltro : 'promedio · todas las ciudades'}
+                {ciudadFiltro ? (ciudadFiltro2 ? `${ciudadFiltro} vs ${ciudadFiltro2}` : ciudadFiltro) : 'promedio · todas las ciudades'}
               </span>
             </div>
             {loading
               ? <div className="rep-chart-empty">Cargando…</div>
-              : <LineChart datos={datosLinea} metrica={metricaGrafico} colorVar={metricaActual.color} />
+              : <LineChart series={seriesLinea} metrica={metricaGrafico} />
             }
           </div>
 
