@@ -4,23 +4,23 @@ const pool = require('../../config/db');
 let isScraping = false;
 let scrapeProgress = 0; // 0 a 100
 
-// Bounding box para Sudamérica aproximado
-const SOUTH_AMERICA_BBOX = {
-  north: 13.0,
-  south: -56.0,
-  west: -82.0,
-  east: -34.0
+// Bounding box para todo el Continente Americano
+const AMERICAS_BBOX = {
+  north: 72.0,   // Norte de Canadá/Alaska
+  south: -56.0,  // Tierra del Fuego
+  west: -168.0,  // Extremo oeste de Alaska
+  east: -34.0    // Extremo este de Brasil
 };
 
 // Generar la cuadrícula (nodos virtuales)
 const generateGrid = () => {
-  const step = 1.2; // ~132km de resolución para optimizar rendimiento de CPU
+  const step = 1.5; // Resolución optimizada (~166km) para cubrir toda América sin agotar cuota API
   const grid = [];
-  let lat = Math.floor(SOUTH_AMERICA_BBOX.south / step) * step;
+  let lat = Math.floor(AMERICAS_BBOX.south / step) * step;
   
-  while (lat <= SOUTH_AMERICA_BBOX.north) {
-    let lng = Math.floor(SOUTH_AMERICA_BBOX.west / step) * step;
-    while (lng <= SOUTH_AMERICA_BBOX.east) {
+  while (lat <= AMERICAS_BBOX.north) {
+    let lng = Math.floor(AMERICAS_BBOX.west / step) * step;
+    while (lng <= AMERICAS_BBOX.east) {
       grid.push({ latitude: lat + (step/2), longitude: lng + (step/2) });
       lng += step;
     }
@@ -33,7 +33,7 @@ const generateGrid = () => {
 const fetchBatchFromOpenMeteo = async (batch, retries = 2) => {
   const lats = batch.map(p => p.latitude).join(',');
   const lngs = batch.map(p => p.longitude).join(',');
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure&timezone=auto`;
   
   let response;
   try {
@@ -61,7 +61,9 @@ const fetchBatchFromOpenMeteo = async (batch, retries = 2) => {
     temperatura: results[i]?.current?.temperature_2m || null,
     weather_code: results[i]?.current?.weather_code || null,
     wind_speed: results[i]?.current?.wind_speed_10m || 0,
-    wind_direction: results[i]?.current?.wind_direction_10m || 0
+    wind_direction: results[i]?.current?.wind_direction_10m || 0,
+    rafagas: results[i]?.current?.wind_gusts_10m || 0,
+    presion: results[i]?.current?.surface_pressure || 1013 // 1013 es la presión a nivel del mar promedio
   }));
 };
 
@@ -71,7 +73,7 @@ const runScraper = async () => {
   scrapeProgress = 0;
   
   try {
-    console.log('[Radar Scraper] Verificando necesidad de recolección de clima para Sudamérica...');
+    console.log('[Radar Scraper] Verificando necesidad de recolección de clima para AMÉRICA...');
     
     // 1. Asegurar que la tabla existe sin borrarla
     await pool.query(`
@@ -82,48 +84,31 @@ const runScraper = async () => {
         temperatura DECIMAL(5,2),
         wind_speed DECIMAL(5,2),
         wind_direction INT,
+        rafagas DECIMAL(5,2),
+        presion DECIMAL(6,2),
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (latitud, longitud)
       )
     `);
 
-    // Intentamos agregar columnas por si venimos de la versión vieja (ignoramos error si ya existen)
     try {
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_speed DECIMAL(5,2)');
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_direction INT');
-    } catch (e) {
-      // Ignorar, ya existen
-    }
+    } catch (e) {}
+    try {
+      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN rafagas DECIMAL(5,2)');
+      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN presion DECIMAL(6,2)');
+    } catch (e) {}
 
-    // Comprobar caché para recolectar solo cada madrugada a las 3 AM
+    // Comprobar si ya existen datos en la tabla
     const result = await pool.query('SELECT MAX(actualizado_en) as last_update FROM radar_grid_cache');
     const lastUpdate = result.rows[0]?.last_update;
-    let needsUpdate = true;
 
     if (lastUpdate) {
-      const lastUpdateDate = new Date(lastUpdate);
-      const now = new Date();
-      
-      // Fecha actual configurada a las 3:00 AM
-      const today3AM = new Date();
-      today3AM.setHours(3, 0, 0, 0);
-      
-      if (now < today3AM) {
-        // Si aún no son las 3 AM de hoy, validamos si se recolectó ayer después de las 3 AM
-        const yesterday3AM = new Date(today3AM);
-        yesterday3AM.setDate(yesterday3AM.getDate() - 1);
-        if (lastUpdateDate >= yesterday3AM) needsUpdate = false;
-      } else {
-        // Si ya pasaron las 3 AM de hoy, validamos si se recolectó hoy después de las 3 AM
-        if (lastUpdateDate >= today3AM) needsUpdate = false;
-      }
-      
-      if (!needsUpdate) {
-        console.log(`[Radar Scraper] Datos de radar vigentes (última vez: ${lastUpdateDate.toLocaleString()}). Próxima recolección será a las 03:00 AM. Omitiendo scraping...`);
-        isScraping = false;
-        scrapeProgress = 100;
-        return;
-      }
+      console.log(`[Radar Scraper] Datos de radar existentes encontrados. Omitiendo recolección para ahorrar cuota API.`);
+      isScraping = false;
+      scrapeProgress = 100;
+      return;
     }
 
     console.log('[Radar Scraper] Iniciando descarga masiva...');
@@ -145,15 +130,17 @@ const runScraper = async () => {
         for (const data of batchResults) {
           if (data.weather_code !== null) {
             await pool.query(
-              `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction)
-               VALUES ($1, $2, $3, $4, $5, $6)
+              `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                ON CONFLICT (latitud, longitud) DO UPDATE SET 
                  weather_code = EXCLUDED.weather_code,
                  temperatura = EXCLUDED.temperatura,
                  wind_speed = EXCLUDED.wind_speed,
                  wind_direction = EXCLUDED.wind_direction,
+                 rafagas = EXCLUDED.rafagas,
+                 presion = EXCLUDED.presion,
                  actualizado_en = NOW()`,
-              [data.latitud, data.longitud, data.weather_code, data.temperatura, data.wind_speed, data.wind_direction]
+              [data.latitud, data.longitud, data.weather_code, data.temperatura, data.wind_speed, data.wind_direction, data.rafagas, data.presion]
             );
           }
         }
@@ -162,8 +149,8 @@ const runScraper = async () => {
       }
       
       scrapeProgress = Math.round(((i + 1) / totalBatches) * 100);
-      // Retraso de 5.5 segundos para evitar límite HTTP 429 (Ligeramente más lento)
-      await new Promise(res => setTimeout(res, 5500));
+      // Retraso masivo de 15 segundos para evitar bloqueos por rate limit de Open-Meteo
+      await new Promise(res => setTimeout(res, 15000));
     }
     
     console.log('[Radar Scraper] Recolección completada con éxito. Datos almacenados en BD.');
@@ -181,7 +168,7 @@ const getRadarData = async () => {
   }
   
   // Leemos todo el radar local instantáneamente
-  const result = await pool.query('SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction FROM radar_grid_cache');
+  const result = await pool.query('SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion FROM radar_grid_cache');
   return { status: 'ready', data: result.rows };
 };
 

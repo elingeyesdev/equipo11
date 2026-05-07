@@ -53,7 +53,9 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             latitude: cell.latitud,
             type: type,
             direction: cell.wind_direction || 0,
-            wind_speed: cell.wind_speed || 0
+            wind_speed: cell.wind_speed || 0,
+            presion: cell.presion || 1013,
+            rafagas: cell.rafagas || 0
           });
         }
       });
@@ -98,10 +100,9 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     
     const initParticles = () => {
       particles = [];
-      // El radio base escala con el zoom. Quitamos el Math.max alto para que
-      // al hacer zoom out (ver toda Sudamérica), el radio sea pequeñito y las
-      // partículas no invadan celdas vecinas, evitando que se vean cruzadas.
-      const baseRadius = Math.max(5, 40 * Math.pow(2, currentZoom - 6));
+      const currentMapZoom = map.getZoom();
+      // El radio base escala con el zoom.
+      const baseRadius = Math.max(5, 40 * Math.pow(2, currentMapZoom - 6));
       
       activeNodes.forEach(node => {
         const particleCount = node.type === 'wind' ? 4 : PARTICLES_PER_NODE;
@@ -129,8 +130,9 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     };
     
     const render = (time) => {
-      const dt = Math.min((time - lastTime) / 1000, 0.1); // Evitar saltos grandes al cambiar de pestaña
+      const dt = Math.min((time - lastTime) / 1000, 0.1); 
       lastTime = time;
+      const currentMapZoom = map.getZoom();
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -144,7 +146,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       const nodeProjections = new Map();
 
       particles.forEach(p => {
-        const { longitude, latitude, type, direction, wind_speed } = p.node;
+        const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
         
         if (longitude < boundW || longitude > boundE ||
             latitude < boundS || latitude > boundN) {
@@ -173,8 +175,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.moveTo(x, y);
           
           // La longitud y el grosor de las gotas de lluvia ahora escalan con el zoom
-          // para no verse como "rayones gigantes" desde lejos.
-          const zoomFactor = Math.max(0.2, currentZoom / 6);
+          const zoomFactor = Math.max(0.2, currentMapZoom / 6);
           const dropLength = 20 * zoomFactor;
           const dropWidth = 5 * zoomFactor;
           
@@ -193,7 +194,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             p.offsetY = -p.baseRadius; 
           }
           
-          const zoomFactor = Math.max(0.2, currentZoom / 6);
+          const zoomFactor = Math.max(0.2, currentMapZoom / 6);
           const snowRadius = Math.max(0.5, (2 * p.speed + 1) * zoomFactor);
           
           ctx.arc(x, y, snowRadius, 0, Math.PI * 2);
@@ -211,8 +212,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           p.offsetX += Math.cos(angleRad) * velocity * dt;
           p.offsetY += Math.sin(angleRad) * velocity * dt;
           
-          // Factor de zoom (e.g. zoom 6 -> 1.0, zoom 3 -> 0.5)
-          const zoomFactor = Math.max(0.2, currentZoom / 6);
+          // Factor de zoom
+          const zoomFactor = Math.max(0.2, currentMapZoom / 6);
 
           // Al hacer zoom out (zoomFactor pequeño), dividimos la duración de vida para que mueran más rápido
           p.life -= dt * (0.5 + p.speed * 0.3) / zoomFactor;
@@ -232,10 +233,21 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.moveTo(tailX, tailY);
           ctx.lineTo(x, y);
           
-          // Efecto de desvanecimiento suave (Fade In -> Fade Out) usando parábola de seno
-          const fade = Math.sin(p.life * Math.PI);
-          ctx.strokeStyle = `rgba(180, 230, 255, ${fade * 0.5})`;
-          ctx.lineWidth = 1.8;
+          // Detección de Huracanes / Tormentas Severas
+          // Si las ráfagas superan 90km/h o la presión es muy baja (<990 hPa), pintamos de Púrpura/Rojo
+          let strokeColor = `rgba(180, 230, 255, ${fade * 0.5})`; // Viento normal (Azul claro)
+          
+          if (rafagas > 90 || presion < 990) {
+            strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; // Rojo/Púrpura agresivo (Huracán)
+            ctx.lineWidth = 2.5; // Más grueso para resaltar el peligro
+          } else if (rafagas > 60 || presion < 1005) {
+            strokeColor = `rgba(255, 140, 0, ${fade * 0.6})`; // Naranja (Tormenta Tropical / Fuerte)
+            ctx.lineWidth = 2.0;
+          } else {
+            ctx.lineWidth = 1.8;
+          }
+          
+          ctx.strokeStyle = strokeColor;
           ctx.lineCap = 'round';
           ctx.stroke();
           
@@ -264,7 +276,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       map.off('resize', updateSize);
       map.off('zoomend', onZoom);
     };
-  }, [map, activeNodes, currentZoom]);
+  }, [map, activeNodes]);
 
   return (
     <>
