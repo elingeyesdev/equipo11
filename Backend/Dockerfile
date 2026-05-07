@@ -13,6 +13,9 @@ RUN apk add --no-cache \
       ca-certificates \
       ttf-freefont
 
+# Instalar eccodes para decodificar archivos meteorológicos GRIB2 de la NOAA
+RUN apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+
 # Configurar variables de entorno para que Puppeteer use el Chromium instalado
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \

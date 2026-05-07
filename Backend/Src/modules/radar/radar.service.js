@@ -1,70 +1,100 @@
 const pool = require('../../config/db');
+const fs = require('fs');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
+const path = require('path');
 
-// Estado global para informar al frontend si estamos cargando
 let isScraping = false;
 let scrapeProgress = 0; // 0 a 100
 
-// Bounding box para todo el Continente Americano
-const AMERICAS_BBOX = {
-  north: 72.0,   // Norte de Canadá/Alaska
-  south: -56.0,  // Tierra del Fuego
-  west: -168.0,  // Extremo oeste de Alaska
-  east: -34.0    // Extremo este de Brasil
+const GLOBAL_BBOX = {
+  north: 90.0,   
+  south: -90.0,  
+  west: 0.0,  
+  east: 359.0    
 };
 
-// Generar la cuadrícula (nodos virtuales)
-const generateGrid = () => {
-  const step = 1.5; // Resolución optimizada (~166km) para cubrir toda América sin agotar cuota API
-  const grid = [];
-  let lat = Math.floor(AMERICAS_BBOX.south / step) * step;
+const generateGridKeys = () => {
+  const step = 1.0; 
+  const keys = new Set();
+  let lat = Math.floor(GLOBAL_BBOX.south / step) * step;
   
-  while (lat <= AMERICAS_BBOX.north) {
-    let lng = Math.floor(AMERICAS_BBOX.west / step) * step;
-    while (lng <= AMERICAS_BBOX.east) {
-      grid.push({ latitude: lat + (step/2), longitude: lng + (step/2) });
+  while (lat <= GLOBAL_BBOX.north) {
+    let lng = Math.floor(GLOBAL_BBOX.west / step) * step;
+    while (lng <= GLOBAL_BBOX.east) {
+      // GFS outputs 0.25 resolution. Our points are exactly at .25 or .75 intervals
+      const gridLat = (lat + (step/2)).toFixed(2);
+      let gridLng = (lng + (step/2));
+      // GFS output longitudes are 0-360
+      let gfsLng = gridLng < 0 ? gridLng + 360 : gridLng;
+      const key = `${gridLat}_${gfsLng.toFixed(2)}`;
+      keys.add(key);
       lng += step;
     }
     lat += step;
   }
-  return grid;
+  return keys;
 };
 
-// Obtener datos por lotes usando fetch nativo con reintentos
-const fetchBatchFromOpenMeteo = async (batch, retries = 2) => {
-  const lats = batch.map(p => p.latitude).join(',');
-  const lngs = batch.map(p => p.longitude).join(',');
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure&timezone=auto`;
-  
-  let response;
-  try {
-    response = await fetch(url);
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Open-Meteo HTTP ${response.status}: ${errText}`);
+const getLatestNOAAUrl = async () => {
+    const hours = ['18', '12', '06', '00'];
+    const now = new Date();
+    
+    // Probar hoy y ayer
+    for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+        const d = new Date(now);
+        d.setUTCDate(d.getUTCDate() - dayOffset);
+        const yyyy = d.getUTCFullYear();
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        const dateStr = `${yyyy}${mm}${dd}`;
+
+        for (const hour of hours) {
+            // Filtro NOAA NOMADS. Sin límites geográficos para obtener TODO EL PLANETA.
+            // Añadimos CRAIN (Rain), CSNOW (Snow) y VIS (Visibility para la niebla).
+            const url = `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${hour}z.pgrb2.0p25.f000&lev_10_m_above_ground=on&lev_mean_sea_level=on&lev_surface=on&var_UGRD=on&var_VGRD=on&var_GUST=on&var_PRMSL=on&var_CRAIN=on&var_CSNOW=on&var_VIS=on&dir=%2Fgfs.${dateStr}%2F${hour}%2Fatmos`;
+            
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                if (response.ok) {
+                    return url;
+                }
+            } catch(e) {
+               console.warn(`[Radar Scraper] Error conectando a NOMADS: ${e.message}`);
+            }
+        }
     }
-  } catch (error) {
-    if (retries > 0) {
-      console.warn(`[Radar Scraper] Error en lote, reintentando en 10s... (${retries} intentos restantes). Error: ${error.message}`);
-      await new Promise(res => setTimeout(res, 10000));
-      return fetchBatchFromOpenMeteo(batch, retries - 1);
-    } else {
-      throw error;
+    throw new Error("No se encontraron datos recientes de GFS en la NOAA.");
+};
+
+const extractGribData = async (gribPath, shortName, gridKeys) => {
+    try {
+        // Ejecutar herramienta C con maxBuffer ampliado a 50MB (el output de texto puede ser grande)
+        const { stdout } = await execPromise(`grib_get_data -F "%.2f" -w shortName=${shortName} ${gribPath}`, { maxBuffer: 50 * 1024 * 1024 });
+        const lines = stdout.split('\n');
+        const data = new Map();
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const parts = lines[i].trim().split(/\s+/);
+            if (parts.length < 3) continue;
+            
+            const lat = parts[0];
+            const lon = parts[1];
+            const val = parts[2];
+            
+            const key = `${parseFloat(lat).toFixed(2)}_${parseFloat(lon).toFixed(2)}`;
+            
+            if (gridKeys.has(key)) {
+                data.set(key, parseFloat(val));
+            }
+        }
+        return data;
+    } catch (err) {
+        console.warn(`[Radar Scraper] Warning: No se pudo extraer ${shortName} o no está en el GRIB. ${err.message}`);
+        return new Map();
     }
-  }
-  
-  const data = await response.json();
-  const results = Array.isArray(data) ? data : [data];
-  
-  return batch.map((p, i) => ({
-    latitud: p.latitude,
-    longitud: p.longitude,
-    temperatura: results[i]?.current?.temperature_2m || null,
-    weather_code: results[i]?.current?.weather_code || null,
-    wind_speed: results[i]?.current?.wind_speed_10m || 0,
-    wind_direction: results[i]?.current?.wind_direction_10m || 0,
-    rafagas: results[i]?.current?.wind_gusts_10m || 0,
-    presion: results[i]?.current?.surface_pressure || 1013 // 1013 es la presión a nivel del mar promedio
-  }));
 };
 
 const runScraper = async () => {
@@ -73,9 +103,8 @@ const runScraper = async () => {
   scrapeProgress = 0;
   
   try {
-    console.log('[Radar Scraper] Verificando necesidad de recolección de clima para AMÉRICA...');
+    console.log('[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...');
     
-    // 1. Asegurar que la tabla existe sin borrarla
     await pool.query(`
       CREATE TABLE IF NOT EXISTS radar_grid_cache (
         latitud DECIMAL(10,4) NOT NULL,
@@ -91,6 +120,7 @@ const runScraper = async () => {
       )
     `);
 
+    // Asegurarse de que las columnas nuevas existan si la tabla es antigua
     try {
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_speed DECIMAL(5,2)');
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_direction INT');
@@ -100,75 +130,98 @@ const runScraper = async () => {
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN presion DECIMAL(6,2)');
     } catch (e) {}
 
-    // Comprobar si ya existen datos en la tabla
+    // Para forzar la prueba de descarga, temporalmente omitimos el caché
+    /*
     const result = await pool.query('SELECT MAX(actualizado_en) as last_update FROM radar_grid_cache');
     const lastUpdate = result.rows[0]?.last_update;
 
     if (lastUpdate) {
-      console.log(`[Radar Scraper] Datos de radar existentes encontrados. Omitiendo recolección para ahorrar cuota API.`);
+      console.log(`[Radar Scraper] Datos bulk existentes. Omitiendo recolección.`);
       isScraping = false;
       scrapeProgress = 100;
       return;
     }
+    */
 
-    console.log('[Radar Scraper] Iniciando descarga masiva...');
+    console.log('[Radar Scraper] Buscando último modelo GFS mundial...');
+    const url = await getLatestNOAAUrl();
+    console.log(`[Radar Scraper] Modelo encontrado! Descargando archivo binario recortado de NOMADS...`);
+    
+    scrapeProgress = 10;
+    
+    const gribPath = path.join(__dirname, 'temp_weather.grib2');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Fallo en descarga GRIB: ${response.statusText}`);
+    
+    const buffer = await response.arrayBuffer();
+    fs.writeFileSync(gribPath, Buffer.from(buffer));
+    
+    console.log(`[Radar Scraper] Archivo GRIB guardado (${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB). Extrayendo variables científicas...`);
+    scrapeProgress = 40;
+    
+    const gridKeys = generateGridKeys();
+    
+    const mapU = await extractGribData(gribPath, '10u', gridKeys);
+    const mapV = await extractGribData(gribPath, '10v', gridKeys);
+    const mapGust = await extractGribData(gribPath, 'gust', gridKeys);
+    const mapPress = await extractGribData(gribPath, 'prmsl', gridKeys);
+    
+    // Extracción de clima
+    console.log(`[Radar Scraper] Extrayendo variables de precipitación y visibilidad...`);
+    const mapRain = await extractGribData(gribPath, 'crain', gridKeys);
+    const mapSnow = await extractGribData(gribPath, 'csnow', gridKeys);
+    const mapVis = await extractGribData(gribPath, 'vis', gridKeys);
+    
+    console.log(`[Radar Scraper] Procesando vectores mundiales a meteorológicos...`);
+    scrapeProgress = 70;
+    
     await pool.query('TRUNCATE TABLE radar_grid_cache');
     
-    const grid = generateGrid();
-    
-    // Mezclar el array aleatoriamente (Fisher-Yates) para que si el scraper se detiene por límite de API,
-    // tengamos una muestra uniforme de TODO el continente en lugar de solo la parte más al sur.
-    for (let i = grid.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [grid[i], grid[j]] = [grid[j], grid[i]];
-    }
-    
-    console.log(`[Radar Scraper] Cuadrícula generada y mezclada con ${grid.length} nodos virtuales.`);
-    
-    const BATCH_SIZE = 50;
-    const totalBatches = Math.ceil(grid.length / BATCH_SIZE);
-    
-    for (let i = 0; i < totalBatches; i++) {
-      const batch = grid.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
-      
-      try {
-        console.log(`[Radar Scraper] Descargando lote ${i+1}/${totalBatches}...`);
-        const batchResults = await fetchBatchFromOpenMeteo(batch);
-        
-        for (const data of batchResults) {
-          if (data.weather_code !== null) {
+    let count = 0;
+    for (const key of gridKeys) {
+        if (mapU.has(key) && mapV.has(key)) {
+            const u = mapU.get(key);
+            const v = mapV.get(key);
+            const gustMs = mapGust.get(key) || 0;
+            const pressPa = mapPress.get(key) || 101325;
+            
+            // Determinar tipo de clima (WMO code)
+            let wCode = null;
+            if (mapSnow.get(key) === 1) wCode = 71; // Nieve
+            else if (mapRain.get(key) === 1) wCode = 61; // Lluvia
+            else if (mapVis.has(key) && mapVis.get(key) < 2000) wCode = 45; // Niebla (Visibilidad menor a 2km)
+            
+            const speedKmH = Math.sqrt(u*u + v*v) * 3.6;
+            
+            // Corrección Matemática Bruta: Convertir Vector Cartesiano a Grados de Brújula Meteorológica
+            let dirDeg = 270 - (Math.atan2(v, u) * (180 / Math.PI));
+            dirDeg = Math.round((dirDeg + 360) % 360);
+            
+            const gustKmH = gustMs * 3.6;
+            const pressHpa = pressPa / 100; 
+            
+            let [latStr, lonStr] = key.split('_');
+            let lat = parseFloat(latStr);
+            let lon = parseFloat(lonStr);
+            if (lon > 180) lon -= 360; // Revertir 0-360 a -180 a 180
+            
             await pool.query(
               `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-               ON CONFLICT (latitud, longitud) DO UPDATE SET 
-                 weather_code = EXCLUDED.weather_code,
-                 temperatura = EXCLUDED.temperatura,
-                 wind_speed = EXCLUDED.wind_speed,
-                 wind_direction = EXCLUDED.wind_direction,
-                 rafagas = EXCLUDED.rafagas,
-                 presion = EXCLUDED.presion,
-                 actualizado_en = NOW()`,
-              [data.latitud, data.longitud, data.weather_code, data.temperatura, data.wind_speed, data.wind_direction, data.rafagas, data.presion]
+               ON CONFLICT (latitud, longitud) DO NOTHING`,
+              [lat, lon, wCode, null, speedKmH, dirDeg, gustKmH, pressHpa]
             );
-          }
+            count++;
         }
-      } catch (err) {
-        console.error(`[Radar Scraper] Error en lote ${i+1}/${totalBatches}:`, err.message);
-        // Si alcanzamos el límite de cuota (429), detenemos la recolección pero conservamos lo ya descargado
-        if (err.message.includes('429')) {
-          console.warn('[Radar Scraper] Cuota de API excedida (Horaria/Diaria). Deteniendo recolección y mostrando datos parciales.');
-          break; 
-        }
-      }
-      
-      scrapeProgress = Math.round(((i + 1) / totalBatches) * 100);
-      // Retraso masivo de 15 segundos para evitar bloqueos por rate limit de Open-Meteo
-      await new Promise(res => setTimeout(res, 15000));
     }
     
-    console.log('[Radar Scraper] Recolección completada con éxito. Datos almacenados en BD.');
+    console.log(`[Radar Scraper] Éxito absoluto. ${count} nodos de la NOAA insertados en la BD en un solo barrido.`);
+    
+    // Limpieza
+    try { fs.unlinkSync(gribPath); } catch (e) {}
+    
   } catch (error) {
-    console.error('[Radar Scraper] Error fatal:', error);
+    console.error('[Radar Scraper] Error fatal Bulk Data:', error);
   } finally {
     isScraping = false;
     scrapeProgress = 100;
@@ -180,7 +233,6 @@ const getRadarData = async () => {
     return { status: 'loading', progress: scrapeProgress };
   }
   
-  // Leemos todo el radar local instantáneamente
   const result = await pool.query('SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion FROM radar_grid_cache');
   return { status: 'ready', data: result.rows };
 };
