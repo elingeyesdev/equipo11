@@ -1,45 +1,73 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Source, Layer } from 'react-map-gl/mapbox'
-import { buildMapboxColorExpr } from '../../../hooks/useUmbrales'
+import { colorPorValor, umbralPorValor } from '../../../hooks/useUmbrales'
+import { API_BASE } from '../../../config/api'
 
-const WORLD_GEOJSON_URL =
-  'https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson'
+const ENDPOINT = `${API_BASE}/geografia/regiones-geojson`
 
-// Caché a nivel de módulo para no refetchear entre renders/remounts
-let _worldCache = null
+let _cachedGeoJSON = null
 
-export default function ChoroplethLayer({ metrica, umbrales, cities }) {
-  const [geoData, setGeoData] = useState(null)
+/**
+ * ChoroplethLayer — Mapa de coropletas por división administrativa (ADM1).
+ *
+ * Obtiene los polígonos GeoJSON desde /api/geografia/regiones-geojson y
+ * colorea cada división según el valor de la métrica activa, usando la
+ * ciudad más cercana como fuente de datos.
+ *
+ * Usa el mismo sistema de umbrales y colores que VoronoiLayer para
+ * mantener consistencia visual.
+ */
+export default function ChoroplethLayer({ metrica, umbrales, cities, activeFilter }) {
+  const [regionGeo, setRegionGeo] = useState(null)
 
   useEffect(() => {
-    if (!cities?.length || !umbrales.length) return
-
-    const enrich = (base) => setGeoData(enrichGeoJSON(base, cities, metrica))
-
-    if (_worldCache) {
-      enrich(_worldCache)
-      return
+    if (!_cachedGeoJSON) {
+      fetch(ENDPOINT)
+        .then(r => r.json())
+        .then(data => { _cachedGeoJSON = data; setRegionGeo(data) })
+        .catch(err => console.error('[ChoroplethLayer] Error fetching:', err))
+    } else {
+      setRegionGeo(_cachedGeoJSON)
     }
+  }, [])
 
-    fetch(WORLD_GEOJSON_URL)
-      .then(r => r.json())
-      .then(data => { _worldCache = data; enrich(data) })
-      .catch(e => console.error('[ChoroplethLayer]', e))
-  }, [cities, metrica, umbrales])
+  const enrichedGeo = useMemo(() => {
+    if (!regionGeo?.features?.length || !cities?.length || !umbrales.length) return null
 
-  if (!geoData || !umbrales.length) return null
+    return {
+      type: 'FeatureCollection',
+      features: regionGeo.features.map(feat => {
+        const centroid = getCentroid(feat.geometry)
+        const nearest  = getNearestCity(centroid, cities)
+        const value    = nearest?.data?.[metrica] ?? 0
+        const umbral   = umbralPorValor(umbrales, value)
+        const inRange  = !activeFilter || (umbral?.nivel === activeFilter.nivel)
 
-  const colorExpr = buildMapboxColorExpr(umbrales, 'val')
+        return {
+          ...feat,
+          properties: {
+            ...feat.properties,
+            fillColor: umbral?.color_hex ?? '#666',
+            value,
+            opacity: inRange ? 0.6 : 0,
+          },
+        }
+      }),
+    }
+  }, [regionGeo, cities, metrica, umbrales, activeFilter])
+
+  if (!enrichedGeo) return null
 
   return (
-    <Source id="choropleth-source" type="geojson" data={geoData}>
+    <Source id="choropleth-source" type="geojson" data={enrichedGeo}>
       <Layer
         id="depto-fill"
         type="fill"
         paint={{
-          'fill-color': colorExpr,
-          'fill-opacity': 0.6,
+          'fill-color': ['get', 'fillColor'],
+          'fill-opacity': ['get', 'opacity'],
           'fill-color-transition': { duration: 500, delay: 0 },
+          'fill-opacity-transition': { duration: 300, delay: 0 },
         }}
       />
       <Layer
@@ -52,24 +80,6 @@ export default function ChoroplethLayer({ metrica, umbrales, cities }) {
       />
     </Source>
   )
-}
-
-// ─────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────
-
-function enrichGeoJSON(geojson, cities, metrica) {
-  return {
-    ...geojson,
-    features: geojson.features.map(feat => {
-      const centroid = getCentroid(feat.geometry)
-      const nearest  = getNearestCity(centroid, cities)
-      return {
-        ...feat,
-        properties: { ...feat.properties, val: nearest?.data?.[metrica] ?? 0 },
-      }
-    }),
-  }
 }
 
 function getCentroid(geometry) {
