@@ -24,6 +24,7 @@ import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 import HeatmapLegend from './components/HeatmapLegend';
 import Draggable from '../../components/Draggable/Draggable';
 import VoronoiLayer from './layers/VoronoiLayer';
+import ChoroplethLayer from './layers/ChoroplethLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import SimulationZoneLayer from './layers/SimulationZoneLayer';
@@ -91,6 +92,7 @@ function MapaMonitoreo() {
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
+  const [isChoroplethActive, setIsChoroplethActive] = useState(false);
   const [heatmapMetric, setHeatmapMetric] = useState('aqi');
   // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
   const { umbrales } = useUmbrales(heatmapMetric);
@@ -533,7 +535,7 @@ function MapaMonitoreo() {
   };
 
   // Contar cuántos controles están activos para el badge
-  const activeControlsCount = [isParticlesActive, isHeatmapActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
+  const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   return (
     <div className="mapa-page-container">
@@ -705,6 +707,16 @@ function MapaMonitoreo() {
           {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
             <VoronoiLayer
+              metrica={heatmapMetric}
+              umbrales={umbrales}
+              cities={citiesData}
+              activeFilter={activeUmbralFilter}
+            />
+          )}
+
+          {/* ChoroplethLayer — divisiones administrativas coloreadas */}
+          {isChoroplethActive && (
+            <ChoroplethLayer
               metrica={heatmapMetric}
               umbrales={umbrales}
               cities={citiesData}
@@ -993,6 +1005,22 @@ function MapaMonitoreo() {
                       </select>
                     </div>
                   )}
+
+                  {/* Divisiones administrativas (coropletas) */}
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">🗾</span>
+                      <span className="control-text">Div. administrativas</span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isChoroplethActive}
+                        onChange={(e) => setIsChoroplethActive(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
 
                   <div className="controls-divider"></div>
                   
