@@ -88,10 +88,17 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
 
   // Motor de renderizado Canvas
   useEffect(() => {
-    if (!map || !canvasRef.current || activeNodes.length === 0) return;
+    if (!map || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
+    
+    // BUG FIX: Si se desactivan todos los filtros, borrar el canvas para que no queden pegadas
+    if (activeNodes.length === 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    
     let animationId;
     let lastTime = performance.now();
     
@@ -105,8 +112,17 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       const baseRadius = Math.max(5, 40 * Math.pow(2, currentMapZoom - 6));
       
       activeNodes.forEach(node => {
-        const particleCount = node.type === 'wind' ? 4 : PARTICLES_PER_NODE;
-        for (let i = 0; i < particleCount; i++) {
+        // OPTIMIZACIÓN MUNDIAL:
+        // Si estamos viendo todo el mundo (zoom < 3), creamos muy pocas partículas para no congelar el navegador (65k nodos!).
+        // Si nos acercamos a nivel país, aumentamos drásticamente el número de partículas.
+        let pCount = 1;
+        if (node.type === 'wind') {
+          pCount = currentMapZoom > 5 ? 4 : (currentMapZoom > 3 ? 2 : 1);
+        } else {
+          pCount = currentMapZoom > 5 ? 10 : (currentMapZoom > 3 ? 3 : 1);
+        }
+        
+        for (let i = 0; i < pCount; i++) {
           particles.push({
             node,
             offsetX: (Math.random() - 0.5) * baseRadius * 2,
