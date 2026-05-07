@@ -34,6 +34,16 @@ const startTelegramListener = () => {
     bot.on('polling_error', (error) => {
         console.error('[Telegram Listener] Error de polling:', error.message);
     });
+
+    // Detener el polling limpiamente cuando Nodemon o el proceso se cierre
+    const stopPolling = () => {
+        console.log('[Telegram Listener] Deteniendo polling de Telegram...');
+        bot.stopPolling();
+    };
+
+    process.once('SIGINT', stopPolling);
+    process.once('SIGTERM', stopPolling);
+    process.once('SIGUSR2', stopPolling); // Nodemon restart signal
 };
 
 module.exports = { startTelegramListener };
