@@ -1,22 +1,13 @@
 /**
  * SimulationZoneLayer — Renderiza el área de simulación como polígono GeoJSON.
- *
- * Cuando la simulación de zona está activa, el color cambia dinámicamente
- * según el valor del último tick (pasado como prop `color`).
- * Sin simulación activa → color cyan estático (modo edición).
+ * 
+ * Soporta múltiples zonas simultáneas mediante IDs únicos.
  */
 import { Source, Layer } from 'react-map-gl/mapbox';
 
-const EDIT_COLOR = '#38bdf8';  // cyan estático (modo edición)
+const EDIT_COLOR = '#38bdf8';
 
-/**
- * @param {{
- *   geojson: GeoJSON.Feature,
- *   color?: string,          // color hex activo (del umbral del tick actual)
- *   simActiva?: boolean,     // true = simulación en marcha
- * }} props
- */
-export default function SimulationZoneLayer({ geojson, color, simActiva = false }) {
+export default function SimulationZoneLayer({ id, geojson, color, simActiva = false }) {
   if (!geojson) return null;
 
   const activeColor = simActiva && color ? color : EDIT_COLOR;
@@ -26,7 +17,7 @@ export default function SimulationZoneLayer({ geojson, color, simActiva = false 
   const glowOpacity = simActiva ? 0.20 : 0.15;
 
   const FILL_LAYER = {
-    id: 'sim-zone-fill',
+    id: `sim-zone-fill-${id}`,
     type: 'fill',
     paint: {
       'fill-color': activeColor,
@@ -35,7 +26,7 @@ export default function SimulationZoneLayer({ geojson, color, simActiva = false 
   };
 
   const LINE_LAYER = {
-    id: 'sim-zone-line',
+    id: `sim-zone-line-${id}`,
     type: 'line',
     paint: {
       'line-color': activeColor,
@@ -45,7 +36,7 @@ export default function SimulationZoneLayer({ geojson, color, simActiva = false 
   };
 
   const GLOW_LAYER = {
-    id: 'sim-zone-glow',
+    id: `sim-zone-glow-${id}`,
     type: 'line',
     paint: {
       'line-color': activeColor,
@@ -56,7 +47,7 @@ export default function SimulationZoneLayer({ geojson, color, simActiva = false 
   };
 
   return (
-    <Source id="sim-zone-source" type="geojson" data={geojson}>
+    <Source id={`sim-zone-source-${id}`} type="geojson" data={geojson}>
       <Layer {...GLOW_LAYER} />
       <Layer {...FILL_LAYER} />
       <Layer {...LINE_LAYER} />

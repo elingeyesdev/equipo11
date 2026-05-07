@@ -21,17 +21,21 @@ export function SimulacionProvider({ children }) {
 
   // ─── Estado de la simulación de ZONA ──────────────────────────────────────
   const [zonaSimActiva, setZonaSimActiva]           = useState(false)
-  const [zonaSimValor, setZonaSimValor]             = useState(null)
-  const [zonaSimColor, setZonaSimColor]             = useState(null)  // ← color directo del backend
+  const [zonaSimZonas, setZonaSimZonas]             = useState([]) // Array de zonas
   const [zonaSimMetrica, setZonaSimMetrica]         = useState(null)
   const [zonaSimUnidad, setZonaSimUnidad]           = useState('')
-  const [zonaSimUmbralLabel, setZonaSimUmbralLabel] = useState('')
-  const [zonaSimSeveridad, setZonaSimSeveridad]     = useState('')
   const [zonaSimEscNombre, setZonaSimEscNombre]     = useState('')
   const [zonaSimProgreso, setZonaSimProgreso]       = useState(0)
   const [zonaSimSesionId, setZonaSimSesionId]       = useState(null)
   const [zonaSimTotalLecturas, setZonaSimTotalLecturas] = useState(0)
-  const [zonaSimCentroide, setZonaSimCentroide]     = useState(null)  // {lat, lng}
+  const [zonaSimTiempo, setZonaSimTiempo] = useState(null)
+
+  // ─── Persistencia de Fronteras Seleccionadas ──────────────────────────────
+  const [fronterasSeleccionadas, setFronterasSeleccionadas] = useState([]) // [{ geojson, bbox, nombre }]
+  const [isComparing, setIsComparing] = useState(false)
+  const [zona1Cfg, setZona1Cfg] = useState({ pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null })
+  const [zona2Cfg, setZona2Cfg] = useState({ pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null })
+  const [isSimMode, setIsSimMode] = useState(false)
 
   // Conectar al montar, desconectar al desmontar
   useEffect(() => {
@@ -76,35 +80,34 @@ export function SimulacionProvider({ children }) {
     socket.on('zona:estado', (payload) => {
       setZonaSimActiva(payload.running)
       if (!payload.running) {
-        setZonaSimValor(null)
-        setZonaSimColor(null)
+        setZonaSimZonas([])
         setZonaSimMetrica(null)
         setZonaSimUnidad('')
-        setZonaSimUmbralLabel('')
-        setZonaSimSeveridad('')
         setZonaSimEscNombre('')
         setZonaSimProgreso(0)
         setZonaSimSesionId(null)
-        setZonaSimCentroide(null)
       } else {
         if (payload.sesionId)     setZonaSimSesionId(payload.sesionId)
         if (payload.metricaClave) setZonaSimMetrica(payload.metricaClave)
-        if (payload.centroide)    setZonaSimCentroide(payload.centroide)
         if (payload.totalLecturas) setZonaSimTotalLecturas(payload.totalLecturas)
       }
     })
 
     socket.on('zona:tick', (payload) => {
       setZonaSimActiva(true)
-      setZonaSimValor(payload.valor)
-      setZonaSimColor(payload.color)              // color directo del backend
+      setZonaSimZonas(payload.zonas || [])
       setZonaSimMetrica(payload.metricaClave)
       setZonaSimUnidad(payload.unidad || '')
-      setZonaSimUmbralLabel(payload.umbralLabel || '')
-      setZonaSimSeveridad(payload.severidad || '')
       setZonaSimEscNombre(payload.escenarioNombre || '')
       setZonaSimProgreso(payload.progreso || 0)
+      setZonaSimTiempo(payload.tiempo || null)
       if (payload.sesionId) setZonaSimSesionId(payload.sesionId)
+    })
+
+    socket.on('zona:error', (payload) => {
+      console.error('⚠️ Error en simulación de zona:', payload.message)
+      alert(`Error en simulación: ${payload.message}`)
+      setZonaSimActiva(false)
     })
 
     return () => {
@@ -163,19 +166,27 @@ export function SimulacionProvider({ children }) {
     iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
     // Zona sim
     zonaSimActiva,
-    zonaSimValor,
-    zonaSimColor,          // hex directo del backend
+    zonaSimZonas,
     zonaSimMetrica,
     zonaSimUnidad,
-    zonaSimUmbralLabel,
-    zonaSimSeveridad,
     zonaSimEscNombre,
     zonaSimProgreso,
     zonaSimSesionId,
     zonaSimTotalLecturas,
-    zonaSimCentroide,
+    zonaSimTiempo,
     iniciarZona,
     detenerZona,
+    // Fronteras
+    fronterasSeleccionadas,
+    setFronterasSeleccionadas,
+    isComparing,
+    setIsComparing,
+    zona1Cfg,
+    setZona1Cfg,
+    zona2Cfg,
+    setZona2Cfg,
+    isSimMode,
+    setIsSimMode,
   }
 
   return (

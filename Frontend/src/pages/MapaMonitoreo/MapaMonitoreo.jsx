@@ -7,7 +7,7 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -28,7 +28,7 @@ import ChoroplethLayer from './layers/ChoroplethLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import SimulationZoneLayer from './layers/SimulationZoneLayer';
-import { computeConvexHull, hullToGeoJSON, calcAreaKm2 } from '../../utils/convexHull';
+import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 // Fallback estático con cobertura de Sudamérica (usado cuando la simulación NO está activa)
 const FALLBACK_DATA = [
   // Bolivia
@@ -83,12 +83,8 @@ const FALLBACK_DATA = [
 
 function MapaMonitoreo() {
   const location = useLocation();
-  const { isRunning, cities: simulatedCities,
-    zonaSimActiva, zonaSimValor, zonaSimColor, zonaSimMetrica,
-    zonaSimUnidad, zonaSimUmbralLabel, zonaSimSeveridad, zonaSimEscNombre,
-    zonaSimProgreso, zonaSimSesionId, zonaSimTotalLecturas, zonaSimCentroide,
-    detenerZona
-  } = useSimulacion();
+
+
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
@@ -97,6 +93,7 @@ function MapaMonitoreo() {
   // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
   const { umbrales } = useUmbrales(heatmapMetric);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [injectedCityId, setInjectedCityId] = useState(null);
   // Sensores IoT — datos reales de la API externa
   const [iotSensors, setIotSensors] = useState([]);
@@ -105,43 +102,61 @@ function MapaMonitoreo() {
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
 
   // ─── Modo Simulación ─────────────────────────────────────────────────────
-  // isSimMode: el usuario está colocando puntos manualmente para definir el área
-  const [isSimMode, setIsSimMode] = useState(false);
-  const [simPoints, setSimPoints] = useState([]); // [{id, lng, lat}]
+  const { 
+    isRunning, cities: simulatedCities,
+    zonaSimActiva, zonaSimZonas = [], zonaSimMetrica,
+    zonaSimUnidad, zonaSimEscNombre,
+    zonaSimProgreso, zonaSimSesionId, zonaSimTotalLecturas,
+    zonaSimTiempo,
+    detenerZona, iniciarZona,
+    // Nuevos estados globales de fronteras
+    fronterasSeleccionadas, setFronterasSeleccionadas,
+    isSimMode, setIsSimMode
+  } = useSimulacion();
 
-  // Convex hull y GeoJSON del área — recalcula solo cuando cambian los puntos
-  const simHull = useMemo(() => computeConvexHull(simPoints), [simPoints]);
-  const simZoneGeoJSON = useMemo(() => hullToGeoJSON(simHull), [simHull]);
-  const simAreaKm2 = useMemo(() => calcAreaKm2(simHull), [simHull]);
+  // Variables derivadas para el panel de estado (usan la primera zona como resumen)
+  const firstZone = (zonaSimZonas && zonaSimZonas[0]) || {};
+  const zonaSimColor = firstZone.color || '#38bdf8';
+  const zonaSimValor = firstZone.valor ?? null;
+  const zonaSimUmbralLabel = firstZone.umbralLabel || '—';
 
-  // Color del área viene directo del backend (calculado a partir de umbrales en BD)
-  // No se necesita useUmbrales aquí — elimina la condición de carrera async
-  const zonaColor = zonaSimColor;
+  // Formatear el tiempo de la simulación
+  const formatSimTime = (isoStr) => {
+    if (!isoStr) return '—';
+    const date = new Date(isoStr);
+    return date.toLocaleString('es-BO', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
-  // Agregar punto en el mapa cuando el modo simulación está activo
-  const handleAddSimPoint = useCallback((lng, lat) => {
-    setSimPoints(prev => [
-      ...prev,
-      { id: `sp_${Date.now()}_${Math.random().toString(36).slice(2)}`, lng, lat }
-    ]);
+  const handleBoundarySelect = useCallback(({ z1, z2, changed }) => {
+    const arr = [];
+    if (z1) arr.push(z1);
+    if (z2) arr.push(z2);
+    setFronterasSeleccionadas(arr);
+    
+    // Fitbounds a la zona que acaba de cambiar
+    const target = changed === 'z2' ? z2 : z1;
+    if (target?.bbox && mapRef.current) {
+      mapRef.current.fitBounds(target.bbox, { padding: 40, duration: 1500 });
+    }
+  }, [setFronterasSeleccionadas]);
+
+  const handleStartSimulation = useCallback((fronteras) => {
+    setFronterasParaSimular(fronteras);
+    setIsModalOpen(true);
   }, []);
 
-  // Eliminar punto individual
-  const handleRemoveSimPoint = useCallback((id) => {
-    setSimPoints(prev => prev.filter(p => p.id !== id));
-  }, []);
+  const handleConfirmSimulation = useCallback((config) => {
+    iniciarZona(config);
+  }, [iniciarZona]);
 
-  // Limpiar todos los puntos
-  const handleClearSimPoints = useCallback(() => {
-    setSimPoints([]);
-  }, []);
-
-  // Desactivar modo simulación — pregunta si hay puntos
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
-    if (!active) {
-      setSimPoints([]);
-    }
+    // Ya no limpiamos fronterasSeleccionadas para que persistan al volver
   }, []);
 
   const handleLegendRangeClick = useCallback((umbral) => {
@@ -463,9 +478,8 @@ function MapaMonitoreo() {
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
 
-    // ─── Modo Simulación: agregar punto y salir ───────────────────────────
+    // ─── Modo Simulación: salir (ahora las zonas se manejan por FronterasPanel) ───
     if (isSimMode) {
-      handleAddSimPoint(lng, lat);
       return;
     }
 
@@ -539,7 +553,12 @@ function MapaMonitoreo() {
 
   return (
     <div className="mapa-page-container">
-      <ModalSimulacion isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} simPoints={simPoints} />
+      <ModalSimulacion 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        fronteras={fronterasParaSimular}
+        onStart={handleConfirmSimulation}
+      />
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -561,6 +580,13 @@ function MapaMonitoreo() {
       )}
 
       <div className={`map-container${isSimMode ? ' sim-mode' : ''}`}>
+        {isSimMode && (
+          <FronterasPanel 
+            onBoundarySelect={handleBoundarySelect} 
+            onStartSimulation={handleStartSimulation}
+            isRunning={zonaSimActiva}
+          />
+        )}
         {/* ========== Buscador Geocoder Global ========== */}
         <Draggable className="geocoder-search-container">
           <div ref={searchRef}>
@@ -654,55 +680,55 @@ function MapaMonitoreo() {
           <FullscreenControl position="bottom-left" />
           <NavigationControl position="bottom-left" />
 
-          {/* ─── Zona de simulación — visible en modo sim O durante simulación activa */}
-          {(isSimMode || zonaSimActiva) && simZoneGeoJSON && (
-            <SimulationZoneLayer
-              geojson={simZoneGeoJSON}
-              color={zonaColor}
-              simActiva={zonaSimActiva}
-            />
-          )}
+          {/* ─── Fronteras y Zonas de Simulación ────────── */}
+          {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
+            const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
+            const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
+            
+            return (
+              <Fragment key={`frontera-${idx}`}>
+                <Source id={`frontera-source-${idx}`} type="geojson" data={frontera.geojson}>
+                  <Layer
+                    id={`frontera-fill-${idx}`}
+                    type="fill"
+                    paint={{
+                      'fill-color': color,
+                      'fill-opacity': simData ? 0.3 : 0.2,
+                      'fill-outline-color': color
+                    }}
+                  />
+                  <Layer
+                    id={`frontera-line-${idx}`}
+                    type="line"
+                    paint={{
+                      'line-color': color,
+                      'line-width': simData ? 3 : 2,
+                      'line-dasharray': simData ? [1, 0] : [2, 2]
+                    }}
+                  />
+                </Source>
 
-          {/* ─── Marcadores de puntos de simulación (numerados) ────────── */}
-          {isSimMode && simPoints.map((pt, idx) => (
-            <Marker
-              key={pt.id}
-              longitude={pt.lng}
-              latitude={pt.lat}
-              anchor="center"
-            >
-              <div className="sim-point-marker" onClick={(e) => e.stopPropagation()}>
-                <span className="sim-point-number">{idx + 1}</span>
-                <button
-                  className="sim-point-remove"
-                  onClick={(e) => { e.stopPropagation(); handleRemoveSimPoint(pt.id); }}
-                  title="Eliminar punto"
-                >
-                  ×
-                </button>
-              </div>
-            </Marker>
-          ))}
-
-          {/* ─── Marcador en el centroide — muestra el valor actual ─────── */}
-          {zonaSimActiva && zonaSimCentroide && zonaSimValor !== null && (
-            <Marker
-              longitude={zonaSimCentroide.lng}
-              latitude={zonaSimCentroide.lat}
-              anchor="center"
-            >
-              <div
-                className="zona-valor-marker"
-                style={{ borderColor: zonaSimColor || '#38bdf8', boxShadow: `0 0 12px ${zonaSimColor || '#38bdf8'}66` }}
-              >
-                <span className="zona-valor-num" style={{ color: zonaSimColor || '#38bdf8' }}>
-                  {zonaSimValor}
-                </span>
-                <span className="zona-valor-unit">{zonaSimUnidad}</span>
-                <span className="zona-valor-label">{zonaSimUmbralLabel}</span>
-              </div>
-            </Marker>
-          )}
+                {simData && simData.centroide && (
+                  <Marker
+                    longitude={simData.centroide.lng}
+                    latitude={simData.centroide.lat}
+                    anchor="center"
+                  >
+                    <div
+                      className="zona-valor-marker"
+                      style={{ borderColor: simData.color, boxShadow: `0 0 12px ${simData.color}66` }}
+                    >
+                      <span className="zona-valor-num" style={{ color: simData.color }}>
+                        {simData.valor}
+                      </span>
+                      <span className="zona-valor-unit">{zonaSimUnidad}</span>
+                      <span className="zona-valor-label">{simData.umbralLabel} • {simData.escenarioNombre || zonaSimEscNombre}</span>
+                    </div>
+                  </Marker>
+                )}
+              </Fragment>
+            );
+          })}
 
           {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
           {isHeatmapActive && (
@@ -1074,71 +1100,7 @@ function MapaMonitoreo() {
         </div>
       </div>
 
-      {/* ─── Panel flotante del Modo Simulación ─────────────────────────── */}
-      {isSimMode && (
-        <div className="sim-toolbar-panel">
-          <div className="sim-toolbar-header">
-            <span className="sim-toolbar-icon">🔬</span>
-            <span className="sim-toolbar-title">Modo Simulación</span>
-            <span className="sim-toolbar-badge">{simPoints.length} pts</span>
-          </div>
 
-          {simPoints.length === 0 && (
-            <p className="sim-toolbar-hint">Haz clic en el mapa para agregar puntos</p>
-          )}
-
-          {simPoints.length > 0 && simPoints.length < 3 && (
-            <p className="sim-toolbar-hint">
-              Agrega {3 - simPoints.length} punto{3 - simPoints.length !== 1 ? 's' : ''} más para generar el área
-            </p>
-          )}
-
-          {simPoints.length >= 3 && (
-            <div className="sim-toolbar-stats">
-              <div className="sim-stat">
-                <span className="sim-stat-label">Área aprox.</span>
-                <span className="sim-stat-value">
-                  {simAreaKm2 < 1
-                    ? `${(simAreaKm2 * 1000).toFixed(1)} km²`
-                    : `${simAreaKm2.toFixed(1)} km²`}
-                </span>
-              </div>
-              <div className="sim-stat">
-                <span className="sim-stat-label">Vértices</span>
-                <span className="sim-stat-value">{simHull.length - 1}</span>
-              </div>
-            </div>
-          )}
-
-          <div className="sim-toolbar-actions">
-            {simPoints.length > 0 && !zonaSimActiva && (
-              <button
-                className="sim-action-btn sim-action-clear"
-                onClick={handleClearSimPoints}
-              >
-                🗑️ Limpiar
-              </button>
-            )}
-            {simPoints.length >= 3 && !zonaSimActiva && (
-              <button
-                className="sim-action-btn sim-action-start"
-                onClick={() => setIsModalOpen(true)}
-                title="Iniciar simulación en el área definida"
-              >
-                ▶ Iniciar Simulación
-              </button>
-            )}
-            {zonaSimActiva && (
-              <button
-                className="sim-action-btn sim-action-stop"
-                onClick={detenerZona}
-              >
-                ⏹ Detener
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {isHistoricalMode && !activeCity && (
         <div className="historical-prompt">
@@ -1196,6 +1158,10 @@ function MapaMonitoreo() {
           <div className="zona-sim-info-row">
             <span className="zona-sim-info-label">Métrica</span>
             <span className="zona-sim-info-val">{zonaSimMetrica} ({zonaSimUnidad})</span>
+          </div>
+          <div className="zona-sim-info-row">
+            <span className="zona-sim-info-label">Fecha/Hora Sim</span>
+            <span className="zona-sim-info-val">{formatSimTime(zonaSimTiempo)}</span>
           </div>
 
           {/* Barra de progreso */}

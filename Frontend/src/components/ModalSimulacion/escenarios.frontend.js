@@ -1,21 +1,21 @@
 /**
- * escenarios.frontend.js — Catálogo de escenarios de simulación (lado cliente).
- *
- * Misma data que escenarios.data.js del backend, pero en formato ES Module
- * para el frontend React.
+ * escenarios.frontend.js — Catálogo de escenarios de simulación para el frontend.
+ * Sincronizado con el backend.
  */
 
 const ESCENARIOS = [
-  // ─── 01 · TEMPERATURA ────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 01 · TEMPERATURA
+  // ─────────────────────────────────────────────────────────────
   {
     metricaClave: 'temperatura',
     numero: '01',
     nombre: 'Temperatura',
-    subtitulo: '°C',
     unidad: '°C',
     categoria: 'Térmica',
     categoriaColor: '#3b82f6',
     descripcion: 'Genera lecturas térmicas extremas para validar alertas de frío y calor en estaciones de monitoreo.',
+    iconCategoria: '🌡️',
     defaultDias: 1,
     defaultIntervalMin: 60,
     defaultIntervalSimSeg: 5,
@@ -47,7 +47,9 @@ const ESCENARIOS = [
     ],
   },
 
-  // ─── 02 · AIRE (AQI) ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 02 · CALIDAD DEL AIRE (AQI)
+  // ─────────────────────────────────────────────────────────────
   {
     metricaClave: 'aqi',
     numero: '02',
@@ -57,6 +59,7 @@ const ESCENARIOS = [
     categoria: 'Atmósfera',
     categoriaColor: '#22c55e',
     descripcion: 'Índice de calidad del aire (PM2.5 / PM10). Simula episodios de contaminación atmosférica típicos en Bolivia.',
+    iconCategoria: '🌫️',
     defaultDias: 5,
     defaultIntervalMin: 30,
     defaultIntervalSimSeg: 2,
@@ -77,7 +80,7 @@ const ESCENARIOS = [
         id: 'estancamiento',
         nombre: 'Caso Estancamiento',
         descripcion: 'Inversión térmica en valle · gases acumulados sin dispersión',
-        icon: '🌫️',
+        icon: '≡',
         iconBg: '#f3f4f6',
         inicio: 60,
         fin: 180,
@@ -88,7 +91,9 @@ const ESCENARIOS = [
     ],
   },
 
-  // ─── 03 · AGUA (ICA) ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 03 · CALIDAD DEL AGUA (ICA)
+  // ─────────────────────────────────────────────────────────────
   {
     metricaClave: 'ica',
     numero: '03',
@@ -98,6 +103,7 @@ const ESCENARIOS = [
     categoria: 'Hídrica',
     categoriaColor: '#f59e0b',
     descripcion: 'Índice de calidad del agua. Modela contaminación química, bacteriológica o concentración por bajo caudal.',
+    iconCategoria: '💧',
     defaultDias: 14,
     defaultIntervalMin: 60,
     defaultIntervalSimSeg: 5,
@@ -118,7 +124,7 @@ const ESCENARIOS = [
         id: 'sequia',
         nombre: 'Caso Escasez / Sequía',
         descripcion: 'Caudal mínimo · sedimentos y contaminantes concentrados',
-        icon: '🏜️',
+        icon: '≋',
         iconBg: '#f3f4f6',
         inicio: 70,
         fin: 38,
@@ -129,7 +135,9 @@ const ESCENARIOS = [
     ],
   },
 
-  // ─── 04 · RUIDO (dB) ──────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 04 · RUIDO (dB)
+  // ─────────────────────────────────────────────────────────────
   {
     metricaClave: 'ruido',
     numero: '04',
@@ -139,6 +147,7 @@ const ESCENARIOS = [
     categoria: 'Acústica',
     categoriaColor: '#f97316',
     descripcion: 'Nivel de presión sonora. Evalúa superación de umbrales de salud auditiva (65–70 dB diurno · 55 dB nocturno).',
+    iconCategoria: '🔊',
     defaultDias: 3,
     defaultIntervalMin: 15,
     defaultIntervalSimSeg: 1,
@@ -170,7 +179,9 @@ const ESCENARIOS = [
     ],
   },
 
-  // ─── 05 · HUMEDAD (%) ─────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // 05 · HUMEDAD (%)
+  // ─────────────────────────────────────────────────────────────
   {
     metricaClave: 'humedad',
     numero: '05',
@@ -180,6 +191,7 @@ const ESCENARIOS = [
     categoria: 'Higrometría',
     categoriaColor: '#06b6d4',
     descripcion: 'Humedad relativa del aire. El riesgo aparece en ambos extremos: saturación favorece moho e inundaciones; sequedad extrema dispara incendios y deshidratación.',
+    iconCategoria: '💦',
     defaultDias: 10,
     defaultIntervalMin: 60,
     defaultIntervalSimSeg: 3,
@@ -197,7 +209,7 @@ const ESCENARIOS = [
         borderColor: '#06b6d4',
       },
       {
-        id: 'sequia_humedad',
+        id: 'sequia',
         nombre: 'Caso Sequedad Crítica',
         descripcion: 'Caída por debajo del 15% · alto riesgo de incendio forestal',
         icon: '☀️',

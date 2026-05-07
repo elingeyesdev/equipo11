@@ -29,46 +29,53 @@ function registerZonaSocketEvents(io) {
         dias,
         intervalMinutos,
         intervalSimSeg,
+        zonas,
         puntos,
         nombreZona,
       } = payload;
 
       // Validaciones básicas
-      if (!metricaClave || !escenario || !dias || !intervalMinutos || !intervalSimSeg) {
-        socket.emit('zona:error', { message: 'Faltan parámetros requeridos (metricaClave, escenario, dias, intervalMinutos, intervalSimSeg).' });
-        return;
-      }
-      if (!puntos || puntos.length < 3) {
-        socket.emit('zona:error', { message: 'Se necesitan al menos 3 puntos para definir el área.' });
-        return;
-      }
-      if (zonaService.isRunning()) {
-        socket.emit('zona:error', { message: 'Ya hay una simulación de zona activa. Detenla antes de iniciar una nueva.' });
+      if (!metricaClave || !dias || !intervalMinutos || !intervalSimSeg) {
+        socket.emit('zona:error', { message: 'Faltan parámetros de tiempo o métrica.' });
         return;
       }
 
-      console.log(`🔬 Iniciando simulación de zona: ${metricaClave} / ${escenario.id} / ${dias}d`);
+      // Si vienen puntos (modo legado), lo convertimos al nuevo formato de zonas
+      let finalZonas = zonas;
+      if (!finalZonas && puntos && puntos.length >= 3) {
+        const centroide = zonaService.calcCentroide ? zonaService.calcCentroide(puntos) : { lat: puntos[0].lat, lng: puntos[0].lng };
+        finalZonas = [{ nombre: nombreZona || 'Zona 1', centroide, escenario }];
+      }
+
+      if (!finalZonas || finalZonas.length === 0) {
+        socket.emit('zona:error', { message: 'Se necesita al menos una zona válida para simular.' });
+        return;
+      }
+
+      if (zonaService.isRunning()) {
+        socket.emit('zona:error', { message: 'Ya hay una simulación activa.' });
+        return;
+      }
+
+      console.log(`🔬 Iniciando simulación de zonas: ${metricaClave} (${finalZonas.length} zonas)`);
 
       try {
         const resultado = await zonaService.iniciarSimulacionZona(
-          { metricaClave, escenario, dias, intervalMinutos, intervalSimSeg, puntos, nombreZona },
+          { metricaClave, escenario, dias, intervalMinutos, intervalSimSeg, zonas: finalZonas },
           (tickPayload) => {
-            // Emitir el tick a TODOS los clientes conectados
             io.emit('zona:tick', tickPayload);
           }
         );
 
-        console.log(`✅ Zona iniciada — sesionId: ${resultado.sesionId}, lecturas: ${resultado.totalLecturas}`);
+        console.log(`✅ Zonas iniciadas — sesionId: ${resultado.sesionId}`);
         io.emit('zona:estado', {
           running: true,
           sesionId: resultado.sesionId,
-          localidadId: resultado.localidadId,
           totalLecturas: resultado.totalLecturas,
-          centroide: resultado.centroide,
           fechaInicio: resultado.fechaInicio,
           metricaClave,
-          escenarioId: escenario.id,
-          escenarioNombre: escenario.nombre,
+          escenarioNombre: (finalZonas[0] && finalZonas[0].escenario && finalZonas[0].escenario.nombre) || 'Simulación',
+          zonas: resultado.zonas
         });
 
       } catch (err) {

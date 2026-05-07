@@ -177,53 +177,76 @@ async function iniciarSimulacionZona(config, onTick) {
   if (tickIntervalId) throw new Error('Ya hay una simulación de zona activa');
 
   const { metricaClave, escenario, dias, intervalMinutos, intervalSimSeg,
-          puntos, nombreZona = 'Área', usuarioId = 1 } = config;
+          zonas = [], usuarioId = 1 } = config;
 
   const meta = METRIC_META[metricaClave] || { unidad: '', nombre: metricaClave };
-  const centroide = calcCentroide(puntos);
-
-  // Cargar umbrales desde BD — fuente única de verdad para colores
   const umbrales = await loadUmbrales(metricaClave);
-  console.log(`[Zona] Umbrales cargados para '${metricaClave}': ${umbrales.length} niveles`);
-
-  const localidadId = await crearLocalidadTemporal(centroide, nombreZona);
   const metricaId   = await getMetricaId(metricaClave);
   const fuenteId    = await getFuenteSimulacionId();
-
   const fechaInicio = new Date();
-  const lecturas = generarDatos(escenario, metricaClave, dias, intervalMinutos, fechaInicio, umbrales);
-  console.log(`[Zona] ${lecturas.length} lecturas generadas`);
+
+  const globalEsc = escenario || (zonas[0] && zonas[0].escenario) || { id: 'custom', nombre: 'Personalizado' };
 
   const configuracionSnapshot = {
     metricaClave, metricaNombre: meta.nombre, unidad: meta.unidad,
-    escenarioId: escenario.id, escenarioNombre: escenario.nombre,
-    dias, intervalMinutos, intervalSimSeg, puntos, centroide,
+    escenarioId: globalEsc.id, escenarioNombre: globalEsc.nombre,
+    dias, intervalMinutos, intervalSimSeg, zonas,
   };
   const sesionId = await crearSesion(usuarioId, configuracionSnapshot, intervalSimSeg * 1000);
-  const rowsInserted = await guardarLecturas(lecturas, localidadId, metricaId, fuenteId, sesionId);
-  console.log(`[Zona] BD: sesionId=${sesionId} | lecturas insertadas=${rowsInserted}`);
 
-  // Preparar tick visual
-  tickData = lecturas;
+  const zonasLecturas = [];
+  let totalLecturas = 0;
+
+  for (const z of zonas) {
+    const localidadId = await crearLocalidadTemporal(z.centroide, z.nombre);
+    const escZ = z.escenario || escenario;
+    const lecturas = generarDatos(escZ, metricaClave, dias, intervalMinutos, fechaInicio, umbrales);
+    totalLecturas += lecturas.length;
+    await guardarLecturas(lecturas, localidadId, metricaId, fuenteId, sesionId);
+    zonasLecturas.push({ localidadId, nombre: z.nombre, centroide: z.centroide, lecturas, escenarioNombre: escZ.nombre });
+  }
+
+  // Prepara tick visual: matriz de frames
+  tickData = [];
+  const lengthPuntos = zonasLecturas[0]?.lecturas.length || 0;
+  for (let i = 0; i < lengthPuntos; i++) {
+    const tickFrame = [];
+    for (const z of zonasLecturas) {
+      tickFrame.push({
+        nombre: z.nombre,
+        centroide: z.centroide,
+        valor: z.lecturas[i].valor,
+        color: z.lecturas[i].color,
+        umbralLabel: z.lecturas[i].umbralLabel,
+        severidad: z.lecturas[i].severidad,
+        tiempo: z.lecturas[i].tiempo,
+        escenarioNombre: z.escenarioNombre
+      });
+    }
+    tickData.push(tickFrame);
+  }
+
   tickIndex = 0;
   currentSesionId = sesionId;
   currentMetricaClave = metricaClave;
   currentEscenario = escenario;
 
   tickIntervalId = setInterval(() => {
-    if (tickIndex >= tickData.length) tickIndex = 0; // loop
-    const punto = tickData[tickIndex];
+    if (tickIndex >= tickData.length) {
+      console.log('🏁 Simulación finalizada');
+      detenerSimulacionZona();
+      return;
+    }
+    console.log(`⏱ Tick ${tickIndex + 1}/${tickData.length} [${metricaClave} - ${globalEsc.nombre}]`);
+    const frames = tickData[tickIndex];
     onTick({
       sesionId,
       metricaClave,
       metricaNombre: meta.nombre,
       unidad: meta.unidad,
-      escenarioNombre: escenario.nombre,
-      valor: punto.valor,
-      color: punto.color,           // ← Color directo desde BD (no depende del frontend)
-      umbralLabel: punto.umbralLabel,
-      severidad: punto.severidad,
-      tiempo: punto.tiempo,
+      escenarioNombre: globalEsc.nombre,
+      zonas: frames,
+      tiempo: frames[0]?.tiempo,
       tickIdx: tickIndex,
       totalTicks: tickData.length,
       progreso: Math.round((tickIndex / Math.max(tickData.length - 1, 1)) * 100),
@@ -231,7 +254,7 @@ async function iniciarSimulacionZona(config, onTick) {
     tickIndex++;
   }, intervalSimSeg * 1000);
 
-  return { sesionId, localidadId, totalLecturas: lecturas.length, centroide, fechaInicio: fechaInicio.toISOString() };
+  return { sesionId, totalLecturas, fechaInicio: fechaInicio.toISOString(), zonas: zonasLecturas.map(z => z.nombre) };
 }
 
 async function detenerSimulacionZona() {
@@ -259,4 +282,4 @@ function getEstado() {
   };
 }
 
-module.exports = { iniciarSimulacionZona, detenerSimulacionZona, isRunning, getEstado };
+module.exports = { iniciarSimulacionZona, detenerSimulacionZona, isRunning, getEstado, calcCentroide };
