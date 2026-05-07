@@ -234,6 +234,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.lineTo(x, y);
           
           // Detección de Huracanes / Tormentas Severas
+          const fade = Math.sin(p.life * Math.PI); // Efecto de desvanecimiento suave
+          
           // Si las ráfagas superan 90km/h o la presión es muy baja (<990 hPa), pintamos de Púrpura/Rojo
           let strokeColor = `rgba(180, 230, 255, ${fade * 0.5})`; // Viento normal (Azul claro)
           

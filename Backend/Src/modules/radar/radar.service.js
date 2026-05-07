@@ -115,7 +115,15 @@ const runScraper = async () => {
     await pool.query('TRUNCATE TABLE radar_grid_cache');
     
     const grid = generateGrid();
-    console.log(`[Radar Scraper] Cuadrícula generada con ${grid.length} nodos virtuales.`);
+    
+    // Mezclar el array aleatoriamente (Fisher-Yates) para que si el scraper se detiene por límite de API,
+    // tengamos una muestra uniforme de TODO el continente en lugar de solo la parte más al sur.
+    for (let i = grid.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [grid[i], grid[j]] = [grid[j], grid[i]];
+    }
+    
+    console.log(`[Radar Scraper] Cuadrícula generada y mezclada con ${grid.length} nodos virtuales.`);
     
     const BATCH_SIZE = 50;
     const totalBatches = Math.ceil(grid.length / BATCH_SIZE);
@@ -146,6 +154,11 @@ const runScraper = async () => {
         }
       } catch (err) {
         console.error(`[Radar Scraper] Error en lote ${i+1}/${totalBatches}:`, err.message);
+        // Si alcanzamos el límite de cuota (429), detenemos la recolección pero conservamos lo ya descargado
+        if (err.message.includes('429')) {
+          console.warn('[Radar Scraper] Cuota de API excedida (Horaria/Diaria). Deteniendo recolección y mostrando datos parciales.');
+          break; 
+        }
       }
       
       scrapeProgress = Math.round(((i + 1) / totalBatches) * 100);
