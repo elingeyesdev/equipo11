@@ -4,7 +4,8 @@ const router = express.Router();
 
 router.get('/bolivia', async (req, res) => {
   try {
-    const data = await getRadarData();
+    const time = req.query.time || null;
+    const data = await getRadarData(time);
     res.json(data);
   } catch (error) {
     console.error('Error fetching radar data:', error);

@@ -183,6 +183,32 @@ function MapaMonitoreo() {
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
   const [timelineIndex, setTimelineIndex] = useState(0);
 
+  const [globalHistoryArray, setGlobalHistoryArray] = useState([]);
+  const [globalTimelineIndex, setGlobalTimelineIndex] = useState(0);
+
+  // Generate global history array for the last 3 days
+  useEffect(() => {
+    const arr = [];
+    const now = new Date();
+    const start = new Date(now);
+    start.setUTCDate(start.getUTCDate() - 2); 
+    start.setUTCHours(0, 0, 0, 0);
+    
+    let index = 0;
+    let curr = start;
+    while (curr <= now) {
+      arr.push({
+        index,
+        timestamp: curr.toISOString(),
+        data: { temperatura: null }
+      });
+      curr = new Date(curr.getTime() + 6 * 60 * 60 * 1000);
+      index++;
+    }
+    setGlobalHistoryArray(arr);
+    setGlobalTimelineIndex(arr.length - 1);
+  }, []);
+
   // Fetch historical data — prioriza BD local (lecturas del simulador)
   useEffect(() => {
     if (isHistoricalMode && selectedCity) {
@@ -434,8 +460,13 @@ function MapaMonitoreo() {
     if (isParticlesActive) {
       const fetchRadar = async () => {
         try {
-          // Consultar el backend local
-          const res = await axios.get(`${API_BASE}/radar/bolivia`);
+          // Consultar el backend local, pasando el tiempo histórico si aplica
+          let url = `${API_BASE}/radar/bolivia`;
+          if (isHistoricalMode && !selectedCity && globalHistoryArray[globalTimelineIndex]) {
+             url += `?time=${encodeURIComponent(globalHistoryArray[globalTimelineIndex].timestamp)}`;
+          }
+
+          const res = await axios.get(url);
           setScannedGrid(res.data);
           
           // Si ya terminó de cargar, detenemos el polling
@@ -460,7 +491,7 @@ function MapaMonitoreo() {
     }
     
     return () => { if (intervalId) clearInterval(intervalId); };
-  }, [isParticlesActive]);
+  }, [isParticlesActive, isHistoricalMode, selectedCity, globalTimelineIndex, globalHistoryArray]);
 
   const handleMapMoveEnd = async (evt) => {
     if (!isParticlesActive || !mapRef.current) return;
@@ -1103,10 +1134,17 @@ function MapaMonitoreo() {
 
 
       {isHistoricalMode && !activeCity && (
-        <div className="historical-prompt">
-          <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
-          <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
-        </div>
+        <>
+          <div className="historical-prompt">
+            <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
+            <span style={{ opacity: 0.8 }}>Mostrando el clima global en la fecha seleccionada.</span>
+          </div>
+          <Timeline
+            cityHistoryArray={globalHistoryArray}
+            currentIndex={globalTimelineIndex}
+            onIndexChange={(idx) => setGlobalTimelineIndex(idx)}
+          />
+        </>
       )}
 
       {isHistoricalMode && activeCity && (
