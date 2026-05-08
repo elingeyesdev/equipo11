@@ -39,6 +39,16 @@ server.listen(PORT, async () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`🔌 WebSocket activo en el mismo puerto`)
   
+  // 1. PRIMERO: Verificar y poblar datos iniciales (Asegura que las tablas existan antes que los servicios)
+  try {
+    const { initDatabase } = require('./Src/config/initDb')
+    await initDatabase()
+    console.log('✅ Base de datos inicializada correctamente')
+  } catch (err) {
+    console.error('❌ Error FATAL al inicializar base de datos:', err)
+  }
+
+  // 2. DESPUÉS: Iniciar servicios que dependen de la base de datos
   // Ejecutar el recopilador global una vez que el servidor arranca
   runScraper()
   // Iniciar sensores IoT — datos reales de Open-Meteo cada 15 minutos
@@ -47,13 +57,4 @@ server.listen(PORT, async () => {
   await alertasService.cargarUmbralesCache()
   // Iniciar el bot de Telegram en modo escucha
   startTelegramListener()
-  
-  // Verificar y poblar datos iniciales si es necesario (Fix para despliegues nuevos)
-  try {
-    const { initDatabase } = require('./Src/config/initDb')
-    await initDatabase()
-    console.log('✅ Verificación de base de datos completada')
-  } catch (err) {
-    console.error('❌ Error al inicializar datos:', err)
-  }
 })
