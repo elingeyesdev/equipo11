@@ -17,11 +17,9 @@
 --   • Lecturas en serie de tiempo (hypertable TimescaleDB) con catálogo
 --     de fuentes (simulación, APIs externas reales, entrada manual, sensor).
 --   • Sesiones de simulación auditables.
---   • Sistema de alertas con suscripciones por usuario.
 --   • Reportes persistidos con parámetros reutilizables.
---   • Historial de conversaciones con el agente IA (para contexto multi-turno
---     y monitoreo de costos de la API).
---   • Preferencias de usuario (tema, unidad preferida por métrica) y favoritos.
+--   • Historial de conversaciones con el agente IA.
+--   • Configuración de notificaciones externas.
 --
 -- JUSTIFICACIÓN DEL MOTOR
 -- -----------------------------------------------------------------------------
@@ -58,9 +56,9 @@
 --   • `lecturas` tiene PK compuesta (tiempo, localidad_id, metrica_id); los
 --     atributos no-clave (`valor`, `fuente_id`) dependen funcionalmente del
 --     conjunto completo de la PK, nunca de un subconjunto.
---   • `metrica_unidades` y las tablas puente (`suscripciones_alertas`,
---     `favoritos_usuario`) usan PKs compuestas y sus atributos no-clave
---     dependen de ambas columnas.
+--   • `lecturas` tiene PK compuesta (tiempo, localidad_id, metrica_id); los
+--     atributos no-clave (`valor`, `fuente_id`) dependen funcionalmente del
+--     conjunto completo de la PK, nunca de un subconjunto.
 --
 -- 3FN (Tercera Forma Normal)
 --   • No existen dependencias transitivas: por ejemplo, `localidades` NO
@@ -80,13 +78,6 @@
 --
 -- 4FN (Cuarta Forma Normal)
 --   • No existen dependencias multivaluadas no triviales.
---   • Relaciones muchos-a-muchos SIEMPRE se modelan con tabla puente:
---       - Usuarios ↔ Localidades favoritas → `favoritos_usuario`.
---       - Usuarios ↔ Alertas suscritas   → `suscripciones_alertas`.
---       - Métricas ↔ Unidades alternativas → `metrica_unidades`.
---       - Usuarios ↔ Preferencias por métrica → `preferencias_usuario_metrica`.
---     Cada tabla puente guarda SOLO los atributos que dependen del par completo
---     (ej: factor de conversión) — ningún atributo depende de sólo un lado.
 --
 -- 5FN / PJNF
 --   • No se detectaron dependencias de join que justifiquen descomposición
@@ -147,20 +138,6 @@ CREATE TABLE usuarios (
 
 CREATE INDEX idx_usuarios_rol ON usuarios(rol_id);
 
--- Tokens para verificación de email y reset de contraseña (flujos auth típicos).
--- Tabla separada para poder purgar tokens expirados sin tocar `usuarios`.
-CREATE TABLE tokens_usuario (
-  id          SERIAL       PRIMARY KEY,
-  usuario_id  INT          NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  token       UUID         NOT NULL DEFAULT gen_random_uuid(),
-  tipo        VARCHAR(30)  NOT NULL CHECK (tipo IN ('verificacion_email','reset_password')),
-  expira_en   TIMESTAMPTZ  NOT NULL,
-  usado_en    TIMESTAMPTZ,
-  creado_en   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  UNIQUE (token)
-);
-
-CREATE INDEX idx_tokens_usuario ON tokens_usuario(usuario_id, tipo);
 
 
 -- =============================================================================
@@ -260,16 +237,6 @@ CREATE TABLE metricas (
 
 CREATE INDEX idx_metricas_categoria ON metricas(categoria_id);
 
--- Conversión lineal entre unidades alternativas y la unidad base de una métrica.
--- Fórmula: valor_unidad_alternativa = valor_base * factor + offset
--- Ejemplo: °F = °C * 1.8 + 32    →    factor=1.8, offset=32
-CREATE TABLE metrica_unidades (
-  metrica_id  INT           NOT NULL REFERENCES metricas(id) ON DELETE CASCADE,
-  unidad_id   INT           NOT NULL REFERENCES unidades(id),
-  factor      DECIMAL(14,6) NOT NULL DEFAULT 1.0,
-  offset_val  DECIMAL(14,6) NOT NULL DEFAULT 0.0,
-  PRIMARY KEY (metrica_id, unidad_id)
-);
 
 -- Umbrales (niveles de calidad) por métrica. La clave natural compuesta
 -- (metrica_id, nivel) asegura BCNF; la unicidad de `label` dentro de métrica
@@ -412,17 +379,6 @@ CREATE TABLE alertas (
 CREATE INDEX idx_alertas_localidad_metrica ON alertas(localidad_id, metrica_id, tiempo DESC);
 CREATE INDEX idx_alertas_pendientes        ON alertas(tiempo DESC) WHERE reconocida = FALSE;
 
-CREATE TABLE suscripciones_alertas (
-  usuario_id       INT     NOT NULL REFERENCES usuarios(id)     ON DELETE CASCADE,
-  localidad_id     INT     NOT NULL REFERENCES localidades(id)  ON DELETE CASCADE,
-  metrica_id       INT     NOT NULL REFERENCES metricas(id)     ON DELETE CASCADE,
-  nivel_minimo     SMALLINT NOT NULL DEFAULT 3 CHECK (nivel_minimo BETWEEN 1 AND 10),
-  canal            VARCHAR(20) NOT NULL DEFAULT 'in_app'
-                     CHECK (canal IN ('in_app','email','push','webhook')),
-  activa           BOOLEAN NOT NULL DEFAULT TRUE,
-  creada_en        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (usuario_id, localidad_id, metrica_id, canal)
-);
 
 
 -- =============================================================================
@@ -450,75 +406,9 @@ CREATE INDEX idx_reportes_usuario ON reportes(usuario_id, creado_en DESC);
 CREATE INDEX idx_reportes_tipo    ON reportes(tipo);
 
 
--- =============================================================================
--- BLOQUE 9 — AGENTE IA (conversaciones multi-turno)
--- =============================================================================
---
--- Dividido en `conversaciones_ia` (thread) y `mensajes_ia` (turnos) para
--- respetar 3FN: los atributos del thread (título, resumen) NO se repiten en
--- cada mensaje. `tokens_usados` y `costo_usd` permiten monitorear el gasto
--- de la API de Claude/OpenAI (punto crítico mencionado en ANALISIS_MEJORAS
--- sección 19).
-
-CREATE TABLE conversaciones_ia (
-  id          SERIAL       PRIMARY KEY,
-  usuario_id  INT          NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  titulo      VARCHAR(255),
-  modelo      VARCHAR(60)  NOT NULL DEFAULT 'claude-sonnet-4-6',
-  inicio      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  ultimo_mensaje_en TIMESTAMPTZ
-);
-
-CREATE INDEX idx_conversaciones_usuario ON conversaciones_ia(usuario_id, inicio DESC);
-
-CREATE TABLE mensajes_ia (
-  id              BIGSERIAL    PRIMARY KEY,
-  conversacion_id INT          NOT NULL REFERENCES conversaciones_ia(id) ON DELETE CASCADE,
-  rol             VARCHAR(20)  NOT NULL CHECK (rol IN ('usuario','asistente','sistema','herramienta')),
-  contenido       TEXT         NOT NULL,
-  tokens_entrada  INT,
-  tokens_salida   INT,
-  costo_usd       DECIMAL(10,6),
-  tiempo          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_mensajes_conversacion ON mensajes_ia(conversacion_id, tiempo);
 
 
--- =============================================================================
--- BLOQUE 10 — PREFERENCIAS Y FAVORITOS DE USUARIO
--- =============================================================================
---
--- `preferencias_usuario` → una fila por usuario con preferencias globales (tema).
--- `preferencias_usuario_metrica` → preferencia por métrica (unidad preferida).
--- `favoritos_usuario` → lista de localidades favoritas (relación M:N → 4FN).
---
--- Separar estas tablas evita que `usuarios` tenga columnas que 90% del tiempo
--- serán NULL (una por métrica, otra por localidad favorita, etc.). Además
--- respeta 4FN: múltiples favoritos y múltiples preferencias por métrica son
--- dependencias multivaluadas que exigen tabla propia.
 
-CREATE TABLE preferencias_usuario (
-  usuario_id    INT          PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
-  tema          VARCHAR(10)  NOT NULL DEFAULT 'oscuro' CHECK (tema IN ('claro','oscuro','sistema')),
-  idioma        VARCHAR(5)   NOT NULL DEFAULT 'es',
-  estilo_mapa   VARCHAR(60)  NOT NULL DEFAULT 'dark-v11',
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE preferencias_usuario_metrica (
-  usuario_id  INT NOT NULL REFERENCES usuarios(id)  ON DELETE CASCADE,
-  metrica_id  INT NOT NULL REFERENCES metricas(id)  ON DELETE CASCADE,
-  unidad_id   INT NOT NULL REFERENCES unidades(id),
-  PRIMARY KEY (usuario_id, metrica_id)
-);
-
-CREATE TABLE favoritos_usuario (
-  usuario_id    INT         NOT NULL REFERENCES usuarios(id)    ON DELETE CASCADE,
-  localidad_id  INT         NOT NULL REFERENCES localidades(id) ON DELETE CASCADE,
-  agregado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (usuario_id, localidad_id)
-);
 
 
 -- =============================================================================
@@ -573,11 +463,6 @@ INSERT INTO metricas (clave, nombre, categoria_id, unidad_base_id, valor_min, va
   ('humedad',     'Humedad relativa',  (SELECT id FROM categorias_metricas WHERE clave='clima'),
                                         (SELECT id FROM unidades WHERE simbolo='%'),      0,   100);
 
--- Conversión °C ↔ °F (ejemplo de uso de metrica_unidades).
-INSERT INTO metrica_unidades (metrica_id, unidad_id, factor, offset_val)
-SELECT m.id, u.id, 1.8, 32.0
-FROM metricas m, unidades u
-WHERE m.clave = 'temperatura' AND u.simbolo = '°F';
 
 -- Umbrales AQI (estándar EPA) — sirven como ejemplo canónico.
 INSERT INTO umbrales (metrica_id, nivel, label, valor_min, valor_max, color_hex, severidad)
