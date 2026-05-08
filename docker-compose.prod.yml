@@ -4,9 +4,9 @@ services:
     image: timescale/timescaledb:latest-pg16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: sistema_ambiental
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: ${DB_NAME:-sistema_ambiental}
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
     ports:
       - "5433:5432"
     volumes:
@@ -18,11 +18,11 @@ services:
       - ./database/seeds/load_geojson.sh:/docker-entrypoint-initdb.d/05_load_geojson.sh
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d sistema_ambiental"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-sistema_ambiental}"]
       interval: 10s
       timeout: 10s
       retries: 10
-      start_period: 30s
+      start_period: 60s
 
   # ─── Backend (API Node.js + Express) ───
   backend:
@@ -32,15 +32,15 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: sistema_ambiental
-      DB_USER: admin
-      DB_PASSWORD: admin123
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-sistema_ambiental}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin123}
       JWT_SECRET: ${JWT_SECRET:-secret_para_tokens_envirosense_2026}
       JWT_EXPIRES_IN: 24h
       CORS_ORIGIN: "*"
-      # Variables de Notificación (Sincronizadas con tu .env)
+      # Variables de Notificación
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -70,9 +70,7 @@ services:
       - backend
     command: npm run dev -- --host
 
-# Volumen nombrado para persistir los datos de PostgreSQL
+# Volumen nombrado para persistir los datos
 volumes:
   pgdata:
   whatsapp_session:
-
-#Si alguien lee esto, solo estoy haciendo una prueba con algo pa ver si funca
