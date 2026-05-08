@@ -3,7 +3,7 @@ import './Timeline.css';
 
 // Componente que reemplaza a la antigua barra del Timeline
 // Formato: Cajón (Widget) de Previsión Histórica / Forecast Widget
-const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange }) => {
+const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = false }) => {
   const scrollRef = useRef(null);
   const [isDraggingState, setIsDraggingState] = useState(false);
   
@@ -115,11 +115,13 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange }) => {
                 <span className="history-card-time" style={{ fontSize: '0.65rem', marginBottom: '2px', opacity: 0.7 }}>
                   {dateObj.toLocaleDateString([], { day: '2-digit', month: 'short' })}
                 </span>
-                <span className="history-card-time">{timeString}</span>
+                <span className="history-card-time" style={isGlobal ? { marginBottom: '0', fontSize: '13px' } : {}}>{timeString}</span>
               </div>
-              <div className="history-card-temp">
-                {entry.data.temperatura != null ? `${Math.round(entry.data.temperatura)}°` : '--°'}
-              </div>
+              {!isGlobal && (
+                <div className="history-card-temp">
+                  {entry.data.temperatura != null ? `${Math.round(entry.data.temperatura)}°` : '--°'}
+                </div>
+              )}
             </div>
           );
         })}

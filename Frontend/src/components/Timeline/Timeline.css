@@ -19,6 +19,8 @@
   color: var(--paper);
   font-family: var(--font-sans);
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .forecast-scroll-area {

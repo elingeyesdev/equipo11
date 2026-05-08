@@ -178,6 +178,7 @@ function MapaMonitoreo() {
   const [weatherCanvases, setWeatherCanvases] = useState({});
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [activeControlsTab, setActiveControlsTab] = useState('capas'); // 'capas' | 'preferencias'
+  const [isFetchingRadar, setIsFetchingRadar] = useState(false);
 
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
@@ -460,6 +461,11 @@ function MapaMonitoreo() {
     if (isParticlesActive) {
       const fetchRadar = async () => {
         try {
+          // Si estamos cambiando de fecha histórica, mostramos el estado de carga visual
+          if (isHistoricalMode && !selectedCity) {
+            setIsFetchingRadar(true);
+          }
+
           // Consultar el backend local, pasando el tiempo histórico si aplica
           let url = `${API_BASE}/radar/bolivia`;
           if (isHistoricalMode && !selectedCity && globalHistoryArray[globalTimelineIndex]) {
@@ -469,12 +475,17 @@ function MapaMonitoreo() {
           const res = await axios.get(url);
           setScannedGrid(res.data);
           
-          // Si ya terminó de cargar, detenemos el polling
+          // Si ya terminó de cargar o no estaba scrapeando, detenemos el polling
           if (res.data.status === 'ready') {
             clearInterval(intervalId);
+            setIsFetchingRadar(false);
+          } else {
+            // Si el backend sigue devolviendo loading, mostramos el loading también
+            setIsFetchingRadar(true);
           }
         } catch (e) {
           console.error('Error fetching backend radar:', e);
+          setIsFetchingRadar(false);
         }
       };
       
@@ -781,10 +792,14 @@ function MapaMonitoreo() {
             />
           )}
 
-          {isParticlesActive && scannedGrid.status === 'loading' && (
+          {isParticlesActive && (scannedGrid.status === 'loading' || isFetchingRadar) && (
             <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#00e5ff', padding: '10px 20px', borderRadius: 30, zIndex: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 15px rgba(0,229,255,0.3)', border: '1px solid rgba(0,229,255,0.2)' }}>
               <span className="spinner" style={{ animation: 'spin 1s linear infinite' }}>📡</span>
-              <span>Construyendo Radar de Bolivia... {scannedGrid.progress}%</span>
+              <span>
+                {isHistoricalMode 
+                  ? 'Cargando clima histórico...' 
+                  : `Construyendo Radar de Bolivia... ${scannedGrid.progress || 0}%`}
+              </span>
             </div>
           )}
 
@@ -1143,6 +1158,7 @@ function MapaMonitoreo() {
             cityHistoryArray={globalHistoryArray}
             currentIndex={globalTimelineIndex}
             onIndexChange={(idx) => setGlobalTimelineIndex(idx)}
+            isGlobal={true}
           />
         </>
       )}
