@@ -65,16 +65,21 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
         if (!res.error && res.data) {
           const apiList = res.data.map(d => ({ name: d.name, states: d.states }))
           
-          // Combinar con la lista de la API, evitando duplicar Bolivia
           apiList.forEach(apiCountry => {
-            if (!apiCountry.name.includes("Bolivia")) {
-              finalPaises.push(apiCountry)
-            } else {
-              // Si la API tiene Bolivia, nos aseguramos de que tenga los 9 departamentos
-              const b = finalPaises.find(c => c.name === "Bolivia")
-              if (apiCountry.states && apiCountry.states.length >= 9) {
-                b.states = apiCountry.states
+            const existing = finalPaises.find(c => 
+              c.name === apiCountry.name || 
+              (apiCountry.name.includes("Bolivia") && c.name === "Bolivia")
+            )
+
+            if (existing) {
+              // Si el país ya está en nuestra lista base (Bolivia, Chile, etc.),
+              // actualizamos sus estados con los que vengan de la API si son válidos.
+              if (apiCountry.states && apiCountry.states.length > 0) {
+                existing.states = apiCountry.states
               }
+            } else {
+              // Si no existe, lo agregamos a la lista final
+              finalPaises.push(apiCountry)
             }
           })
         }
@@ -186,8 +191,9 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
           provName = `Provincia ${provName}`;
         }
         
-        const queryProv = `${provName}, ${zState.depto}, Bolivia`
-          .replace(/ Department/g, '')
+        const queryProv = `${provName}, ${zState.depto}, ${zState.pais}`
+          .replace(/ Department/gi, '')
+          .replace(/ Province/gi, '')
           .replace(/Departamento de /g, '')
           .replace(/Departamento del /g, '');
         url.searchParams.append('q', queryProv);
@@ -210,17 +216,15 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
 
         url.searchParams.append('q', mappingNombres[deptoBase] || `${zState.depto}, Bolivia`);
         url.searchParams.append('featuretype', 'state');
-      } else {
-        // OTROS CASOS (País solo o países extranjeros)
-        url.searchParams.append('format', 'json')
-        if (isSoloPais) {
-          url.searchParams.append('country', zState.pais);
-          url.searchParams.append('featuretype', 'country');
         } else {
           if (zState.pais) url.searchParams.append('country', zState.pais);
-          if (zState.depto) url.searchParams.append('state', zState.depto);
+          if (zState.depto) {
+            // Limpiar sufijos como 'Department' o 'Province' que añade la API de países
+            // pero que Nominatim suele rechazar para Colombia y otros países.
+            const cleanDepto = zState.depto.replace(/ Department| Province/gi, "").trim();
+            url.searchParams.append('state', cleanDepto);
+          }
         }
-      }
       
       url.searchParams.append('format', 'json')
       url.searchParams.append('polygon_geojson', '1')
@@ -239,7 +243,7 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
         fallbackUrl.searchParams.append('limit', '1')
         const parts = []
         if (zState.prov) parts.push(zState.prov)
-        if (zState.depto) parts.push(zState.depto)
+        if (zState.depto) parts.push(zState.depto.replace(/ Department| Province/gi, "").trim())
         if (zState.pais) parts.push(zState.pais)
         fallbackUrl.searchParams.append('q', parts.join(', '))
         
