@@ -37,6 +37,16 @@ export function SimulacionProvider({ children }) {
   const [zona2Cfg, setZona2Cfg] = useState({ pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null })
   const [isSimMode, setIsSimMode] = useState(false)
 
+  // ─── Estado visual del Mapa (Persistente) ──────────────────────────────
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false)
+  const [isChoroplethActive, setIsChoroplethActive] = useState(false)
+  const [heatmapMetric, setHeatmapMetric] = useState('aqi')
+  const [showSensors, setShowSensors] = useState(true)
+  const [isParticlesActive, setIsParticlesActive] = useState(false)
+  const [particleFilters, setParticleFilters] = useState({ rain: true, snow: true, wind: true, fog: true })
+  const [isHistoricalMode, setIsHistoricalMode] = useState(false)
+  const [isDynamicHistoricalMode, setIsDynamicHistoricalMode] = useState(false)
+
   // Conectar al montar, desconectar al desmontar
   useEffect(() => {
     const socket = io(SOCKET_URL)
@@ -187,6 +197,14 @@ export function SimulacionProvider({ children }) {
     setZona2Cfg,
     isSimMode,
     setIsSimMode,
+    isHeatmapActive, setIsHeatmapActive,
+    isChoroplethActive, setIsChoroplethActive,
+    heatmapMetric, setHeatmapMetric,
+    showSensors, setShowSensors,
+    isParticlesActive, setIsParticlesActive,
+    particleFilters, setParticleFilters,
+    isHistoricalMode, setIsHistoricalMode,
+    isDynamicHistoricalMode, setIsDynamicHistoricalMode,
   }
 
   return (

@@ -1432,3 +1432,63 @@ input:checked + .slider:before { transform: translateX(16px); }
 }
 
 .zona-sim-db-badge strong { color: #86efac; }
+
+/* ==========================================================
+   Leyenda de Clima Dinámico
+   ========================================================== */
+.legend-dynamic-clima {
+  padding: 8px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.legend-icon {
+  font-size: 1.2rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.legend-line {
+  width: 24px;
+  height: 4px;
+  border-radius: 2px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.legend-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.legend-text strong {
+  font: 700 11.5px/1 var(--font-sans);
+  color: var(--ink);
+}
+
+.legend-text p {
+  margin: 0;
+  font: 500 10.5px/1.4 var(--font-mono);
+  color: var(--ink-faint);
+  letter-spacing: 0.01em;
+}
+
+.legend-section-title {
+  font: 700 9px/1 var(--font-mono);
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: -4px;
+}

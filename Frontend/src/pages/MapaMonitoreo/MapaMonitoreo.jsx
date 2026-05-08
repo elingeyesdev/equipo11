@@ -87,32 +87,36 @@ function MapaMonitoreo() {
 
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
-  const [isHeatmapActive, setIsHeatmapActive] = useState(false);
-  const [isChoroplethActive, setIsChoroplethActive] = useState(false);
-  const [heatmapMetric, setHeatmapMetric] = useState('aqi');
-  // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
-  const { umbrales } = useUmbrales(heatmapMetric);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
-  const [injectedCityId, setInjectedCityId] = useState(null);
-  // Sensores IoT — datos reales de la API externa
-  const [iotSensors, setIotSensors] = useState([]);
-  const [showSensors, setShowSensors] = useState(true);
-  const [iotLoading, setIotLoading] = useState(true);
-  const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
 
-  // ─── Modo Simulación ─────────────────────────────────────────────────────
-  const { 
+  // ─── Modo Simulación y Estado del Mapa ───────────────────────────────────
+  const {
     isRunning, cities: simulatedCities,
     zonaSimActiva, zonaSimZonas = [], zonaSimMetrica,
     zonaSimUnidad, zonaSimEscNombre,
     zonaSimProgreso, zonaSimSesionId, zonaSimTotalLecturas,
     zonaSimTiempo,
     detenerZona, iniciarZona,
-    // Nuevos estados globales de fronteras
     fronterasSeleccionadas, setFronterasSeleccionadas,
-    isSimMode, setIsSimMode
+    isSimMode, setIsSimMode,
+    isHeatmapActive, setIsHeatmapActive,
+    isChoroplethActive, setIsChoroplethActive,
+    heatmapMetric, setHeatmapMetric,
+    showSensors, setShowSensors,
+    isParticlesActive, setIsParticlesActive,
+    particleFilters, setParticleFilters,
+    isHistoricalMode, setIsHistoricalMode,
+    isDynamicHistoricalMode, setIsDynamicHistoricalMode
   } = useSimulacion();
+
+  // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
+  const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
+  const [injectedCityId, setInjectedCityId] = useState(null);
+  // Sensores IoT — datos reales de la API externa
+  const [iotSensors, setIotSensors] = useState([]);
+  const [iotLoading, setIotLoading] = useState(true);
+  const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
 
   // Variables derivadas para el panel de estado (usan la primera zona como resumen)
   const firstZone = (zonaSimZonas && zonaSimZonas[0]) || {};
@@ -137,7 +141,7 @@ function MapaMonitoreo() {
     if (z1) arr.push(z1);
     if (z2) arr.push(z2);
     setFronterasSeleccionadas(arr);
-    
+
     // Fitbounds a la zona que acaba de cambiar
     const target = changed === 'z2' ? z2 : z1;
     if (target?.bbox && mapRef.current) {
@@ -169,18 +173,15 @@ function MapaMonitoreo() {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  const [isParticlesActive, setIsParticlesActive] = useState(false);
-  const [particleFilters, setParticleFilters] = useState({ rain: true, snow: true, wind: true, fog: true });
   const [weatherCode, setWeatherCode] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
   const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
   const [weatherCanvases, setWeatherCanvases] = useState({});
   const [isControlsOpen, setIsControlsOpen] = useState(false);
-  const [activeControlsTab, setActiveControlsTab] = useState('capas'); // 'capas' | 'preferencias'
+  const [activeControlsTab, setActiveControlsTab] = useState('capas'); // 'capas' | 'preferencias' | 'clima_dinamico' | 'leyenda_clima_dinamico'
   const [isFetchingRadar, setIsFetchingRadar] = useState(false);
 
-  const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
   const [timelineIndex, setTimelineIndex] = useState(0);
 
@@ -192,9 +193,9 @@ function MapaMonitoreo() {
     const arr = [];
     const now = new Date();
     const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 2); 
+    start.setUTCDate(start.getUTCDate() - 2);
     start.setUTCHours(0, 0, 0, 0);
-    
+
     let index = 0;
     let curr = start;
     while (curr <= now) {
@@ -270,6 +271,21 @@ function MapaMonitoreo() {
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
+  const containerRef = useRef(null); // ref para el ResizeObserver
+
+  // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (mapRef.current) {
+        requestAnimationFrame(() => {
+          mapRef.current.resize();
+        });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Abrir modal o centrar en ciudad inyectada según el estado de navegación o query params
   useEffect(() => {
@@ -300,7 +316,7 @@ function MapaMonitoreo() {
           pendingFlyTo.current = flyToParams
         }
       }
-      
+
       if (urlCityId) {
         searchParams.delete('city');
         const newUrl = `${location.pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
@@ -462,19 +478,19 @@ function MapaMonitoreo() {
       const fetchRadar = async () => {
         try {
           // Si estamos cambiando de fecha histórica, mostramos el estado de carga visual
-          if (isHistoricalMode && !selectedCity) {
+          if (isDynamicHistoricalMode) {
             setIsFetchingRadar(true);
           }
 
           // Consultar el backend local, pasando el tiempo histórico si aplica
           let url = `${API_BASE}/radar/bolivia`;
-          if (isHistoricalMode && !selectedCity && globalHistoryArray[globalTimelineIndex]) {
-             url += `?time=${encodeURIComponent(globalHistoryArray[globalTimelineIndex].timestamp)}`;
+          if (isDynamicHistoricalMode && globalHistoryArray[globalTimelineIndex]) {
+            url += `?time=${encodeURIComponent(globalHistoryArray[globalTimelineIndex].timestamp)}`;
           }
 
           const res = await axios.get(url);
           setScannedGrid(res.data);
-          
+
           // Si ya terminó de cargar o no estaba scrapeando, detenemos el polling
           if (res.data.status === 'ready') {
             clearInterval(intervalId);
@@ -488,11 +504,11 @@ function MapaMonitoreo() {
           setIsFetchingRadar(false);
         }
       };
-      
+
       fetchRadar();
       // Hacer polling cada 1 segundo si está cargando
       intervalId = setInterval(fetchRadar, 1000);
-      
+
       const { longitude, latitude } = mapRef.current ? mapRef.current.getCenter() : viewState;
       getWeatherAtLocation(latitude, longitude).then(w => {
         if (w && w.current) setWeatherCode(w.current.weather_code);
@@ -500,9 +516,9 @@ function MapaMonitoreo() {
     } else {
       setScannedGrid({ status: 'idle', progress: 0, data: [] });
     }
-    
+
     return () => { if (intervalId) clearInterval(intervalId); };
-  }, [isParticlesActive, isHistoricalMode, selectedCity, globalTimelineIndex, globalHistoryArray]);
+  }, [isParticlesActive, isDynamicHistoricalMode, globalTimelineIndex, globalHistoryArray]);
 
   const handleMapMoveEnd = async (evt) => {
     if (!isParticlesActive || !mapRef.current) return;
@@ -570,10 +586,10 @@ function MapaMonitoreo() {
 
       const newCityData = {
         temperatura: fullData?.temperatura ?? null,
-        humedad:     fullData?.humedad     ?? null,
-        aqi:         fullData?.aqi         ?? null,
-        ica:         fullData?.ica         ?? null,
-        ruido:       fullData?.ruido       ?? null,
+        humedad: fullData?.humedad ?? null,
+        aqi: fullData?.aqi ?? null,
+        ica: fullData?.ica ?? null,
+        ruido: fullData?.ruido ?? null,
       };
 
       setWeatherCode(fullData?.weatherCode ?? null);
@@ -594,10 +610,10 @@ function MapaMonitoreo() {
   const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   return (
-    <div className="mapa-page-container">
-      <ModalSimulacion 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+    <div className="mapa-page-container" ref={containerRef}>
+      <ModalSimulacion
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         fronteras={fronterasParaSimular}
         onStart={handleConfirmSimulation}
       />
@@ -623,8 +639,8 @@ function MapaMonitoreo() {
 
       <div className={`map-container${isSimMode ? ' sim-mode' : ''}`}>
         {isSimMode && (
-          <FronterasPanel 
-            onBoundarySelect={handleBoundarySelect} 
+          <FronterasPanel
+            onBoundarySelect={handleBoundarySelect}
             onStartSimulation={handleStartSimulation}
             isRunning={zonaSimActiva}
           />
@@ -714,6 +730,7 @@ function MapaMonitoreo() {
           onClick={handleMapClick}
           projection="mercator"
           maxZoom={9}
+          minZoom={2.5}
           maxPitch={0}
           dragRotate={false}
           touchPitch={false}
@@ -726,7 +743,7 @@ function MapaMonitoreo() {
           {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
             const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
             const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
-            
+
             return (
               <Fragment key={`frontera-${idx}`}>
                 <Source id={`frontera-source-${idx}`} type="geojson" data={frontera.geojson}>
@@ -796,8 +813,8 @@ function MapaMonitoreo() {
             <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#00e5ff', padding: '10px 20px', borderRadius: 30, zIndex: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 15px rgba(0,229,255,0.3)', border: '1px solid rgba(0,229,255,0.2)' }}>
               <span className="spinner" style={{ animation: 'spin 1s linear infinite' }}>📡</span>
               <span>
-                {isHistoricalMode 
-                  ? 'Cargando clima histórico...' 
+                {isDynamicHistoricalMode
+                  ? 'Cargando clima histórico...'
                   : `Construyendo Radar de Bolivia... ${scannedGrid.progress || 0}%`}
               </span>
             </div>
@@ -938,13 +955,13 @@ function MapaMonitoreo() {
           {isControlsOpen && (
             <div className="controls-dropdown">
               <div className="controls-tabs">
-                <button 
+                <button
                   className={`controls-tab ${activeControlsTab === 'capas' ? 'active' : ''}`}
                   onClick={() => setActiveControlsTab('capas')}
                 >
                   Capas
                 </button>
-                <button 
+                <button
                   className={`controls-tab ${activeControlsTab === 'preferencias' ? 'active' : ''}`}
                   onClick={() => setActiveControlsTab('preferencias')}
                 >
@@ -977,48 +994,17 @@ function MapaMonitoreo() {
 
                   <div className="controls-divider"></div>
 
-                  {/* Clima 3D */}
-                  <div className="control-row">
+                  {/* Clima 3D (Botón de navegación) */}
+                  <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveControlsTab('clima_dinamico')}>
                     <div className="control-row-label">
                       <span className="control-icon">🌦️</span>
                       <span className="control-text">Clima dinámico</span>
+                      {isParticlesActive && (
+                        <span className="control-status on" style={{ marginLeft: '6px' }}>ON</span>
+                      )}
                     </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isParticlesActive}
-                        onChange={(e) => setIsParticlesActive(e.target.checked)}
-                      />
-                      <span className="slider round"></span>
-                    </label>
+                    <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
                   </div>
-
-                  {/* Subfiltros de partículas (visible si Clima dinámico está ON) */}
-                  {isParticlesActive && (
-                    <div style={{ paddingLeft: '20px', marginTop: '-5px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {[
-                        { key: 'rain', icon: '🌧️', label: 'Lluvia' },
-                        { key: 'snow', icon: '❄️', label: 'Nieve' },
-                        { key: 'wind', icon: '💨', label: 'Viento' },
-                        { key: 'fog',  icon: '🌫️', label: 'Niebla' }
-                      ].map(f => (
-                        <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
-                          <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
-                            <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
-                            <span className="control-text">{f.label}</span>
-                          </div>
-                          <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
-                            <input
-                              type="checkbox"
-                              checked={particleFilters[f.key]}
-                              onChange={(e) => setParticleFilters(prev => ({ ...prev, [f.key]: e.target.checked }))}
-                            />
-                            <span className="slider round"></span>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
                   {/* Sensores IoT */}
                   <div className="control-row">
@@ -1095,7 +1081,7 @@ function MapaMonitoreo() {
                   </div>
 
                   <div className="controls-divider"></div>
-                  
+
                   {/* Histórico */}
                   <div className="control-row">
                     <div className="control-row-label">
@@ -1109,13 +1095,17 @@ function MapaMonitoreo() {
                       <input
                         type="checkbox"
                         checked={isHistoricalMode}
-                        onChange={(e) => setIsHistoricalMode(e.target.checked)}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setIsHistoricalMode(val);
+                          if (val) setIsDynamicHistoricalMode(false);
+                        }}
                       />
                       <span className="slider round"></span>
                     </label>
                   </div>
                 </div>
-              ) : (
+              ) : activeControlsTab === 'preferencias' ? (
                 <div className="controls-tab-content">
                   <div className="controls-section-title">Preferencias de Usuario</div>
                   <div className="units-content-dropdown">
@@ -1140,7 +1130,148 @@ function MapaMonitoreo() {
                     ))}
                   </div>
                 </div>
-              )}
+              ) : activeControlsTab === 'clima_dinamico' ? (
+                <div className="controls-tab-content">
+                  <div className="controls-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveControlsTab('capas')}>
+                    <span style={{ fontSize: '1.2rem', color: 'var(--sage)' }}>‹</span>
+                    Volver a Capas
+                  </div>
+
+                  <div className="control-row">
+                    <div className="control-row-label">
+                      <span className="control-icon">🌦️</span>
+                      <span className="control-text">Motor de Partículas</span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isParticlesActive}
+                        onChange={(e) => setIsParticlesActive(e.target.checked)}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  <div className="controls-divider"></div>
+
+                  {/* Subfiltros de partículas siempre visibles en este panel, pero deshabilitados si está apagado */}
+                  <div style={{ paddingLeft: '20px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px', opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
+                    {[
+                      { key: 'rain', icon: '🌧️', label: 'Lluvia' },
+                      { key: 'snow', icon: '❄️', label: 'Nieve' },
+                      { key: 'wind', icon: '💨', label: 'Viento' },
+                      { key: 'fog', icon: '🌫️', label: 'Niebla' }
+                    ].map(f => (
+                      <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
+                        <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
+                          <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
+                          <span className="control-text">{f.label}</span>
+                        </div>
+                        <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
+                          <input
+                            type="checkbox"
+                            checked={particleFilters[f.key]}
+                            onChange={(e) => setParticleFilters(prev => ({ ...prev, [f.key]: e.target.checked }))}
+                          />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="controls-divider"></div>
+
+                  {/* Histórico Global del Clima Dinámico */}
+                  <div className="control-row" style={{ opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
+                    <div className="control-row-label">
+                      <span className="control-icon">⏳</span>
+                      <span className="control-text">Histórico de Clima</span>
+                      <span className={`control-status ${isDynamicHistoricalMode ? 'on' : 'off'}`}>
+                        {isDynamicHistoricalMode ? 'ON' : 'OFF'}
+                      </span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isDynamicHistoricalMode}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setIsDynamicHistoricalMode(val);
+                          if (val) setIsHistoricalMode(false);
+                        }}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  <div className="controls-divider"></div>
+
+                  {/* Leyenda de Clima Dinámico (Botón de navegación) */}
+                  <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveControlsTab('leyenda_clima_dinamico')}>
+                    <div className="control-row-label">
+                      <span className="control-icon">📖</span>
+                      <span className="control-text">Leyenda de Clima</span>
+                    </div>
+                    <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
+                  </div>
+                </div>
+              ) : activeControlsTab === 'leyenda_clima_dinamico' ? (
+                <div className="controls-tab-content">
+                  <div className="controls-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveControlsTab('clima_dinamico')}>
+                    <span style={{ fontSize: '1.2rem', color: 'var(--sage)' }}>‹</span>
+                    Leyenda de Partículas
+                  </div>
+
+                  <div className="legend-dynamic-clima">
+                    <div className="legend-item">
+                      <span className="legend-icon">🌧️</span>
+                      <div className="legend-text">
+                        <strong>Lluvia</strong>
+                        <p>Gotas azules cayendo con inclinación según viento.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-icon">❄️</span>
+                      <div className="legend-text">
+                        <strong>Nieve</strong>
+                        <p>Puntos blancos con movimiento suave y oscilante.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-icon">🌫️</span>
+                      <div className="legend-text">
+                        <strong>Niebla</strong>
+                        <p>Zonas brumosas grises de visibilidad reducida.</p>
+                      </div>
+                    </div>
+
+                    <div className="controls-divider"></div>
+                    <div className="legend-section-title">Niveles de Viento</div>
+
+                    <div className="legend-item">
+                      <div className="legend-line" style={{ background: 'rgba(180, 230, 255, 0.7)' }}></div>
+                      <div className="legend-text">
+                        <strong>Viento Normal</strong>
+                        <p>Velocidad &gt; 15 km/h. Brisas y vientos estándar.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <div className="legend-line" style={{ background: 'rgba(255, 140, 0, 0.7)' }}></div>
+                      <div className="legend-text">
+                        <strong>Viento Fuerte / Tormenta</strong>
+                        <p>Ráfagas &gt; 60 km/h o Presión &lt; 1005 hPa.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <div className="legend-line" style={{ background: 'rgba(220, 20, 150, 0.7)' }}></div>
+                      <div className="legend-text">
+                        <strong>Huracán / Severo</strong>
+                        <p>Ráfagas &gt; 90 km/h o Presión &lt; 990 hPa.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -1148,7 +1279,7 @@ function MapaMonitoreo() {
 
 
 
-      {isHistoricalMode && !activeCity && (
+      {isDynamicHistoricalMode && (
         <>
           <div className="historical-prompt">
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
@@ -1161,6 +1292,13 @@ function MapaMonitoreo() {
             isGlobal={true}
           />
         </>
+      )}
+
+      {isHistoricalMode && !activeCity && (
+        <div className="historical-prompt">
+          <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
+          <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
+        </div>
       )}
 
       {isHistoricalMode && activeCity && (

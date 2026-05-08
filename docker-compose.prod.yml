@@ -11,7 +11,11 @@ services:
       - "5433:5432"
     volumes:
       - ./database/esquema_envirosense.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/02_sudamerica.sql
+      - ./database/seeds/01_geografia.sql:/docker-entrypoint-initdb.d/02_geografia.sql
+      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/03_sudamerica.sql
+      - ./database/seeds/02_umbrales.sql:/docker-entrypoint-initdb.d/04_umbrales.sql
+      - ./database/seeds/geojson:/docker-entrypoint-initdb.d/geojson
+      - ./database/seeds/load_geojson.sh:/docker-entrypoint-initdb.d/05_load_geojson.sh
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d sistema_ambiental"]
@@ -44,7 +48,7 @@ services:
       SMTP_PASS: ${SMTP_PASS}
       SMTP_FROM: ${SMTP_FROM}
     volumes:
-      - ./Backend/.whatsapp_session:/usr/src/app/.whatsapp_session
+      - whatsapp_session:/app/.wwebjs_auth
     depends_on:
       db:
         condition: service_healthy
