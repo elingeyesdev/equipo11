@@ -15,6 +15,7 @@ import './MapaMonitoreo.css';
 import { API_BASE } from '../../config/api';
 import { useSimulacion } from '../../context/SimulacionContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
+import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
 import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
 import axios from 'axios';
@@ -111,6 +112,7 @@ function MapaMonitoreo() {
   // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [injectedCityId, setInjectedCityId] = useState(null);
   // Sensores IoT — datos reales de la API externa
@@ -160,6 +162,7 @@ function MapaMonitoreo() {
 
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
+    if (active) setSelectedCity(null);
     // Ya no limpiamos fronterasSeleccionadas para que persistan al volver
   }, []);
 
@@ -617,6 +620,10 @@ function MapaMonitoreo() {
         fronteras={fronterasParaSimular}
         onStart={handleConfirmSimulation}
       />
+      <ModalInyeccion
+        isOpen={isInjectModalOpen}
+        onClose={() => setIsInjectModalOpen(false)}
+      />
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -950,6 +957,15 @@ function MapaMonitoreo() {
             {activeControlsCount > 0 && !isControlsOpen && (
               <span className="control-status-badge">{activeControlsCount}</span>
             )}
+          </button>
+          
+          <button
+            className="controls-toggle-btn"
+            style={{ marginLeft: '10px' }}
+            onClick={() => setIsInjectModalOpen(true)}
+            title="Inyectar datos manualmente"
+          >
+            <span className="controls-toggle-icon">💉</span>
           </button>
 
           {isControlsOpen && (
