@@ -109,23 +109,6 @@ async function actualizarSensores() {
   try {
     console.log('[Sensores IoT] Iniciando actualización de datos reales...');
 
-    // Asegurar tabla de caché de sensores (lectura actual)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS sensores_cache (
-        sensor_id   TEXT PRIMARY KEY,
-        nombre      TEXT NOT NULL,
-        latitud     DECIMAL(10,6) NOT NULL,
-        longitud    DECIMAL(10,6) NOT NULL,
-        temperatura DECIMAL(5,2),
-        humedad     DECIMAL(5,2),
-        aqi         DECIMAL(6,2),
-        ica         DECIMAL(5,2),
-        ruido       DECIMAL(5,2),
-        weather_code INT,
-        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
     // Fetch en paralelo (2 peticiones batch)
     const [weatherResults, aqiResults] = await Promise.all([
       fetchWeatherBatch(LOCALIDADES),
