@@ -973,15 +973,7 @@ input:checked + .slider:before { transform: translateX(16px); }
   .city-info-panel { width: 100%; }
 }
 
-/* ==========================================================
-   Modo Simulación — Cursor crosshair
-   ========================================================== */
-.map-container.sim-mode .mapboxgl-canvas-container {
-  cursor: crosshair !important;
-}
-.map-container.sim-mode .mapboxgl-canvas {
-  cursor: crosshair !important;
-}
+
 
 /* ==========================================================
    Marcadores de puntos de simulación (pins numerados cyan)
@@ -1491,4 +1483,21 @@ input:checked + .slider:before { transform: translateX(16px); }
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: -4px;
+}
+
+/* ==========================================================
+   Cursores Globales - Forzando flecha normal (Default)
+   ========================================================== */
+.map-container .mapboxgl-canvas-container,
+.map-container .mapboxgl-canvas,
+.map-container.sim-mode .mapboxgl-canvas-container,
+.map-container.sim-mode .mapboxgl-canvas {
+  cursor: default !important;
+}
+
+.city-info-panel-wrapper {
+  cursor: default !important;
+}
+.city-info-panel-wrapper:active { 
+  cursor: default !important; 
 }

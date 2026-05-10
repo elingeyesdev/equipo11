@@ -26,6 +26,39 @@ function calcCenter(bbox) {
   return { lng, lat }
 }
 
+function SearchableComboBox({ value, onChange, options, disabled, placeholder }) {
+  const [query, setQuery] = useState('')
+
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
+
+  return (
+    <div className="fp-combo-container">
+      <div className="fp-search-wrapper">
+        <span className="fp-search-icon">🔍</span>
+        <input
+          type="text"
+          className="fp-combo-search"
+          placeholder={placeholder}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          disabled={disabled}
+        />
+      </div>
+      <select 
+        className="fp-combo-select"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+      >
+        <option value="">-- Selecciona --</option>
+        {filtered.map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export default function FronterasPanel({ onBoundarySelect, onStartSimulation, isRunning }) {
   const { 
     isComparing, setIsComparing, 
@@ -286,10 +319,13 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
     <div className="fp-zona-box">
       <div className="fp-field">
         <label>País {isZ2 && "2"}</label>
-        <select value={z.pais} onChange={e => handlePaisChange(z, setZ, e.target.value, isZ2)} disabled={paises.length === 0 || isRunning}>
-          <option value="">Selecciona País...</option>
-          {paises.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
-        </select>
+        <SearchableComboBox
+          value={z.pais}
+          onChange={val => handlePaisChange(z, setZ, val, isZ2)}
+          options={paises.map(p => p.name)}
+          disabled={paises.length === 0 || isRunning}
+          placeholder="Filtrar..."
+        />
       </div>
       {z.pais && (
         <div className="fp-field">

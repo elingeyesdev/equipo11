@@ -175,3 +175,56 @@
 .fp-btn-start:not(:disabled):active {
   transform: scale(0.98);
 }
+.fp-combo-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.fp-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fp-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 11px;
+  color: var(--ink-mute);
+  pointer-events: none;
+}
+
+.fp-combo-search {
+  width: 100%;
+  padding: 6px 8px 6px 28px !important;
+  font-size: 11.5px !important;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  outline: none;
+}
+
+.fp-combo-search:focus {
+  border-color: var(--moss);
+}
+
+.fp-combo-select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  outline: none;
+  cursor: pointer;
+}
+
+.fp-combo-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

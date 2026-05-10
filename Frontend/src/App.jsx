@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import MapaMonitoreo from './pages/MapaMonitoreo/MapaMonitoreo'
-import PanelSimulacion from './pages/PanelSimulacion/PanelSimulacion'
 import Reportes from './pages/Reportes/Reportes'
 import Usuarios from './pages/Usuarios/Usuarios'
 import Alertas from './pages/Alertas/Alertas'
@@ -34,7 +33,6 @@ function App() {
       >
         <Route index element={<Navigate to="/mapa" replace />} />
         <Route path="mapa"       element={<MapaMonitoreo />} />
-        <Route path="simulacion" element={<PanelSimulacion />} />
         <Route path="reportes"   element={<Reportes />} />
         <Route path="usuarios"   element={<Usuarios />} />
         <Route path="alertas"    element={<Alertas />} />

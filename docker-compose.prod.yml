@@ -7,6 +7,10 @@ services:
       POSTGRES_DB: ${DB_NAME:-sistema_ambiental}
       POSTGRES_USER: ${DB_USER:-admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
+      # Pasamos estas variables explícitamente para el healthcheck interno
+      DB_NAME: ${DB_NAME:-sistema_ambiental}
+      DB_USER: ${DB_USER:-admin}
+
     ports:
       - "5433:5432"
     volumes:
@@ -18,11 +22,12 @@ services:
       - ./database/seeds/load_geojson.sh:/docker-entrypoint-initdb.d/05_load_geojson.sh
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-sistema_ambiental}"]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-admin} -d $${DB_NAME:-sistema_ambiental}"]
       interval: 10s
       timeout: 10s
       retries: 10
-      start_period: 60s
+      start_period: 300s
+
 
   # ─── Backend (API Node.js + Express) ───
   backend:
