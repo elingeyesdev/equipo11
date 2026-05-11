@@ -33,6 +33,8 @@ async function initDatabase() {
         ica         DECIMAL(5,2),
         ruido       DECIMAL(5,2),
         weather_code INT,
+        wind_speed   DECIMAL(5,2),
+        wind_direction INT,
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);

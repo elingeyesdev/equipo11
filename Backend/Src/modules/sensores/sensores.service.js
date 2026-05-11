@@ -74,7 +74,7 @@ async function fetchWeatherBatch(localidades) {
   const lats = localidades.map(l => l.latitude).join(',');
   const lngs = localidades.map(l => l.longitude).join(',');
 
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m&timezone=auto`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Open-Meteo weather HTTP ${res.status}`);
@@ -145,8 +145,8 @@ async function actualizarSensores() {
       // Upsert en tabla de caché para GET instantáneo desde el frontend
       await pool.query(`
         INSERT INTO sensores_cache
-          (sensor_id, nombre, latitud, longitud, temperatura, humedad, aqi, ica, ruido, weather_code, actualizado_en)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+          (sensor_id, nombre, latitud, longitud, temperatura, humedad, aqi, ica, ruido, weather_code, wind_speed, wind_direction, actualizado_en)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
         ON CONFLICT (sensor_id) DO UPDATE SET
           temperatura    = EXCLUDED.temperatura,
           humedad        = EXCLUDED.humedad,
@@ -154,9 +154,11 @@ async function actualizarSensores() {
           ica            = EXCLUDED.ica,
           ruido          = EXCLUDED.ruido,
           weather_code   = EXCLUDED.weather_code,
+          wind_speed     = EXCLUDED.wind_speed,
+          wind_direction = EXCLUDED.wind_direction,
           actualizado_en = NOW()
       `, [loc.id, loc.name, loc.latitude, loc.longitude,
-          temperatura, humedad, aqi, ica, ruido, weatherCode]);
+          temperatura, humedad, aqi, ica, ruido, weatherCode, w.wind_speed_10m, w.wind_direction_10m]);
 
       // Persistir en lecturas (fuente_id = 3 → sensor IoT real)
       const locId = dbMapping.localidades[loc.name.toLowerCase()];

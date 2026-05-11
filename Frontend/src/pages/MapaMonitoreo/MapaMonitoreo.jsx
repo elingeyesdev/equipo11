@@ -190,29 +190,76 @@ function MapaMonitoreo() {
 
   const [globalHistoryArray, setGlobalHistoryArray] = useState([]);
   const [globalTimelineIndex, setGlobalTimelineIndex] = useState(0);
+  const [availableRadarDates, setAvailableRadarDates] = useState([]);
 
-  // Generate global history array for the last 3 days
+  // Fetch available dates from backend
+  const fetchAvailableDates = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/radar/available-dates`);
+      setAvailableRadarDates(res.data);
+    } catch (e) {
+      console.error('Error fetching available dates', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableDates();
+    const interval = setInterval(fetchAvailableDates, 30000); // Cada 30s
+    return () => clearInterval(interval);
+  }, [fetchAvailableDates]);
+
+  // Generate global history array for the last 3 days + next 24h
   useEffect(() => {
     const arr = [];
     const now = new Date();
+    
+    // Inicio: Hace 3 días a las 00:00
     const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 2);
+    start.setUTCDate(start.getUTCDate() - 3);
     start.setUTCHours(0, 0, 0, 0);
+
+    // Fin: Dentro de 24 horas
+    const futureEnd = new Date(now);
+    futureEnd.setUTCDate(futureEnd.getUTCDate() + 1);
+    futureEnd.setUTCHours(23, 0, 0, 0);
 
     let index = 0;
     let curr = start;
-    while (curr <= now) {
+    let initialIndex = 0;
+    const nowTs = now.getTime();
+    let minDiff = Infinity;
+
+    while (curr <= futureEnd) {
+      const ts = curr.getTime();
+      const diff = Math.abs(ts - nowTs);
+      
+      // Encontrar el índice más cercano al momento actual para seleccionarlo por defecto
+      if (diff < minDiff) {
+        minDiff = diff;
+        initialIndex = index;
+      }
+
+      const isAvailable = availableRadarDates.some(d => {
+        const d1 = new Date(d).getTime();
+        const d2 = curr.getTime();
+        return Math.abs(d1 - d2) < 1000 * 60 * 60; // Tolerancia de 1 hora
+      });
+
       arr.push({
         index,
         timestamp: curr.toISOString(),
+        isPrediction: curr > now,
+        isAvailable: isAvailable || curr < now, // Por ahora el pasado lo consideramos disponible (fallback)
         data: { temperatura: null }
       });
-      curr = new Date(curr.getTime() + 6 * 60 * 60 * 1000);
+      
+      curr = new Date(curr.getTime() + 3 * 60 * 60 * 1000); // Pasos de 3h para coincidir con NOAA
       index++;
     }
     setGlobalHistoryArray(arr);
-    setGlobalTimelineIndex(arr.length - 1);
-  }, []);
+    // Solo establecer el índice inicial la primera vez para no perder la selección del usuario
+    setGlobalTimelineIndex(prev => prev === 0 ? initialIndex : prev);
+  }, [availableRadarDates]);
 
   // Fetch historical data — prioriza BD local (lecturas del simulador)
   useEffect(() => {
@@ -487,8 +534,14 @@ function MapaMonitoreo() {
 
           // Consultar el backend local, pasando el tiempo histórico si aplica
           let url = `${API_BASE}/radar/bolivia`;
-          if (isDynamicHistoricalMode && globalHistoryArray[globalTimelineIndex]) {
-            url += `?time=${encodeURIComponent(globalHistoryArray[globalTimelineIndex].timestamp)}`;
+          const selectedEntry = globalHistoryArray[globalTimelineIndex];
+          
+          if (isDynamicHistoricalMode && selectedEntry) {
+            // Si es una fecha futura, usar el endpoint de predicción IA
+            if (selectedEntry.isPrediction) {
+                url = `${API_BASE}/radar/prediction`;
+            }
+            url += `?time=${encodeURIComponent(selectedEntry.timestamp)}`;
           }
 
           const res = await axios.get(url);

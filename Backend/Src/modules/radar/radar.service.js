@@ -9,13 +9,17 @@ const path = require('path');
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DATA_RAW_DIR = path.join(DATA_DIR, 'raw');
 const DATA_PROCESSED_DIR = path.join(DATA_DIR, 'Processed');
+const DATA_HIST_RAW_DIR = path.join(DATA_DIR, 'HistoricalPredictions', 'raw');
+const DATA_HIST_PROCESSED_DIR = path.join(DATA_DIR, 'HistoricalPredictions', 'Processed');
 
 // Asegurar que existan los directorios
 const initDirectories = () => {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     if (!fs.existsSync(DATA_RAW_DIR)) fs.mkdirSync(DATA_RAW_DIR, { recursive: true });
     if (!fs.existsSync(DATA_PROCESSED_DIR)) fs.mkdirSync(DATA_PROCESSED_DIR, { recursive: true });
-    console.log(`[Radar Scraper] Directorios de datos inicializados en: ${DATA_DIR}`);
+    if (!fs.existsSync(DATA_HIST_RAW_DIR)) fs.mkdirSync(DATA_HIST_RAW_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_HIST_PROCESSED_DIR)) fs.mkdirSync(DATA_HIST_PROCESSED_DIR, { recursive: true });
+    console.log(`[Radar Scraper] Directorios de datos inicializados.`);
 };
 
 let isScraping = false;
@@ -231,12 +235,16 @@ let isScrapingHistory = false;
 const scrapeHistoricalBackground = async () => {
     if (isScrapingHistory) return;
     isScrapingHistory = true;
-    console.log('[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...');
-    
-    const hours = ['00', '06', '12', '18'];
-    const now = new Date();
     
     try {
+        const { collectTrainingData } = require('./weather_history.service');
+        await collectTrainingData(7); // Bajar 7 días de entrenamiento
+        
+        console.log('[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...');
+        
+        const hours = ['00', '06', '12', '18'];
+        const now = new Date();
+        
         // Recorrer los últimos 3 días
         for (let dayOffset = 0; dayOffset <= 2; dayOffset++) {
             const d = new Date(now);
@@ -281,6 +289,10 @@ const runScraper = async () => {
     try {
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN rafagas DECIMAL(5,2)');
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN presion DECIMAL(6,2)');
+    } catch (e) {}
+    try {
+      await pool.query('ALTER TABLE sensores_cache ADD COLUMN wind_speed DECIMAL(5,2)');
+      await pool.query('ALTER TABLE sensores_cache ADD COLUMN wind_direction INT');
     } catch (e) {}
     try {
       // Intentar agregar forecast_time y actualizar PK si es necesario
@@ -329,9 +341,41 @@ const runScraper = async () => {
     isScraping = false;
     scrapeProgress = 100;
     
-    // Disparar en background la obtención del histórico
+    // Disparar en background la obtención del histórico y el FORECAST (IA)
     setTimeout(scrapeHistoricalBackground, 2000);
+    setTimeout(scrapeFutureForecasts, 5000);
   }
+};
+
+/**
+ * Descarga y procesa los pronósticos para las próximas 24h (f003, f006, f009, f012)
+ */
+const scrapeFutureForecasts = async () => {
+    console.log('[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...');
+    const result = await getLatestNOAAUrl(); // Usar el ciclo más reciente
+    const { dateStr, hour } = result;
+    
+    // Offsets a descargar: cada 3 horas hasta las 24h
+    const offsets = ['f003', 'f006', 'f009', 'f012', 'f015', 'f018', 'f021', 'f024'];
+    
+    for (const offset of offsets) {
+        const url = `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${hour}z.pgrb2.0p25.${offset}&lev_10_m_above_ground=on&lev_mean_sea_level=on&lev_surface=on&var_UGRD=on&var_VGRD=on&var_GUST=on&var_PRMSL=on&var_CRAIN=on&var_CSNOW=on&var_VIS=on&dir=%2Fgfs.${dateStr}%2F${hour}%2Fatmos`;
+        
+        // Calcular el tiempo de este forecast
+        const offsetHours = parseInt(offset.substring(1));
+        const baseDate = new Date(`${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}T${hour}:00:00Z`);
+        const forecastDate = new Date(baseDate.getTime() + offsetHours * 60 * 60 * 1000);
+        const forecastTimeStr = forecastDate.toISOString();
+
+        // Verificar si ya existe para no repetir
+        const check = await pool.query('SELECT 1 FROM radar_grid_cache WHERE forecast_time = $1 LIMIT 1', [forecastTimeStr]);
+        if (check.rowCount === 0) {
+            // Usamos una carpeta distinta para indicar que es forecast? 
+            // Por ahora a la misma tabla pero podemos marcarla como "IA" luego
+            await processGribForUrl(url, dateStr, `${hour}_${offset}`, forecastTimeStr, true);
+        }
+    }
+    console.log('[Radar Scraper] Pronósticos futuros completados.');
 };
 
 const getRadarData = async (targetTime = null) => {
@@ -363,5 +407,11 @@ const getRadarData = async (targetTime = null) => {
 
 module.exports = {
   runScraper,
-  getRadarData
+  getRadarData,
+  extractGribData,
+  generateGridKeys,
+  GLOBAL_BBOX,
+  DATA_HIST_RAW_DIR,
+  DATA_HIST_PROCESSED_DIR,
+  processGribForUrl
 };

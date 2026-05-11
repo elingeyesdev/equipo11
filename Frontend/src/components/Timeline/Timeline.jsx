@@ -100,9 +100,10 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
           return (
             <div 
               key={entry.index} 
-              className={`history-card ${isSelected ? 'active' : ''} ${isCurrentHour ? 'current-time' : ''}`}
+              className={`history-card ${isSelected ? 'active' : ''} ${isCurrentHour ? 'current-time' : ''} ${!entry.isAvailable ? 'disabled' : ''}`}
+              style={!entry.isAvailable ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
               onClick={(e) => {
-                if (hasDragged.current) {
+                if (hasDragged.current || !entry.isAvailable) {
                   e.stopPropagation();
                   return;
                 }
@@ -110,6 +111,7 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
               }}
             >
               {isCurrentHour && <div className="history-card-badge">ACTUAL</div>}
+              {entry.isPrediction && <div className="history-card-badge" style={{ background: 'var(--accent)', color: 'white' }}>IA</div>}
               
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <span className="history-card-time" style={{ fontSize: '0.65rem', marginBottom: '2px', opacity: 0.7 }}>
