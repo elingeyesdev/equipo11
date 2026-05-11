@@ -26,7 +26,7 @@ yarn-error.log*
 # Docker
 docker-compose.override.yml
 
-#Archivos innecesarios
+# Archivos innecesarios
 ANALISIS_MEJORAS.md
 CLAUDE.md
 implementation_plan.md
@@ -39,3 +39,6 @@ PLAN_ALERTAS.md
 contexto_proyecto.md
 implementation_plan_mapas.md
 EVOLUCION_RADAR.md
+
+# Datos de clima persistentes
+data/

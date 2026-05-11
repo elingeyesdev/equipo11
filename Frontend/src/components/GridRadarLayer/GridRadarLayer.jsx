@@ -93,34 +93,34 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
     
-    // BUG FIX: Si se desactivan todos los filtros, borrar el canvas para que no queden pegadas
-    if (activeNodes.length === 0) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-    
     let animationId;
     let lastTime = performance.now();
-    
-    const PARTICLES_PER_NODE = 10; 
     let particles = [];
-    
+    let visibleNodes = [];
+
+    // Función para filtrar qué nodos están en el viewport
+    const updateVisibleNodes = () => {
+      if (!map) return;
+      const bounds = map.getBounds();
+      const buffer = 1.0; // 1 grado de margen
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+
+      visibleNodes = activeNodes.filter(node => 
+        node.latitude >= sw.lat - buffer && node.latitude <= ne.lat + buffer &&
+        node.longitude >= sw.lng - buffer && node.longitude <= ne.lng + buffer
+      );
+
+      initParticles();
+    };
+
     const initParticles = () => {
       particles = [];
       const currentMapZoom = map.getZoom();
-      // El radio base escala con el zoom.
       const baseRadius = Math.max(5, 40 * Math.pow(2, currentMapZoom - 6));
       
-      activeNodes.forEach(node => {
-        // OPTIMIZACIÓN MUNDIAL:
-        // Si estamos viendo todo el mundo (zoom < 3), creamos muy pocas partículas para no congelar el navegador (65k nodos!).
-        // Si nos acercamos a nivel país, aumentamos drásticamente el número de partículas.
-        let pCount = 1;
-        if (node.type === 'wind') {
-          pCount = currentMapZoom > 5 ? 4 : (currentMapZoom > 3 ? 2 : 1);
-        } else {
-          pCount = currentMapZoom > 5 ? 10 : (currentMapZoom > 3 ? 3 : 1);
-        }
+      visibleNodes.forEach(node => {
+        let pCount = currentMapZoom > 5 ? (node.type === 'wind' ? 4 : 10) : (currentMapZoom > 3 ? 2 : 1);
         
         for (let i = 0; i < pCount; i++) {
           particles.push({
@@ -164,10 +164,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       particles.forEach(p => {
         const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
         
-        if (longitude < boundW || longitude > boundE ||
-            latitude < boundS || latitude > boundN) {
-            return;
-        }
+        // Ya no necesitamos filtrar aquí porque 'particles' solo contiene elementos visibles
 
         let pixelPos = nodeProjections.get(p.node.id);
         if (!pixelPos) {
@@ -281,18 +278,18 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     };
     
     map.on('resize', updateSize);
+    map.on('moveend', updateVisibleNodes);
+    map.on('zoomend', updateVisibleNodes);
+
     updateSize();
-    initParticles();
+    updateVisibleNodes();
     animationId = requestAnimationFrame(render);
-    
-    // Reiniciar posiciones al cambiar zoom abruptamente
-    const onZoom = () => { initParticles(); };
-    map.on('zoomend', onZoom);
     
     return () => {
       cancelAnimationFrame(animationId);
       map.off('resize', updateSize);
-      map.off('zoomend', onZoom);
+      map.off('moveend', updateVisibleNodes);
+      map.off('zoomend', updateVisibleNodes);
     };
   }, [map, activeNodes]);
 

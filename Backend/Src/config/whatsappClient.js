@@ -53,11 +53,15 @@ const client = new Client({
     }
 });
 
+let qrShown = false;
 client.on('qr', (qr) => {
+    if (qrShown) return;
+    qrShown = true;
     console.log('---------------------------------------------------------');
     console.log('SCAN THIS QR CODE WITH WHATSAPP TO CONNECT:');
     qrcode.generate(qr, { small: true });
     console.log('---------------------------------------------------------');
+    console.log('💡 El código QR se muestra solo una vez para evitar saturar la consola.');
 });
 
 client.on('ready', () => {

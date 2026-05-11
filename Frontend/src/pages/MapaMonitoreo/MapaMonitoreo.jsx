@@ -190,29 +190,84 @@ function MapaMonitoreo() {
 
   const [globalHistoryArray, setGlobalHistoryArray] = useState([]);
   const [globalTimelineIndex, setGlobalTimelineIndex] = useState(0);
+  const [availableRadarDates, setAvailableRadarDates] = useState([]);
 
-  // Generate global history array for the last 3 days
+  // --- Estados de Modo Comparar (Fase 2) ---
+  const [isCompareMode, setIsCompareMode] = useState(false);
+  const [compareIndexA, setCompareIndexA] = useState(null); 
+  const [compareIndexB, setCompareIndexB] = useState(null); 
+  const [swipePos, setSwipePos] = useState(50);
+  const [scannedGridA, setScannedGridA] = useState({ status: 'idle', data: [] });
+  const [scannedGridB, setScannedGridB] = useState({ status: 'idle', data: [] });
+
+  // Fetch available dates from backend
+  const fetchAvailableDates = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/radar/available-dates`);
+      setAvailableRadarDates(res.data);
+    } catch (e) {
+      console.error('Error fetching available dates', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableDates();
+    const interval = setInterval(fetchAvailableDates, 30000); // Cada 30s
+    return () => clearInterval(interval);
+  }, [fetchAvailableDates]);
+
+  // Generate global history array for the last 3 days + next 24h
   useEffect(() => {
     const arr = [];
     const now = new Date();
+
+    // Inicio: Hace 3 días a las 00:00
     const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 2);
+    start.setUTCDate(start.getUTCDate() - 3);
     start.setUTCHours(0, 0, 0, 0);
+
+    // Fin: Dentro de 24 horas
+    const futureEnd = new Date(now);
+    futureEnd.setUTCDate(futureEnd.getUTCDate() + 1);
+    futureEnd.setUTCHours(23, 0, 0, 0);
 
     let index = 0;
     let curr = start;
-    while (curr <= now) {
+    let initialIndex = 0;
+    const nowTs = now.getTime();
+    let minDiff = Infinity;
+
+    while (curr <= futureEnd) {
+      const ts = curr.getTime();
+      const diff = Math.abs(ts - nowTs);
+
+      // Encontrar el índice más cercano al momento actual para seleccionarlo por defecto
+      if (diff < minDiff) {
+        minDiff = diff;
+        initialIndex = index;
+      }
+
+      const isAvailable = availableRadarDates.some(d => {
+        const d1 = new Date(d).getTime();
+        const d2 = curr.getTime();
+        return Math.abs(d1 - d2) < 1000 * 60 * 60; // Tolerancia de 1 hora
+      });
+
       arr.push({
         index,
         timestamp: curr.toISOString(),
+        isPrediction: curr > now,
+        isAvailable: isAvailable || curr < now, // Por ahora el pasado lo consideramos disponible (fallback)
         data: { temperatura: null }
       });
-      curr = new Date(curr.getTime() + 6 * 60 * 60 * 1000);
+
+      curr = new Date(curr.getTime() + 3 * 60 * 60 * 1000); // Pasos de 3h para coincidir con NOAA
       index++;
     }
     setGlobalHistoryArray(arr);
-    setGlobalTimelineIndex(arr.length - 1);
-  }, []);
+    // Solo establecer el índice inicial la primera vez para no perder la selección del usuario
+    setGlobalTimelineIndex(prev => prev === 0 ? initialIndex : prev);
+  }, [availableRadarDates]);
 
   // Fetch historical data — prioriza BD local (lecturas del simulador)
   useEffect(() => {
@@ -480,48 +535,63 @@ function MapaMonitoreo() {
     if (isParticlesActive) {
       const fetchRadar = async () => {
         try {
-          // Si estamos cambiando de fecha histórica, mostramos el estado de carga visual
-          if (isDynamicHistoricalMode) {
-            setIsFetchingRadar(true);
-          }
+          if (isDynamicHistoricalMode) setIsFetchingRadar(true);
 
-          // Consultar el backend local, pasando el tiempo histórico si aplica
-          let url = `${API_BASE}/radar/bolivia`;
-          if (isDynamicHistoricalMode && globalHistoryArray[globalTimelineIndex]) {
-            url += `?time=${encodeURIComponent(globalHistoryArray[globalTimelineIndex].timestamp)}`;
-          }
+          if (isCompareMode) {
+            // --- MODO COMPARAR: Descarga A y B ---
+            const fetchSide = async (timeIndex, setter) => {
+              const entry = globalHistoryArray[timeIndex];
+              if (!entry) return;
+              let url = entry.isPrediction ? `${API_BASE}/radar/prediction` : `${API_BASE}/radar/bolivia`;
+              const r = await axios.get(url, { params: { time: entry.timestamp } });
+              setter(r.data);
+              return r.data.status;
+            };
 
-          const res = await axios.get(url);
-          setScannedGrid(res.data);
+            const [statusA, statusB] = await Promise.all([
+              fetchSide(compareIndexA ?? globalTimelineIndex, setScannedGridA),
+              fetchSide(compareIndexB ?? globalTimelineIndex, setScannedGridB)
+            ]);
 
-          // Si ya terminó de cargar o no estaba scrapeando, detenemos el polling
-          if (res.data.status === 'ready') {
-            clearInterval(intervalId);
-            setIsFetchingRadar(false);
+            if (statusA === 'ready' && statusB === 'ready') {
+              clearInterval(intervalId);
+              setIsFetchingRadar(false);
+            }
           } else {
-            // Si el backend sigue devolviendo loading, mostramos el loading también
-            setIsFetchingRadar(true);
+            // --- MODO NORMAL ---
+            let url = `${API_BASE}/radar/bolivia`;
+            const selectedEntry = globalHistoryArray[globalTimelineIndex];
+
+            if (isDynamicHistoricalMode && selectedEntry) {
+              if (selectedEntry.isPrediction) url = `${API_BASE}/radar/prediction`;
+              url += `?time=${encodeURIComponent(selectedEntry.timestamp)}`;
+            }
+
+            const res = await axios.get(url);
+            setScannedGrid(res.data);
+
+            if (res.data.status === 'ready') {
+              clearInterval(intervalId);
+              setIsFetchingRadar(false);
+            } else {
+              setIsFetchingRadar(true);
+            }
           }
         } catch (e) {
-          console.error('Error fetching backend radar:', e);
+          console.error('Error fetching radar:', e);
           setIsFetchingRadar(false);
         }
       };
 
       fetchRadar();
-      // Hacer polling cada 1 segundo si está cargando
       intervalId = setInterval(fetchRadar, 1000);
-
-      const { longitude, latitude } = mapRef.current ? mapRef.current.getCenter() : viewState;
-      getWeatherAtLocation(latitude, longitude).then(w => {
-        if (w && w.current) setWeatherCode(w.current.weather_code);
-      }).catch(() => { });
     } else {
       setScannedGrid({ status: 'idle', progress: 0, data: [] });
+      setScannedGridA({ status: 'idle', data: [] });
+      setScannedGridB({ status: 'idle', data: [] });
     }
-
     return () => { if (intervalId) clearInterval(intervalId); };
-  }, [isParticlesActive, isDynamicHistoricalMode, globalTimelineIndex, globalHistoryArray]);
+  }, [isParticlesActive, isCompareMode, isDynamicHistoricalMode, globalTimelineIndex, compareIndexA, compareIndexB, globalHistoryArray]);
 
   const handleMapMoveEnd = async (evt) => {
     if (!isParticlesActive || !mapRef.current) return;
@@ -721,175 +791,263 @@ function MapaMonitoreo() {
             )}
           </div>
         </Draggable>
-        <Map
-          ref={mapRef}
-          {...viewState}
-          onMove={evt => setViewState(evt.viewState)}
-          onMoveEnd={handleMapMoveEnd}
-          onLoad={() => {
-            if (pendingFlyTo.current) {
-              mapRef.current.flyTo(pendingFlyTo.current)
-              pendingFlyTo.current = null
-            }
-          }}
-          mapStyle={mapStyle}
-          mapboxAccessToken={MAPBOX_TOKEN}
-          onClick={handleMapClick}
-          projection="mercator"
-          maxZoom={9}
-          minZoom={2.5}
-          maxPitch={0}
-          dragRotate={false}
-          touchPitch={false}
-        >
-          <GeolocateControl position="bottom-left" />
-          <FullscreenControl position="bottom-left" />
-          <NavigationControl position="bottom-left" />
+        {/* Contenedor del Mapa con soporte para Comparar (Swipe) */}
+        <div className="map-main-wrapper" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+          
+          {/* MAPA A (Fondo / Izquierda / Tiempo A) */}
+          <Map
+            id="mapA"
+            ref={mapRef}
+            {...viewState}
+            onMove={evt => setViewState(evt.viewState)}
+            onMoveEnd={handleMapMoveEnd}
+            onLoad={() => {
+              if (pendingFlyTo.current) {
+                mapRef.current.flyTo(pendingFlyTo.current)
+                pendingFlyTo.current = null
+              }
+            }}
+            mapStyle={mapStyle}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            onClick={handleMapClick}
+            projection="mercator"
+            maxZoom={9}
+            minZoom={2.5}
+            maxPitch={0}
+            dragRotate={false}
+            touchPitch={false}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+          >
+            <GeolocateControl position="bottom-left" />
+            <FullscreenControl position="bottom-left" />
+            <NavigationControl position="bottom-left" />
 
-          {/* ─── Fronteras y Zonas de Simulación ────────── */}
-          {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
-            const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
-            const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
+            {/* Fronteras (A) */}
+            {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
+              const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
+              const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
+              return (
+                <Fragment key={`frontera-a-${idx}`}>
+                  <Source id={`frontera-source-a-${idx}`} type="geojson" data={frontera.geojson}>
+                    <Layer id={`frontera-fill-a-${idx}`} type="fill" paint={{ 'fill-color': color, 'fill-opacity': simData ? 0.3 : 0.2 }} />
+                    <Layer id={`frontera-line-a-${idx}`} type="line" paint={{ 'line-color': color, 'line-width': 2 }} />
+                  </Source>
+                </Fragment>
+              );
+            })}
 
-            return (
-              <Fragment key={`frontera-${idx}`}>
-                <Source id={`frontera-source-${idx}`} type="geojson" data={frontera.geojson}>
-                  <Layer
-                    id={`frontera-fill-${idx}`}
-                    type="fill"
-                    paint={{
-                      'fill-color': color,
-                      'fill-opacity': simData ? 0.3 : 0.2,
-                      'fill-outline-color': color
-                    }}
-                  />
-                  <Layer
-                    id={`frontera-line-${idx}`}
-                    type="line"
-                    paint={{
-                      'line-color': color,
-                      'line-width': simData ? 3 : 2,
-                      'line-dasharray': simData ? [1, 0] : [2, 2]
-                    }}
-                  />
-                </Source>
-
-                {simData && simData.centroide && (
+            {/* Capas Globales (A) */}
+            {isHeatmapActive && (
+              <VoronoiLayer
+                metrica={heatmapMetric}
+                umbrales={umbrales}
+                cities={citiesData}
+                activeFilter={activeUmbralFilter}
+              />
+            )}
+            {isChoroplethActive && (
+              <ChoroplethLayer
+                metrica={heatmapMetric}
+                umbrales={umbrales}
+                cities={citiesData}
+                activeFilter={activeUmbralFilter}
+              />
+            )}
+            
+            {showSensors && (
+              isHeatmapActive ? (
+                <MarkersLayer
+                  cities={citiesData}
+                  metrica={heatmapMetric}
+                  umbrales={umbrales}
+                  activeFilter={activeUmbralFilter}
+                  unidad={unidades[heatmapMetric]}
+                  currentZoom={viewState.zoom}
+                  onCityClick={async (city) => {
+                    setSelectedCity(city);
+                    try {
+                      const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                      if (weather && weather.current) setWeatherCode(weather.current.weather_code);
+                    } catch (err) { console.error(err); }
+                  }}
+                />
+              ) : (
+                citiesData.map((city) => (
                   <Marker
-                    longitude={simData.centroide.lng}
-                    latitude={simData.centroide.lat}
-                    anchor="center"
+                    key={`marker-a-${city.id}`}
+                    longitude={city.longitude}
+                    latitude={city.latitude}
+                    anchor="bottom"
+                    onClick={async (e) => {
+                      e.originalEvent.stopPropagation();
+                      setSelectedCity(city);
+                      try {
+                        const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                        if (weather?.current) setWeatherCode(weather.current.weather_code);
+                      } catch (err) { console.error(err); }
+                    }}
                   >
-                    <div
-                      className="zona-valor-marker"
-                      style={{ borderColor: simData.color, boxShadow: `0 0 12px ${simData.color}66` }}
-                    >
-                      <span className="zona-valor-num" style={{ color: simData.color }}>
-                        {simData.valor}
-                      </span>
-                      <span className="zona-valor-unit">{zonaSimUnidad}</span>
-                      <span className="zona-valor-label">{simData.umbralLabel} • {simData.escenarioNombre || zonaSimEscNombre}</span>
+                    <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
+                      <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
                     </div>
                   </Marker>
+                ))
+              )
+            )}
+
+            {/* Radar (A) */}
+            {isParticlesActive && (
+              <GridRadarLayer 
+                scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data} 
+                currentZoom={viewState.zoom} 
+                particleFilters={particleFilters} 
+              />
+            )}
+          </Map>
+
+          {/* MAPA B (Superpuesto / Derecha / Tiempo B) - Solo en Modo Comparar */}
+          {isCompareMode && (
+            <div 
+              className="map-b-clip-container" 
+              style={{ 
+                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                clipPath: `inset(0 0 0 ${swipePos}%)`, zIndex: 10, pointerEvents: 'none' 
+              }}
+            >
+              <Map
+                id="mapB"
+                {...viewState}
+                onMove={evt => setViewState(evt.viewState)}
+                mapStyle={mapStyle}
+                mapboxAccessToken={MAPBOX_TOKEN}
+                projection="mercator"
+                maxZoom={9}
+                minZoom={2.5}
+                dragRotate={false}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'auto' }}
+              >
+                {/* Fronteras (B) */}
+                {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
+                  const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
+                  const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
+                  return (
+                    <Fragment key={`frontera-b-${idx}`}>
+                      <Source id={`frontera-source-b-${idx}`} type="geojson" data={frontera.geojson}>
+                        <Layer id={`frontera-fill-b-${idx}`} type="fill" paint={{ 'fill-color': color, 'fill-opacity': simData ? 0.3 : 0.2 }} />
+                        <Layer id={`frontera-line-b-${idx}`} type="line" paint={{ 'line-color': color, 'line-width': 2 }} />
+                      </Source>
+                    </Fragment>
+                  );
+                })}
+
+                {/* Capas Globales (B) */}
+                {isHeatmapActive && (
+                  <VoronoiLayer
+                    metrica={heatmapMetric}
+                    umbrales={umbrales}
+                    cities={citiesData}
+                    activeFilter={activeUmbralFilter}
+                  />
                 )}
-              </Fragment>
-            );
-          })}
+                {isChoroplethActive && (
+                  <ChoroplethLayer
+                    metrica={heatmapMetric}
+                    umbrales={umbrales}
+                    cities={citiesData}
+                    activeFilter={activeUmbralFilter}
+                  />
+                )}
+                
+                {showSensors && (
+                  isHeatmapActive ? (
+                    <MarkersLayer
+                      cities={citiesData}
+                      metrica={heatmapMetric}
+                      umbrales={umbrales}
+                      activeFilter={activeUmbralFilter}
+                      unidad={unidades[heatmapMetric]}
+                      currentZoom={viewState.zoom}
+                      onCityClick={async (city) => {
+                        setSelectedCity(city);
+                        try {
+                          const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                          if (weather && weather.current) setWeatherCode(weather.current.weather_code);
+                        } catch (err) { console.error(err); }
+                      }}
+                    />
+                  ) : (
+                    citiesData.map((city) => (
+                      <Marker
+                        key={`marker-b-${city.id}`}
+                        longitude={city.longitude}
+                        latitude={city.latitude}
+                        anchor="bottom"
+                        onClick={async (e) => {
+                          e.originalEvent.stopPropagation();
+                          setSelectedCity(city);
+                          try {
+                            const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                            if (weather?.current) setWeatherCode(weather.current.weather_code);
+                          } catch (err) { console.error(err); }
+                        }}
+                      >
+                        <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
+                          <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
+                        </div>
+                      </Marker>
+                    ))
+                  )
+                )}
 
-          {/* VoronoiLayer — manto continental activo solo con el heatmap ON */}
-          {isHeatmapActive && (
-            <VoronoiLayer
-              metrica={heatmapMetric}
-              umbrales={umbrales}
-              cities={citiesData}
-              activeFilter={activeUmbralFilter}
-            />
-          )}
-
-          {/* ChoroplethLayer — divisiones administrativas coloreadas */}
-          {isChoroplethActive && (
-            <ChoroplethLayer
-              metrica={heatmapMetric}
-              umbrales={umbrales}
-              cities={citiesData}
-              activeFilter={activeUmbralFilter}
-            />
-          )}
-
-          {isParticlesActive && (scannedGrid.status === 'loading' || isFetchingRadar) && (
-            <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#00e5ff', padding: '10px 20px', borderRadius: 30, zIndex: 10, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 15px rgba(0,229,255,0.3)', border: '1px solid rgba(0,229,255,0.2)' }}>
-              <span className="spinner" style={{ animation: 'spin 1s linear infinite' }}>📡</span>
-              <span>
-                {isDynamicHistoricalMode
-                  ? 'Cargando clima histórico...'
-                  : `Construyendo Radar de Bolivia... ${scannedGrid.progress || 0}%`}
-              </span>
+                {/* Radar (B) */}
+                {isParticlesActive && (
+                  <GridRadarLayer 
+                    scannedGrid={scannedGridB.data} 
+                    currentZoom={viewState.zoom} 
+                    particleFilters={particleFilters} 
+                  />
+                )}
+              </Map>
             </div>
           )}
 
-          {/* Radar Meteorológico Orgánico (3000 puntos desde BD local) */}
-          {isParticlesActive && scannedGrid.status === 'ready' && (
-            <GridRadarLayer scannedGrid={scannedGrid.data} currentZoom={viewState.zoom} particleFilters={particleFilters} />
+          {/* Barra de Swipe (Control de Cortina) */}
+          {isCompareMode && (
+            <div 
+              className="map-swipe-handle"
+              style={{
+                position: 'absolute', top: 0, bottom: 0, left: `${swipePos}%`, width: '4px',
+                background: 'white', boxShadow: '0 0 10px rgba(0,0,0,0.5)', zIndex: 20,
+                cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}
+              onMouseDown={(e) => {
+                const startX = e.pageX;
+                const startPos = swipePos;
+                const handleMouseMove = (mv) => {
+                  const delta = ((mv.pageX - startX) / window.innerWidth) * 100;
+                  setSwipePos(Math.max(0, Math.min(100, startPos + delta)));
+                };
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+                };
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+              }}
+            >
+              <div style={{ width: '40px', height: '40px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', color: '#333' }}>
+                ↔
+              </div>
+              
+              <div style={{ position: 'absolute', top: '20px', left: '-130px', background: 'rgba(0,0,0,0.8)', color: '#06b6d4', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #06b6d4' }}>
+                IZQ: {globalHistoryArray[compareIndexA]?.timestamp ? new Date(globalHistoryArray[compareIndexA].timestamp).toLocaleTimeString() : '...'}
+              </div>
+              <div style={{ position: 'absolute', top: '20px', right: '-130px', background: 'rgba(0,0,0,0.8)', color: '#f59e0b', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #f59e0b' }}>
+                DER: {globalHistoryArray[compareIndexB]?.timestamp ? new Date(globalHistoryArray[compareIndexB].timestamp).toLocaleTimeString() : '...'}
+              </div>
+            </div>
           )}
-
-          {/* Marcadores IQAir (círculos numéricos con valor) — en modo heatmap ON */}
-          {isHeatmapActive ? (
-            showSensors && (
-              <MarkersLayer
-                cities={citiesData}
-                metrica={heatmapMetric}
-                umbrales={umbrales}
-                activeFilter={activeUmbralFilter}
-                unidad={unidades[heatmapMetric]}
-                currentZoom={viewState.zoom}
-                onCityClick={async (city) => {
-                  setSelectedCity(city);
-                  try {
-                    const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                    if (weather && weather.current) setWeatherCode(weather.current.weather_code);
-                  } catch (err) { console.error(err); }
-                }}
-              />
-            )
-          ) : (
-            /* Marcadores Sensor IoT — en modo heatmap OFF */
-            showSensors && citiesData.map((city) => (
-              <Marker
-                key={city.id}
-                longitude={city.longitude}
-                latitude={city.latitude}
-                anchor="bottom"
-                onClick={async (e) => {
-                  e.originalEvent.stopPropagation();
-                  setSelectedCity(city);
-                  try {
-                    const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                    if (weather?.current) setWeatherCode(weather.current.weather_code);
-                  } catch (err) { console.error(err); }
-                }}
-              >
-                <div
-                  className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}
-                  style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-                >
-                  <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
-                  {viewState.zoom >= 5.5 && (
-                    <div style={{
-                      position: 'absolute', top: '100%', left: '50%',
-                      transform: 'translateX(-50%)', marginTop: '2px',
-                      color: 'white', textShadow: '0 0 4px rgba(0,229,255,0.9), 0 1px 3px black',
-                      fontSize: '11px', whiteSpace: 'nowrap', fontWeight: 700, pointerEvents: 'none',
-                      background: 'rgba(0,0,0,0.45)', borderRadius: '4px', padding: '1px 5px'
-                    }}>
-                      {city.name}
-                    </div>
-                  )}
-                </div>
-              </Marker>
-            ))
-          )}
-
-        </Map>
+        </div>
 
         <HeatmapLegend
           metrica={heatmapMetric}
@@ -958,7 +1116,7 @@ function MapaMonitoreo() {
               <span className="control-status-badge">{activeControlsCount}</span>
             )}
           </button>
-          
+
           <button
             className="controls-toggle-btn"
             style={{ marginLeft: '10px' }}
@@ -1213,7 +1371,33 @@ function MapaMonitoreo() {
                         onChange={(e) => {
                           const val = e.target.checked;
                           setIsDynamicHistoricalMode(val);
-                          if (val) setIsHistoricalMode(false);
+                          if (val) {
+                            setIsHistoricalMode(false);
+                            if (isCompareMode && compareIndexA === null) setCompareIndexA(globalTimelineIndex);
+                          }
+                        }}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  {/* Nuevo: Switch Modo Comparar (Fase 2) */}
+                  <div className="control-row" style={{ opacity: isParticlesActive && isDynamicHistoricalMode ? 1 : 0.5, pointerEvents: isParticlesActive && isDynamicHistoricalMode ? 'auto' : 'none' }}>
+                    <div className="control-row-label">
+                      <span className="control-icon">⚖️</span>
+                      <span className="control-text">Modo Comparar</span>
+                    </div>
+                    <label className="ios-switch">
+                      <input
+                        type="checkbox"
+                        checked={isCompareMode}
+                        onChange={(e) => {
+                          const val = e.target.checked;
+                          setIsCompareMode(val);
+                          if (val) {
+                            if (compareIndexA === null) setCompareIndexA(globalTimelineIndex);
+                            if (compareIndexB === null) setCompareIndexB(Math.min(globalTimelineIndex + 1, globalHistoryArray.length - 1));
+                          }
                         }}
                       />
                       <span className="slider round"></span>
@@ -1306,6 +1490,13 @@ function MapaMonitoreo() {
             currentIndex={globalTimelineIndex}
             onIndexChange={(idx) => setGlobalTimelineIndex(idx)}
             isGlobal={true}
+            isCompareMode={isCompareMode}
+            compareIndexA={compareIndexA}
+            compareIndexB={compareIndexB}
+            onCompareIndexChange={(side, idx) => {
+              if (side === 'A') setCompareIndexA(idx);
+              else setCompareIndexB(idx);
+            }}
           />
         </>
       )}
