@@ -212,7 +212,7 @@ function MapaMonitoreo() {
   useEffect(() => {
     const arr = [];
     const now = new Date();
-    
+
     // Inicio: Hace 3 días a las 00:00
     const start = new Date(now);
     start.setUTCDate(start.getUTCDate() - 3);
@@ -232,7 +232,7 @@ function MapaMonitoreo() {
     while (curr <= futureEnd) {
       const ts = curr.getTime();
       const diff = Math.abs(ts - nowTs);
-      
+
       // Encontrar el índice más cercano al momento actual para seleccionarlo por defecto
       if (diff < minDiff) {
         minDiff = diff;
@@ -252,7 +252,7 @@ function MapaMonitoreo() {
         isAvailable: isAvailable || curr < now, // Por ahora el pasado lo consideramos disponible (fallback)
         data: { temperatura: null }
       });
-      
+
       curr = new Date(curr.getTime() + 3 * 60 * 60 * 1000); // Pasos de 3h para coincidir con NOAA
       index++;
     }
@@ -535,11 +535,11 @@ function MapaMonitoreo() {
           // Consultar el backend local, pasando el tiempo histórico si aplica
           let url = `${API_BASE}/radar/bolivia`;
           const selectedEntry = globalHistoryArray[globalTimelineIndex];
-          
+
           if (isDynamicHistoricalMode && selectedEntry) {
             // Si es una fecha futura, usar el endpoint de predicción IA
             if (selectedEntry.isPrediction) {
-                url = `${API_BASE}/radar/prediction`;
+              url = `${API_BASE}/radar/prediction`;
             }
             url += `?time=${encodeURIComponent(selectedEntry.timestamp)}`;
           }
@@ -899,6 +899,39 @@ function MapaMonitoreo() {
                   setSelectedCity(city);
                   try {
                     const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+                    // ─── Optimización de Viewport (Culling) ───
+                    // Solo procesamos los puntos que están dentro de la vista actual del mapa
+                    const updateFilteredData = () => {
+                      if (!mapRef.current || !weatherParticlesRef.current) return;
+
+                      const bounds = mapRef.current.getBounds();
+                      const sw = bounds.getSouthWest();
+                      const ne = bounds.getNorthEast();
+
+                      // Añadir un pequeño margen (buffer) para que no se corten bruscamente en los bordes
+                      const buffer = 0.5;
+                      const filtered = scannedGrid.data.filter(p =>
+                        p.latitud >= sw.lat - buffer && p.latitud <= ne.lat + buffer &&
+                        p.longitud >= sw.lng - buffer && p.longitud <= ne.lng + buffer
+                      );
+
+                      weatherParticlesRef.current.setData(filtered);
+                    };
+
+                    // Escuchar movimientos del mapa para actualizar el filtro
+                    mapRef.current.on('moveend', updateFilteredData);
+                    mapRef.current.on('zoomend', updateFilteredData);
+
+                    // Carga inicial
+                    updateFilteredData();
+                    weatherParticlesRef.current.animate();
+
+                    return () => {
+                      if (mapRef.current) {
+                        mapRef.current.off('moveend', updateFilteredData);
+                        mapRef.current.off('zoomend', updateFilteredData);
+                      }
+                    };
                     if (weather && weather.current) setWeatherCode(weather.current.weather_code);
                   } catch (err) { console.error(err); }
                 }}
@@ -1011,7 +1044,7 @@ function MapaMonitoreo() {
               <span className="control-status-badge">{activeControlsCount}</span>
             )}
           </button>
-          
+
           <button
             className="controls-toggle-btn"
             style={{ marginLeft: '10px' }}

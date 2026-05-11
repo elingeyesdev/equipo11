@@ -33,7 +33,10 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.forecast-scroll-area::-webkit-scrollbar { display: none; }
+
+.forecast-scroll-area::-webkit-scrollbar {
+  display: none;
+}
 
 .history-card {
   position: relative;
@@ -108,12 +111,17 @@
     bottom: 10px;
     gap: 8px;
   }
-  
+
   .history-card {
     padding: 6px 10px;
     min-width: 50px;
   }
-  
-  .history-card-temp { font-size: 14px; }
-  .history-card-time { font-size: 10px; }
+
+  .history-card-temp {
+    font-size: 14px;
+  }
+
+  .history-card-time {
+    font-size: 10px;
+  }
 }

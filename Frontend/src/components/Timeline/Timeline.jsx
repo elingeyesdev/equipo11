@@ -6,7 +6,7 @@ import './Timeline.css';
 const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = false }) => {
   const scrollRef = useRef(null);
   const [isDraggingState, setIsDraggingState] = useState(false);
-  
+
   // Drag-to-scroll state
   const isDragging = useRef(false);
   const hasDragged = useRef(false);
@@ -49,12 +49,12 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
     const now = Date.now();
     let closestIndex = -1;
     let minDiff = Infinity;
-    
+
     cityHistoryArray.forEach((e) => {
       const diff = Math.abs(new Date(e.timestamp).getTime() - now);
-      if (diff < minDiff) { 
-         minDiff = diff; 
-         closestIndex = e.index; 
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIndex = e.index;
       }
     });
     return closestIndex;
@@ -69,7 +69,7 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
       } else {
         const currentElement = scrollRef.current.querySelector('.history-card.current-time');
         if (currentElement) {
-           currentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          currentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
       }
     }
@@ -81,8 +81,8 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
 
   return (
     <div className="forecast-widget-container">
-      <div 
-        className="forecast-scroll-area" 
+      <div
+        className="forecast-scroll-area"
         ref={scrollRef}
         onMouseDown={handleMouseDown}
         onMouseLeave={handleMouseLeave}
@@ -93,13 +93,13 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
         {cityHistoryArray.map((entry) => {
           const isSelected = entry.index === currentIndex;
           const isCurrentHour = entry.index === currentHourIndex;
-          
+
           const dateObj = new Date(entry.timestamp);
           const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
           return (
-            <div 
-              key={entry.index} 
+            <div
+              key={entry.index}
               className={`history-card ${isSelected ? 'active' : ''} ${isCurrentHour ? 'current-time' : ''} ${!entry.isAvailable ? 'disabled' : ''}`}
               style={!entry.isAvailable ? { opacity: 0.4, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
               onClick={(e) => {
@@ -112,7 +112,7 @@ const Timeline = ({ cityHistoryArray, currentIndex, onIndexChange, isGlobal = fa
             >
               {isCurrentHour && <div className="history-card-badge">ACTUAL</div>}
               {entry.isPrediction && <div className="history-card-badge" style={{ background: 'var(--accent)', color: 'white' }}>IA</div>}
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <span className="history-card-time" style={{ fontSize: '0.65rem', marginBottom: '2px', opacity: 0.7 }}>
                   {dateObj.toLocaleDateString([], { day: '2-digit', month: 'short' })}
