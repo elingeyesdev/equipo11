@@ -36,6 +36,8 @@ function calcStats(datos, key) {
 
 // ─── Line Chart (SVG) ─────────────────────────────────────────────────────────
 function LineChart({ series, metrica }) {
+  const [hoverData, setHoverData] = useState(null)
+
   const todasLasFechas = useMemo(() => {
     const s = new Set()
     series.forEach(serie => serie.datos.forEach(d => {
@@ -50,10 +52,9 @@ function LineChart({ series, metrica }) {
     return <div className="rep-chart-empty">Datos insuficientes para la serie temporal</div>
   }
 
-  const H = 180, PX = 40, PY = 20
-  // Dinámico para evitar que se apriete la gráfica a la derecha e izquierda
+  const H = 200, PX = 45, PY = 30
   const numPuntos = Math.max(...series.map(s => s.datos.length))
-  const W = Math.max(560, numPuntos * 10 + PX * 2)
+  const W = Math.max(560, numPuntos * 12 + PX * 2)
   
   const minT = todasLasFechas[0]
   const maxT = todasLasFechas[todasLasFechas.length - 1]
@@ -71,74 +72,151 @@ function LineChart({ series, metrica }) {
   })
   if (minV === Infinity) minV = 0
   if (maxV === -Infinity) maxV = 100
-  // Margen superior/inferior para no tocar los bordes
-  const extraV = (maxV - minV) * 0.1 || 1
-  minV = minV - extraV
-  maxV = maxV + extraV
+  const extraV = (maxV - minV) * 0.15 || 5
+  minV = Math.floor(minV - extraV)
+  maxV = Math.ceil(maxV + extraV)
   const rangeV = maxV - minV || 1
 
   const cx = t => PX + ((t - minT) / rangeT) * (W - PX * 2)
-  const cy = v => PY + ((maxV - v) / rangeV) * (H - PY * 2)
+  const cy = v => PY + ((maxV - v) / rangeV) * (H - PY - 25)
 
-  const ticks = [minV, minV + rangeV / 2, maxV]
+  const ticksY = [minV, minV + (maxV - minV) / 2, maxV]
+
+  const handleMouseMove = (e) => {
+    const svg = e.currentTarget
+    const rect = svg.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * W
+    
+    const t = minT + ((x - PX) / (W - PX * 2)) * rangeT
+    
+    let closestT = todasLasFechas[0]
+    let minDiff = Math.abs(t - closestT)
+    for (let i = 1; i < todasLasFechas.length; i++) {
+      const diff = Math.abs(t - todasLasFechas[i])
+      if (diff < minDiff) {
+        minDiff = diff
+        closestT = todasLasFechas[i]
+      }
+    }
+
+    const points = series.map(s => {
+      const d = s.datos.find(pt => new Date(pt.fecha).getTime() === closestT)
+      return d ? { val: d[metrica], color: s.colorVar, name: s.name } : null
+    }).filter(Boolean)
+
+    if (points.length) {
+      setHoverData({ t: closestT, points, x: cx(closestT) })
+    }
+  }
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px', width: '100%' }} className="rep-chart-scrollable">
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ minWidth: W, height: H, display: 'block' }} aria-hidden="true">
-        {/* Eje Y */}
-        {ticks.map((v, i) => {
-          const y = cy(v)
-          return (
-            <g key={i}>
-              <line x1={PX} x2={W - PX} y1={y} y2={y}
-                stroke="var(--line)" strokeDasharray="3,3" strokeWidth={0.8} />
-              <text x={PX - 5} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-faint)">
-                {isFinite(v) ? v.toFixed(1) : ''}
-              </text>
-            </g>
-          )
-        })}
-        
-        {/* Eje X (Fechas) */}
-        <text x={PX} y={H - 2} textAnchor="start" fontSize={10} fill="var(--ink-mute)">
-          {new Date(minT).toLocaleString('es-BO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-        </text>
-        <text x={W - PX} y={H - 2} textAnchor="end" fontSize={10} fill="var(--ink-mute)">
-          {new Date(maxT).toLocaleString('es-BO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-        </text>
-        
-        {/* Series */}
-        {series.map((serie, sIdx) => {
-          let pts = serie.datos
-            .filter(d => d[metrica] != null && !isNaN(d[metrica]))
-            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+    <div className="rep-chart-container">
+      <div 
+        className="rep-chart-scrollable"
+        style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '12px', width: '100%', position: 'relative' }}
+      >
+        <svg 
+          viewBox={`0 0 ${W} ${H}`} 
+          style={{ minWidth: W, height: H, display: 'block', cursor: 'crosshair' }} 
+          aria-hidden="true"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoverData(null)}
+        >
+          {/* Eje Y */}
+          {ticksY.map((v, i) => {
+            const y = cy(v)
+            return (
+              <g key={i}>
+                <line x1={PX} x2={W - PX} y1={y} y2={y}
+                  stroke="var(--line)" strokeDasharray="4,4" strokeWidth={0.8} />
+                <text x={PX - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-faint)" fontWeight="500">
+                  {v.toFixed(0)}
+                </text>
+              </g>
+            )
+          })}
           
-          if (pts.length === 0) return null
+          {/* Eje X (Fechas) */}
+          <text x={PX} y={H - 8} textAnchor="start" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
+            {new Date(minT).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} {new Date(minT).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+          </text>
+          <text x={W - PX} y={H - 8} textAnchor="end" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
+            {new Date(maxT).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} {new Date(maxT).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+          </text>
           
-          const step = Math.max(1, Math.floor(pts.length / 60))
-          pts = pts.filter((_, i) => i % step === 0)
-          
-          const linePath = pts.map((d, i) =>
-            `${i === 0 ? 'M' : 'L'}${cx(new Date(d.fecha).getTime()).toFixed(1)},${cy(d[metrica]).toFixed(1)}`
-          ).join(' ')
-          
-          const stroke = `var(--${serie.colorVar})`
-          const areaPath = series.length === 1 
-            ? `${linePath} L${cx(new Date(pts[pts.length - 1].fecha).getTime()).toFixed(1)},${(H - PY + 1).toFixed(1)} L${cx(new Date(pts[0].fecha).getTime()).toFixed(1)},${(H - PY + 1).toFixed(1)} Z`
-            : null
+          {/* Series */}
+          {series.map((serie, sIdx) => {
+            let pts = serie.datos
+              .filter(d => d[metrica] != null && !isNaN(d[metrica]))
+              .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
             
-          return (
-            <g key={sIdx}>
-              {areaPath && <path d={areaPath} fill={stroke} fillOpacity={0.08} />}
-              <path d={linePath} fill="none" stroke={stroke} strokeWidth={2}
-                strokeLinejoin="round" strokeLinecap="round" />
-              {pts.length <= 40 && pts.map((d, i) => (
-                <circle key={i} cx={cx(new Date(d.fecha).getTime())} cy={cy(d[metrica])} r={3} fill={stroke} />
+            if (pts.length === 0) return null
+            
+            const linePath = pts.map((d, i) =>
+              `${i === 0 ? 'M' : 'L'}${cx(new Date(d.fecha).getTime()).toFixed(1)},${cy(d[metrica]).toFixed(1)}`
+            ).join(' ')
+            
+            const stroke = `var(--${serie.colorVar})`
+            const areaPath = series.length === 1 
+              ? `${linePath} L${cx(new Date(pts[pts.length - 1].fecha).getTime()).toFixed(1)},${cy(minV).toFixed(1)} L${cx(new Date(pts[0].fecha).getTime()).toFixed(1)},${cy(minV).toFixed(1)} Z`
+              : null
+              
+            return (
+              <g key={sIdx}>
+                {areaPath && <path d={areaPath} fill={stroke} fillOpacity={0.1} />}
+                <path d={linePath} fill="none" stroke={stroke} strokeWidth={2.5}
+                  strokeLinejoin="round" strokeLinecap="round" style={{ transition: 'all 0.3s' }} />
+                {pts.length <= 50 && pts.map((d, i) => (
+                  <circle key={i} cx={cx(new Date(d.fecha).getTime())} cy={cy(d[metrica])} r={3.5} fill="var(--card)" stroke={stroke} strokeWidth={1.5} />
+                ))}
+              </g>
+            )
+          })}
+
+          {/* Hover Guide */}
+          {hoverData && (
+            <g>
+              <line x1={hoverData.x} x2={hoverData.x} y1={PY} y2={cy(minV)} stroke="var(--ink-faint)" strokeWidth={1} strokeDasharray="2,2" />
+              {hoverData.points.map((p, i) => (
+                <circle key={i} cx={hoverData.x} cy={cy(p.val)} r={5} fill={`var(--${p.color})`} stroke="white" strokeWidth={2} />
               ))}
             </g>
-          )
-        })}
-      </svg>
+          )}
+        </svg>
+
+        {/* Tooltip */}
+        {hoverData && (
+          <div className="rep-chart-tooltip" style={{ 
+            left: Math.min(hoverData.x, W - 150),
+            top: 10
+          }}>
+            <div className="rep-tooltip-date">
+              {new Date(hoverData.t).toLocaleDateString('es-BO', { weekday: 'long', day: '2-digit', month: 'short' })}
+              <br />
+              <span className="rep-tooltip-time">{new Date(hoverData.t).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div className="rep-tooltip-items">
+              {hoverData.points.map((p, i) => (
+                <div key={i} className="rep-tooltip-item">
+                  <span className="rep-tooltip-dot" style={{ background: `var(--${p.color})` }}></span>
+                  <span className="rep-tooltip-name">{p.name}:</span>
+                  <span className="rep-tooltip-val">{p.val.toFixed(1)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="rep-chart-legend">
+        {series.map((s, i) => (
+          <div key={i} className="rep-legend-item">
+            <span className="rep-legend-dot" style={{ background: `var(--${s.colorVar})` }}></span>
+            <span className="rep-legend-name">{s.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

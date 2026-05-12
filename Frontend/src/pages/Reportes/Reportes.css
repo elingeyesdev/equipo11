@@ -261,6 +261,107 @@
   font-style: italic;
 }
 
+/* ─── Tooltip y Leyenda del Gráfico ─── */
+.rep-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rep-chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  font-family: var(--font-sans);
+  min-width: 130px;
+  transition: left 0.1s ease-out, top 0.1s ease-out;
+}
+
+:root[data-theme='dark'] .rep-chart-tooltip {
+  background: rgba(30, 30, 35, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.rep-tooltip-date {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 4px;
+}
+
+.rep-tooltip-time {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.rep-tooltip-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rep-tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.rep-tooltip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.rep-tooltip-name {
+  color: var(--ink-mute);
+  flex: 1;
+}
+
+.rep-tooltip-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rep-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 0 10px;
+}
+
+.rep-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rep-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.rep-legend-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+
 /* ─── Tabla ────────────────────────────────────────────────── */
 .rep-tabla-wrap {
   background: var(--card);
