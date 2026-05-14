@@ -42,3 +42,10 @@ EVOLUCION_RADAR.md
 
 # Datos de clima persistentes
 data/
+
+# WhatsApp Web JS
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Archivos temporales del Radar
+*.grib2

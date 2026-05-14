@@ -1,31 +1,27 @@
 # Imagen base: Node.js 20 versión ligera
 FROM node:20-alpine
 
-# Directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Instalar dependencias para Puppeteer/Chromium (necesario para whatsapp-web.js)
+# Instalar dependencias para Puppeteer/Chromium y eccodes para archivos GRIB2
 RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont && \
+    apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
 
-# Instalar eccodes para decodificar archivos meteorológicos GRIB2 de la NOAA
-RUN apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
-
-# Configurar variables de entorno para que Puppeteer use el Chromium instalado
+# Configurar variables de entorno para Puppeteer y Corepack
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    CHROME_BIN=/usr/bin/chromium-browser
+    CHROME_BIN=/usr/bin/chromium-browser \
+    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
-# Copiar archivos de dependencias primero (para cache eficiente)
-COPY package.json package-lock.json ./
+# Habilitar pnpm vía Corepack
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Instalar dependencias
-RUN npm install
+# Copiar manifiestos
+COPY package.json pnpm-lock.yaml ./
+
+# Instalar dependencias con pnpm
+RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente
 COPY . .
@@ -34,4 +30,4 @@ COPY . .
 EXPOSE 3000
 
 # Comando para iniciar en desarrollo (con nodemon para hot-reload)
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]

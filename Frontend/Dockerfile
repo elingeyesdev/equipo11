@@ -1,14 +1,17 @@
 # Imagen base: Node.js 20 versión ligera
 FROM node:20-alpine
 
-# Directorio de trabajo dentro del contenedor
+# Habilitar Corepack para gestionar pnpm sin depender de npm
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 WORKDIR /app
 
-# Copiar archivos de dependencias primero (para cache eficiente)
-COPY package.json package-lock.json ./
+# Copiar solo manifiestos para aprovechar la caché de capas de Docker
+COPY package.json pnpm-lock.yaml ./
 
-# Borrar package-lock.json para evitar el bug de npm con dependencias opcionales (bindings de rolldown) y luego instalar
-RUN rm -f package-lock.json && npm install
+# Instalar dependencias (frozen-lockfile garantiza reproducibilidad exacta)
+RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente
 COPY . .
@@ -21,4 +24,4 @@ ARG VITE_API_URL
 EXPOSE 5173
 
 # Iniciar Vite en modo desarrollo
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]
