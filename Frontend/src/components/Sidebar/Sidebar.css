@@ -7,7 +7,7 @@
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  background-color: var(--white);
+  background-color: var(--bg-app);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -32,7 +32,7 @@
   justify-content: center;
   cursor: pointer;
   z-index: 1001;
-  box-shadow: 0 2px 5px rgba(20,26,22,.08);
+  box-shadow: var(--shadow-sm);
   color: var(--ink-mute);
   font-size: 9px;
   transition: all 0.2s ease;
@@ -189,7 +189,7 @@
 
 .status-dot--online {
   background-color: var(--moss);
-  box-shadow: 0 0 0 3px rgba(87, 160, 98, 0.18);
+  box-shadow: 0 0 0 3px var(--border);
   animation: sbPulse 2.2s infinite;
 }
 
@@ -214,7 +214,7 @@
   }
   .sidebar.mobile-open { 
     transform: translateX(0);
-    box-shadow: 20px 0 50px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-md);
   }
   .sidebar-toggle-btn { display: none; }
 }

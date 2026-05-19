@@ -138,7 +138,7 @@ function Login() {
               <h2 className="auth-heading">Bienvenido de <em>vuelta</em>.</h2>
               <p className="auth-subheading">Ingresa tus credenciales para continuar con la observación.</p>
 
-              {successMsg && <div className="auth-api-success" style={{color: '#10ac84', marginBottom: '1rem', background: 'rgba(16, 172, 132, 0.1)', padding: '0.8rem', borderRadius: '4px'}}>{successMsg}</div>}
+              {successMsg && <div className="auth-api-success" style={{color: 'var(--primary)', marginBottom: '1rem', background: 'var(--moss-soft)', padding: '0.8rem', borderRadius: '4px'}}>{successMsg}</div>}
 
               <form onSubmit={handleSubmit} className="auth-form" noValidate>
                 <div className={`auth-field ${errors.email ? 'auth-field--error' : ''}`}>
@@ -158,7 +158,7 @@ function Login() {
                 <div className={`auth-field ${errors.password ? 'auth-field--error' : ''}`}>
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <label htmlFor="login-password">Contraseña</label>
-                    <span style={{fontSize: '0.8rem', color: '#10ac84', cursor: 'pointer', textDecoration: 'underline'}} onClick={() => cambiarVista('forgot')}>¿Olvidaste tu contraseña?</span>
+                    <span style={{fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline'}} onClick={() => cambiarVista('forgot')}>¿Olvidaste tu contraseña?</span>
                   </div>
                   <input
                     id="login-password"
@@ -222,7 +222,7 @@ function Login() {
               </form>
 
               <p className="auth-footer-text">
-                <span style={{cursor: 'pointer', color: '#10ac84', textDecoration: 'underline'}} onClick={() => cambiarVista('login')}>Volver a inicio de sesión</span>
+                <span style={{cursor: 'pointer', color: 'var(--primary)', textDecoration: 'underline'}} onClick={() => cambiarVista('login')}>Volver a inicio de sesión</span>
               </p>
             </>
           )}
@@ -233,7 +233,7 @@ function Login() {
               <h2 className="auth-heading">Nueva <em>contraseña</em>.</h2>
               <p className="auth-subheading">Ingresa el código enviado a {form.email}</p>
 
-              {successMsg && <div className="auth-api-success" style={{color: '#10ac84', marginBottom: '1rem', background: 'rgba(16, 172, 132, 0.1)', padding: '0.8rem', borderRadius: '4px'}}>{successMsg}</div>}
+              {successMsg && <div className="auth-api-success" style={{color: 'var(--primary)', marginBottom: '1rem', background: 'var(--moss-soft)', padding: '0.8rem', borderRadius: '4px'}}>{successMsg}</div>}
 
               <form onSubmit={handleResetSubmit} className="auth-form" noValidate>
                 <div className="auth-field">
@@ -269,7 +269,7 @@ function Login() {
               </form>
 
               <p className="auth-footer-text">
-                <span style={{cursor: 'pointer', color: '#10ac84', textDecoration: 'underline'}} onClick={() => cambiarVista('login')}>Volver a inicio de sesión</span>
+                <span style={{cursor: 'pointer', color: 'var(--primary)', textDecoration: 'underline'}} onClick={() => cambiarVista('login')}>Volver a inicio de sesión</span>
               </p>
             </>
           )}

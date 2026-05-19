@@ -14,6 +14,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { API_BASE } from '../../config/api';
 import { useSimulacion } from '../../context/SimulacionContext';
+import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
@@ -84,7 +85,7 @@ const FALLBACK_DATA = [
 
 function MapaMonitoreo() {
   const location = useLocation();
-
+  const { theme } = useTheme();
 
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
@@ -477,6 +478,33 @@ function MapaMonitoreo() {
   // Usar datos del contexto si existen (simulación activa), sino sensores IoT reales, sino fallback estático
   let citiesData = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
 
+  const citiesWithWindGeoJSON = useMemo(() => {
+    if (!citiesData || !scannedGrid.data || scannedGrid.data.length === 0) return null;
+    
+    const features = citiesData.map(city => {
+      let nearestCell = null;
+      let minDist = Infinity;
+      scannedGrid.data.forEach(cell => {
+        const dist = Math.hypot(cell.latitud - city.latitude, cell.longitud - city.longitude);
+        if (dist < minDist) {
+          minDist = dist;
+          nearestCell = cell;
+        }
+      });
+
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [city.longitude, city.latitude] },
+        properties: {
+          name: city.name,
+          wind_speed: nearestCell ? nearestCell.wind_speed : 0
+        }
+      };
+    });
+
+    return { type: 'FeatureCollection', features };
+  }, [citiesData, scannedGrid.data]);
+
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
   let activeCity = selectedCity
     ? citiesData.find(c => c.id === selectedCity.id) || selectedCity
@@ -501,7 +529,7 @@ function MapaMonitoreo() {
   }
 
   // Modo oscuro automático cuando el heatmap o el clima 3D está activo — mejora el contraste de colores
-  const mapStyle = (isHeatmapActive || isParticlesActive)
+  const mapStyle = theme === 'dark'
     ? 'mapbox://styles/mapbox/dark-v11'
     : 'mapbox://styles/mapbox/light-v11';
 
@@ -632,7 +660,16 @@ function MapaMonitoreo() {
       });
       try {
         const weather = await getWeatherAtLocation(lat, lng);
-        if (weather?.current) setWeatherCode(weather.current.weather_code);
+        if (weather?.current) {
+          setWeatherCode(weather.current.weather_code);
+          setSelectedCity(prev => prev ? {
+            ...prev,
+            data: {
+              ...prev.data,
+              windSpeed: weather.current.wind_speed_10m
+            }
+          } : null);
+        }
       } catch { /* ignorar */ }
       return;
     }
@@ -663,6 +700,7 @@ function MapaMonitoreo() {
         aqi: fullData?.aqi ?? null,
         ica: fullData?.ica ?? null,
         ruido: fullData?.ruido ?? null,
+        windSpeed: fullData?.windSpeed ?? null,
       };
 
       setWeatherCode(fullData?.weatherCode ?? null);
@@ -867,7 +905,16 @@ function MapaMonitoreo() {
                     setSelectedCity(city);
                     try {
                       const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                      if (weather && weather.current) setWeatherCode(weather.current.weather_code);
+                      if (weather && weather.current) {
+                        setWeatherCode(weather.current.weather_code);
+                        setSelectedCity(prev => prev ? {
+                          ...prev,
+                          data: {
+                            ...prev.data,
+                            windSpeed: weather.current.wind_speed_10m
+                          }
+                        } : null);
+                      }
                     } catch (err) { console.error(err); }
                   }}
                 />
@@ -883,7 +930,16 @@ function MapaMonitoreo() {
                       setSelectedCity(city);
                       try {
                         const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                        if (weather?.current) setWeatherCode(weather.current.weather_code);
+                        if (weather?.current) {
+                          setWeatherCode(weather.current.weather_code);
+                          setSelectedCity(prev => prev ? {
+                            ...prev,
+                            data: {
+                              ...prev.data,
+                              windSpeed: weather.current.wind_speed_10m
+                            }
+                          } : null);
+                        }
                       } catch (err) { console.error(err); }
                     }}
                   >
@@ -902,6 +958,31 @@ function MapaMonitoreo() {
                 currentZoom={viewState.zoom} 
                 particleFilters={particleFilters} 
               />
+            )}
+
+            {/* Capa de Velocidad de Viento sobre las ciudades (Solo visible si partículas de viento están activas) */}
+            {isParticlesActive && particleFilters.wind && citiesWithWindGeoJSON && (
+              <Source id="city-wind-source" type="geojson" data={citiesWithWindGeoJSON}>
+                <Layer 
+                  id="city-wind-text-layer"
+                  type="symbol"
+                  layout={{
+                    'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['round', ['to-number', ['get', 'wind_speed']]]], ' km/h'],
+                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                    'text-size': 13,
+                    'text-offset': [0, 1.5],
+                    'text-anchor': 'top',
+                    'text-allow-overlap': false,
+                    'text-ignore-placement': false
+                  }}
+                  paint={{
+                    'text-color': '#ffffff',
+                    'text-halo-color': '#000000',
+                    'text-halo-width': 1.5
+                  }}
+                  filter={['>', ['to-number', ['get', 'wind_speed']], 0]}
+                />
+              </Source>
             )}
           </Map>
 
@@ -1085,6 +1166,7 @@ function MapaMonitoreo() {
                   { icon: '💧', label: 'Calidad del Agua', key: 'ica', unit: unidades.ica },
                   { icon: '🔊', label: 'Nivel de Ruido', key: 'ruido', unit: unidades.ruido },
                   { icon: '💦', label: 'Humedad', key: 'humedad', unit: unidades.humedad },
+                  { icon: '💨', label: 'Viento', key: 'windSpeed', unit: 'km/h' },
                 ].map(({ icon, label, key, unit }) => (
                   <div key={key} className="data-item">
                     <div className="data-icon">{icon}</div>
@@ -1345,7 +1427,19 @@ function MapaMonitoreo() {
                           <input
                             type="checkbox"
                             checked={particleFilters[f.key]}
-                            onChange={(e) => setParticleFilters(prev => ({ ...prev, [f.key]: e.target.checked }))}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setParticleFilters(prev => {
+                                if (f.key === 'wind' && isChecked) {
+                                  // Viento exclusivo: desactiva los demás
+                                  return { rain: false, snow: false, fog: false, thunderstorm: false, tornado_warning: false, wind: true };
+                                } else if (f.key !== 'wind' && isChecked) {
+                                  // Activar otro desactiva el viento
+                                  return { ...prev, wind: false, [f.key]: true };
+                                }
+                                return { ...prev, [f.key]: isChecked };
+                              });
+                            }}
                           />
                           <span className="slider round"></span>
                         </label>

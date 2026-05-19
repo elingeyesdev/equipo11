@@ -17,6 +17,9 @@ async function initDatabase() {
         wind_direction INT,
         rafagas DECIMAL(5,2),
         presion DECIMAL(6,2),
+        cape DECIMAL(8,2),
+        hlcy DECIMAL(8,2),
+        refc DECIMAL(8,2),
         forecast_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (latitud, longitud, forecast_time)

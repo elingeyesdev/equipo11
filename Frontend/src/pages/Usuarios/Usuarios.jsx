@@ -155,7 +155,7 @@ function Usuarios() {
               <div className="sub">{filteredUsers.length} resultados mostrados</div>
             </div>
             <div className="adm-tools">
-              <div className="search" style={{display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #333', padding: '0.2rem 0.5rem', borderRadius: '4px'}}>
+              <div className="search" style={{display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid var(--line)', padding: '0.2rem 0.5rem', borderRadius: '4px'}}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="7" />
                   <path d="m21 21-4.3-4.3" />
@@ -165,7 +165,7 @@ function Usuarios() {
                   placeholder="Buscar usuario..." 
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  style={{background: 'transparent', border: 'none', color: '#fff', outline: 'none', fontSize: '0.9rem'}}
+                  style={{background: 'transparent', border: 'none', color: 'var(--ink)', outline: 'none', fontSize: '0.9rem'}}
                 />
               </div>
             </div>
@@ -231,9 +231,9 @@ function Usuarios() {
                               }
                             }}
                             style={{
-                              background: '#222', 
-                              color: '#fff', 
-                              border: '1px solid #444',
+                              background: 'var(--paper)', 
+                              color: 'var(--ink)', 
+                              border: '1px solid var(--line)',
                               padding: '0.3rem',
                               borderRadius: '4px',
                               outline: 'none'

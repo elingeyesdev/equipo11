@@ -32,7 +32,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--bg-overlay);
   backdrop-filter: blur(2px);
   z-index: 998;
   transition: opacity 0.3s ease;

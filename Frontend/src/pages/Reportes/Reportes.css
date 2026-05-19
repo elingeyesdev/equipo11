@@ -178,8 +178,8 @@
 .rep-export-btn:hover   { opacity: 0.85; }
 .rep-export-btn:active  { transform: scale(0.97); }
 
-.rep-export-pdf { background: var(--rust);  color: var(--white); }
-.rep-export-xl  { background: #2d6a4f;      color: var(--white); }
+.rep-export-pdf { background: var(--rust);  color: var(--bg-card); }
+.rep-export-xl  { background: var(--moss);  color: var(--bg-card); }
 
 /* ─── Gráficos ──────────────────────────────────────────────── */
 .rep-charts {
@@ -272,20 +272,15 @@
   position: absolute;
   z-index: 10;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--bg-card);
   backdrop-filter: blur(8px);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-md);
   font-family: var(--font-sans);
   min-width: 130px;
   transition: left 0.1s ease-out, top 0.1s ease-out;
-}
-
-:root[data-theme='dark'] .rep-chart-tooltip {
-  background: rgba(30, 30, 35, 0.85);
-  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .rep-tooltip-date {

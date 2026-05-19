@@ -1,7 +1,15 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { Source, Layer, useMap } from 'react-map-gl/mapbox';
 
-const getWeatherType = (code) => {
+const getWeatherType = (cell) => {
+  if (!cell) return null;
+  const code = cell.weather_code;
+  
+  // Si tenemos CAPE y REFC altos, es tormenta eléctrica
+  if (cell.cape > 1000 && cell.refc > 35) return 'thunderstorm';
+  // Si tenemos CAPE alto y HLCY (Helicidad) alto, es advertencia de tornado
+  if (cell.cape > 1000 && cell.hlcy > 150) return 'tornado_warning';
+
   if (code == null || code === 0) return null;
   // Lluvia
   if ((code >= 51 && code <= 69) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)) return 'rain';
@@ -17,10 +25,12 @@ const getWeatherColor = (type) => {
   if (type === 'snow') return '#ffffff';
   if (type === 'fog') return '#9ca3af';
   if (type === 'wind') return '#a7f3d0';
+  if (type === 'thunderstorm') return '#fbbf24'; // Amarillo rayo
+  if (type === 'tornado_warning') return '#9333ea'; // Púrpura tornado
   return null;
 };
 
-const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain: true, snow: true, wind: true, fog: true } }) => {
+const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain: true, snow: true, wind: true, fog: true, thunderstorm: true, tornado_warning: true } }) => {
   const { current: map } = useMap();
   const canvasRef = useRef(null);
 
@@ -30,17 +40,25 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     
     if (scannedGrid && scannedGrid.length > 0) {
       scannedGrid.forEach((cell, index) => {
-        let type = getWeatherType(cell.weather_code);
+        let type = getWeatherType(cell);
         
-        // Si no hay lluvia/nieve/niebla, pero hay mucho viento, lo marcamos como viento
-        if (!type && cell.wind_speed > 15) {
+        // Si el tipo actual está desactivado en los filtros, intentamos caer en "wind" si hay viento
+        if (type && particleFilters[type] === false) {
+          type = null;
+        }
+
+        // Si no hay lluvia/nieve/niebla activa, pero hay viento fuerte, y el filtro de viento está activo
+        if (!type && cell.wind_speed > 15 && particleFilters.wind !== false) {
           type = 'wind';
         }
 
         if (type && cell.latitud && cell.longitud && particleFilters[type] !== false) {
           features.push({
             type: 'Feature',
-            properties: { color: getWeatherColor(type) },
+            properties: { 
+              color: getWeatherColor(type),
+              wind_speed: cell.wind_speed || 0
+            },
             geometry: {
               type: 'Point',
               coordinates: [cell.longitud, cell.latitud]
@@ -86,6 +104,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     }
   };
 
+
+
   // Motor de renderizado Canvas
   useEffect(() => {
     if (!map || !canvasRef.current) return;
@@ -121,6 +141,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       
       visibleNodes.forEach(node => {
         let pCount = currentMapZoom > 5 ? (node.type === 'wind' ? 4 : 10) : (currentMapZoom > 3 ? 2 : 1);
+        if (node.type === 'thunderstorm' || node.type === 'tornado_warning') pCount = currentMapZoom > 5 ? 3 : 1;
         
         for (let i = 0; i < pCount; i++) {
           particles.push({
@@ -130,7 +151,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             speed: Math.random() * 0.5 + 0.5,
             phase: Math.random() * Math.PI * 2,
             life: Math.random(),
-            baseRadius
+            baseRadius,
+            flashTimer: Math.random() * 100 // Para relámpagos
           });
         }
       });
@@ -266,6 +288,42 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.lineCap = 'round';
           ctx.stroke();
           
+        } else if (type === 'thunderstorm') {
+          p.flashTimer -= dt * 50;
+          if (p.flashTimer <= 0) {
+            ctx.moveTo(x, y);
+            let lx = x;
+            let ly = y;
+            for(let j=0; j<3; j++) {
+               lx += (Math.random() - 0.5) * 15;
+               ly += Math.random() * 20;
+               ctx.lineTo(lx, ly);
+            }
+            ctx.strokeStyle = 'rgba(255, 255, 150, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            p.flashTimer = Math.random() * 200 + 50;
+          } else if (p.flashTimer > 195) {
+             ctx.arc(x, y, p.baseRadius * 0.5, 0, Math.PI * 2);
+             ctx.fillStyle = 'rgba(255, 255, 200, 0.15)';
+             ctx.fill();
+          }
+        } else if (type === 'tornado_warning') {
+          p.phase += dt * 5 * p.speed; 
+          const radius = (p.baseRadius * 0.3) * (1 - p.life); 
+          const vortexX = pixelPos.x + Math.cos(p.phase) * radius;
+          const vortexY = pixelPos.y + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
+          
+          ctx.moveTo(vortexX, vortexY);
+          ctx.lineTo(vortexX + Math.cos(p.phase + 0.5)*radius*0.8, vortexY + Math.sin(p.phase + 0.5)*radius*0.8);
+          
+          ctx.strokeStyle = `rgba(150, 50, 200, ${p.life})`;
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+
+          p.life -= dt * 0.5;
+          if (p.life <= 0) p.life = 1;
         } else if (type === 'fog') {
           p.offsetX += Math.sin(time / 1500 + p.phase) * (p.baseRadius * 0.01);
           ctx.arc(x, y, 40 * p.speed, 0, Math.PI * 2);
