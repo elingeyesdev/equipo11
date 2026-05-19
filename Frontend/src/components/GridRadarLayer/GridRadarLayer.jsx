@@ -42,17 +42,22 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       scannedGrid.forEach((cell, index) => {
         let type = getWeatherType(cell);
         
+        let isTypeEnabled = particleFilters[type];
+        if (type === 'thunderstorm') isTypeEnabled = particleFilters.rain;
+        if (type === 'tornado_warning') isTypeEnabled = particleFilters.wind;
+
         // Si el tipo actual está desactivado en los filtros, intentamos caer en "wind" si hay viento
-        if (type && particleFilters[type] === false) {
+        if (type && isTypeEnabled === false) {
           type = null;
         }
 
         // Si no hay lluvia/nieve/niebla activa, pero hay viento fuerte, y el filtro de viento está activo
         if (!type && cell.wind_speed > 15 && particleFilters.wind !== false) {
           type = 'wind';
+          isTypeEnabled = particleFilters.wind;
         }
 
-        if (type && cell.latitud && cell.longitud && particleFilters[type] !== false) {
+        if (type && cell.latitud && cell.longitud && isTypeEnabled !== false) {
           features.push({
             type: 'Feature',
             properties: { 
@@ -104,8 +109,6 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     }
   };
 
-
-
   // Motor de renderizado Canvas
   useEffect(() => {
     if (!map || !canvasRef.current) return;
@@ -143,6 +146,9 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         let pCount = currentMapZoom > 5 ? (node.type === 'wind' ? 4 : 10) : (currentMapZoom > 3 ? 2 : 1);
         if (node.type === 'thunderstorm' || node.type === 'tornado_warning') pCount = currentMapZoom > 5 ? 3 : 1;
         
+        // Reducir masivamente la densidad de partículas al hacer zoom out para mantener un rendimiento alto
+        if (currentMapZoom < 4 && Math.random() > 0.4) pCount = 0; 
+
         for (let i = 0; i < pCount; i++) {
           particles.push({
             node,
@@ -152,7 +158,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             phase: Math.random() * Math.PI * 2,
             life: Math.random(),
             baseRadius,
-            flashTimer: Math.random() * 100 // Para relámpagos
+            flashTimer: Math.random() * 50 // Para relámpagos
           });
         }
       });
@@ -180,58 +186,111 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       const boundE = bounds.getEast() + 2;
       const boundW = bounds.getWest() - 2;
       
-      // Cache the projected positions for this frame to avoid calling map.project 23,000 times
       const nodeProjections = new Map();
 
+      // Calcular el worldWidth para el mapa infinito una sola vez
+      let worldWidth = 0;
+      if (currentMapZoom < 4) {
+         let rightPos = map.project([360, 0]);
+         let centerPos = map.project([0, 0]);
+         worldWidth = Math.abs(rightPos.x - centerPos.x);
+      }
+      const offsets = worldWidth > 0 ? [0, -worldWidth, worldWidth] : [0];
+
+      // ACTUALIZACIÓN DE FÍSICA
       particles.forEach(p => {
-        const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
-        
-        // Ya no necesitamos filtrar aquí porque 'particles' solo contiene elementos visibles
-
-        let pixelPos = nodeProjections.get(p.node.id);
-        if (!pixelPos) {
-          pixelPos = map.project([longitude, latitude]);
-          nodeProjections.set(p.node.id, pixelPos);
-        }
-
-        const x = pixelPos.x + p.offsetX;
-        const y = pixelPos.y + p.offsetY;
-        
-        ctx.beginPath();
+        const { type, direction, wind_speed } = p.node;
         
         if (type === 'rain') {
-          // Velocidad relativa al radio para que se vea igual sin importar el zoom
           p.offsetY += (p.baseRadius * 4) * p.speed * dt;
           if (p.offsetY > p.baseRadius) { 
             p.offsetY = -p.baseRadius; 
             p.offsetX = (Math.random() - 0.5) * p.baseRadius * 2; 
           }
-          
-          ctx.moveTo(x, y);
-          
-          // La longitud y el grosor de las gotas de lluvia ahora escalan con el zoom
-          const zoomFactor = Math.max(0.2, currentMapZoom / 6);
-          const dropLength = 20 * zoomFactor;
-          const dropWidth = 5 * zoomFactor;
-          
-          ctx.lineTo(x - dropWidth, y + dropLength); // Lluvia inclinada
-          const opacity = Math.max(0, 0.7 - Math.abs(p.offsetY) / p.baseRadius);
-          ctx.strokeStyle = `rgba(50, 130, 255, ${opacity})`;
-          // Líneas más finas al alejar la cámara
-          ctx.lineWidth = Math.max(0.5, 1.5 * zoomFactor);
-          ctx.lineCap = 'round';
-          ctx.stroke();
-          
         } else if (type === 'snow') {
           p.offsetY += (p.baseRadius * 0.8) * p.speed * dt;
           p.offsetX += Math.sin(time / 800 + p.phase) * (p.baseRadius * 0.02);
           if (p.offsetY > p.baseRadius) { 
             p.offsetY = -p.baseRadius; 
           }
+        } else if (type === 'wind') {
+          const angleRad = (direction - 90) * Math.PI / 180;
+          
+          const windIntensity = Math.max(15, wind_speed) / 20;
+          const velocity = (p.baseRadius * 2.5) * p.speed * windIntensity;
+          
+          p.offsetX += Math.cos(angleRad) * velocity * dt;
+          p.offsetY += Math.sin(angleRad) * velocity * dt;
           
           const zoomFactor = Math.max(0.2, currentMapZoom / 6);
-          const snowRadius = Math.max(0.5, (2 * p.speed + 1) * zoomFactor);
+          p.life -= dt * (0.5 + p.speed * 0.3) / zoomFactor;
           
+          if (p.life <= 0) {
+            p.life = 1;
+            p.offsetX = (Math.random() - 0.5) * p.baseRadius * 1.2;
+            p.offsetY = (Math.random() - 0.5) * p.baseRadius * 1.2;
+          }
+        } else if (type === 'thunderstorm') {
+          p.flashTimer += dt;
+          if (!p.lightningForks || p.flashTimer > 3.0) {
+             p.flashTimer = 0;
+             p.lightningForks = [];
+             for(let k=0; k<2; k++) {
+               let lx = (Math.random() - 0.5) * p.baseRadius;
+               let ly = -p.baseRadius * 0.5;
+               let path = [[lx, ly]];
+               for(let j=0; j<4; j++) {
+                  lx += (Math.random() - 0.5) * 15;
+                  ly += Math.random() * 15;
+                  path.push([lx, ly]);
+               }
+               p.lightningForks.push(path);
+             }
+          }
+        } else if (type === 'tornado_warning') {
+          p.phase += dt * 5 * p.speed; 
+          p.life -= dt * 0.5;
+          if (p.life <= 0) p.life = 1;
+        } else if (type === 'fog') {
+          p.offsetX += Math.sin(time / 1500 + p.phase) * (p.baseRadius * 0.01);
+        }
+      });
+
+      const drawParticle = (p, isThunderstormPass) => {
+        const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
+        
+        // Separamos las capas: las tormentas se dibujan en una segunda pasada para que estén por encima
+        if ((type === 'thunderstorm') !== isThunderstormPass) return;
+        
+        let pixelPosMain = nodeProjections.get(`${p.node.id}_main`);
+        if (!pixelPosMain) {
+          const centerLng = map.getCenter().lng;
+          let mainLng = longitude;
+          mainLng = mainLng - 360 * Math.round((mainLng - centerLng) / 360);
+          pixelPosMain = map.project([mainLng, latitude]);
+          nodeProjections.set(`${p.node.id}_main`, pixelPosMain);
+        }
+
+        const x = pixelPosMain.x + p.offsetX;
+        const y = pixelPosMain.y + p.offsetY;
+        const zoomFactor = Math.max(0.2, currentMapZoom / 6);
+        
+        ctx.beginPath();
+        
+        if (type === 'rain') {
+          const dropLength = 20 * zoomFactor;
+          const dropWidth = 5 * zoomFactor;
+          
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - dropWidth, y + dropLength);
+          const opacity = Math.max(0, 0.7 - Math.abs(p.offsetY) / p.baseRadius);
+          ctx.strokeStyle = `rgba(50, 130, 255, ${opacity})`;
+          ctx.lineWidth = Math.max(0.5, 1.5 * zoomFactor);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+          
+        } else if (type === 'snow') {
+          const snowRadius = Math.max(0.5, (2 * p.speed + 1) * zoomFactor);
           ctx.arc(x, y, snowRadius, 0, Math.PI * 2);
           const opacity = Math.max(0, 0.8 - Math.abs(p.offsetY) / p.baseRadius);
           ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
@@ -239,28 +298,6 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           
         } else if (type === 'wind') {
           const angleRad = (direction - 90) * Math.PI / 180;
-          
-          // Velocidad proporcional al viento real de la API y al nivel de zoom
-          const windIntensity = Math.max(15, wind_speed) / 20; // 20km/h = 1x, 60km/h = 3x
-          const velocity = (p.baseRadius * 2.5) * p.speed * windIntensity;
-          
-          p.offsetX += Math.cos(angleRad) * velocity * dt;
-          p.offsetY += Math.sin(angleRad) * velocity * dt;
-          
-          // Factor de zoom
-          const zoomFactor = Math.max(0.2, currentMapZoom / 6);
-
-          // Al hacer zoom out (zoomFactor pequeño), dividimos la duración de vida para que mueran más rápido
-          p.life -= dt * (0.5 + p.speed * 0.3) / zoomFactor;
-          
-          if (p.life <= 0) {
-            p.life = 1;
-            // Respawn cerca del centro del nodo para evitar que crucen a otras áreas
-            p.offsetX = (Math.random() - 0.5) * p.baseRadius * 1.2;
-            p.offsetY = (Math.random() - 0.5) * p.baseRadius * 1.2;
-          }
-          
-          // Longitud de la línea de viento más corta, además se hace ultra-corta al hacer zoom out
           const length = (8 + (p.speed * 4)) * zoomFactor;
           const tailX = x - Math.cos(angleRad) * length;
           const tailY = y - Math.sin(angleRad) * length;
@@ -268,17 +305,14 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.moveTo(tailX, tailY);
           ctx.lineTo(x, y);
           
-          // Detección de Huracanes / Tormentas Severas
-          const fade = Math.sin(p.life * Math.PI); // Efecto de desvanecimiento suave
-          
-          // Si las ráfagas superan 90km/h o la presión es muy baja (<990 hPa), pintamos de Púrpura/Rojo
-          let strokeColor = `rgba(180, 230, 255, ${fade * 0.5})`; // Viento normal (Azul claro)
+          const fade = Math.sin(p.life * Math.PI); 
+          let strokeColor = `rgba(180, 230, 255, ${fade * 0.5})`; 
           
           if (rafagas > 90 || presion < 990) {
-            strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; // Rojo/Púrpura agresivo (Huracán)
-            ctx.lineWidth = 2.5; // Más grueso para resaltar el peligro
+            strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; 
+            ctx.lineWidth = 2.5; 
           } else if (rafagas > 60 || presion < 1005) {
-            strokeColor = `rgba(255, 140, 0, ${fade * 0.6})`; // Naranja (Tormenta Tropical / Fuerte)
+            strokeColor = `rgba(255, 140, 0, ${fade * 0.6})`; 
             ctx.lineWidth = 2.0;
           } else {
             ctx.lineWidth = 1.8;
@@ -289,30 +323,27 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.stroke();
           
         } else if (type === 'thunderstorm') {
-          p.flashTimer -= dt * 50;
-          if (p.flashTimer <= 0) {
-            ctx.moveTo(x, y);
-            let lx = x;
-            let ly = y;
-            for(let j=0; j<3; j++) {
-               lx += (Math.random() - 0.5) * 15;
-               ly += Math.random() * 20;
-               ctx.lineTo(lx, ly);
-            }
-            ctx.strokeStyle = 'rgba(255, 255, 150, 0.9)';
-            ctx.lineWidth = 2;
+          let opacity = 0;
+          if (p.flashTimer < 0.25) opacity = p.flashTimer / 0.25; 
+          else if (p.flashTimer < 0.75) opacity = 1.0; 
+          else if (p.flashTimer < 1.75) opacity = 1.0 - ((p.flashTimer - 0.75) / 1.0); 
+          
+          if (opacity > 0) {
+            p.lightningForks.forEach(path => {
+              ctx.moveTo(x + path[0][0], y + path[0][1]);
+              for(let i=1; i<path.length; i++) {
+                ctx.lineTo(x + path[i][0], y + path[i][1]);
+              }
+            });
+            ctx.strokeStyle = `rgba(255, 255, 150, ${opacity})`;
+            ctx.lineWidth = 1.5;
+            ctx.lineJoin = 'round';
             ctx.stroke();
-            p.flashTimer = Math.random() * 200 + 50;
-          } else if (p.flashTimer > 195) {
-             ctx.arc(x, y, p.baseRadius * 0.5, 0, Math.PI * 2);
-             ctx.fillStyle = 'rgba(255, 255, 200, 0.15)';
-             ctx.fill();
           }
         } else if (type === 'tornado_warning') {
-          p.phase += dt * 5 * p.speed; 
           const radius = (p.baseRadius * 0.3) * (1 - p.life); 
-          const vortexX = pixelPos.x + Math.cos(p.phase) * radius;
-          const vortexY = pixelPos.y + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
+          const vortexX = pixelPosMain.x + Math.cos(p.phase) * radius;
+          const vortexY = pixelPosMain.y + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
           
           ctx.moveTo(vortexX, vortexY);
           ctx.lineTo(vortexX + Math.cos(p.phase + 0.5)*radius*0.8, vortexY + Math.sin(p.phase + 0.5)*radius*0.8);
@@ -321,15 +352,24 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.lineWidth = 3;
           ctx.lineCap = 'round';
           ctx.stroke();
-
-          p.life -= dt * 0.5;
-          if (p.life <= 0) p.life = 1;
         } else if (type === 'fog') {
-          p.offsetX += Math.sin(time / 1500 + p.phase) * (p.baseRadius * 0.01);
           ctx.arc(x, y, 40 * p.speed, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(200, 200, 200, 0.05)';
           ctx.fill();
         }
+      };
+
+      offsets.forEach(dx => {
+        ctx.save();
+        ctx.translate(dx, 0);
+
+        // Primera pasada: Dibuja viento, lluvia, nieve, niebla
+        particles.forEach(p => drawParticle(p, false));
+        
+        // Segunda pasada: Dibuja rayos POR ENCIMA de todo lo demás
+        particles.forEach(p => drawParticle(p, true));
+
+        ctx.restore();
       });
       
       animationId = requestAnimationFrame(render);

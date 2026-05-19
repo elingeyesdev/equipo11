@@ -462,6 +462,43 @@ function MapaMonitoreo() {
     setShowResults(false);
   };
 
+  const [dynamicWindLabels, setDynamicWindLabels] = useState(null);
+
+  useEffect(() => {
+    if (!scannedGrid?.data || !isParticlesActive || !particleFilters.wind) return;
+    
+    let activeCities = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
+
+    const newFeatures = activeCities.map((city) => {
+      let nearestCell = null;
+      let minDist = Infinity;
+      const lng = city.longitude;
+      const lat = city.latitude;
+      
+      const roughGrid = scannedGrid.data.filter(c => Math.abs(c.latitud - lat) < 1.5 && Math.abs(c.longitud - lng) < 1.5);
+      const searchSpace = roughGrid.length > 0 ? roughGrid : scannedGrid.data;
+
+      searchSpace.forEach(cell => {
+        const dist = Math.hypot(cell.latitud - lat, cell.longitud - lng);
+        if (dist < minDist) {
+          minDist = dist;
+          nearestCell = cell;
+        }
+      });
+
+      return {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [lng, lat] },
+        properties: { 
+          name: city.name || city.ciudad || 'Desconocido', 
+          wind_speed: nearestCell ? nearestCell.wind_speed : 0 
+        }
+      };
+    });
+
+    setDynamicWindLabels({ type: 'FeatureCollection', features: newFeatures });
+  }, [scannedGrid, simulatedCities, iotSensors, isParticlesActive, particleFilters.wind]);
+
   // Cargar sensores IoT al montar el componente y refrescar cada 15 min
   useEffect(() => {
     const loadSensors = async () => {
@@ -477,33 +514,6 @@ function MapaMonitoreo() {
 
   // Usar datos del contexto si existen (simulación activa), sino sensores IoT reales, sino fallback estático
   let citiesData = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
-
-  const citiesWithWindGeoJSON = useMemo(() => {
-    if (!citiesData || !scannedGrid.data || scannedGrid.data.length === 0) return null;
-    
-    const features = citiesData.map(city => {
-      let nearestCell = null;
-      let minDist = Infinity;
-      scannedGrid.data.forEach(cell => {
-        const dist = Math.hypot(cell.latitud - city.latitude, cell.longitud - city.longitude);
-        if (dist < minDist) {
-          minDist = dist;
-          nearestCell = cell;
-        }
-      });
-
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [city.longitude, city.latitude] },
-        properties: {
-          name: city.name,
-          wind_speed: nearestCell ? nearestCell.wind_speed : 0
-        }
-      };
-    });
-
-    return { type: 'FeatureCollection', features };
-  }, [citiesData, scannedGrid.data]);
 
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
   let activeCity = selectedCity
@@ -960,27 +970,27 @@ function MapaMonitoreo() {
               />
             )}
 
-            {/* Capa de Velocidad de Viento sobre las ciudades (Solo visible si partículas de viento están activas) */}
-            {isParticlesActive && particleFilters.wind && citiesWithWindGeoJSON && (
-              <Source id="city-wind-source" type="geojson" data={citiesWithWindGeoJSON}>
+            {/* Capa de Velocidad de Viento dinámica anclada a las ciudades reales de Mapbox */}
+            {isParticlesActive && particleFilters.wind && dynamicWindLabels && (
+              <Source id="dynamic-wind-source" type="geojson" data={dynamicWindLabels}>
                 <Layer 
-                  id="city-wind-text-layer"
+                  id="dynamic-wind-text-layer"
                   type="symbol"
                   layout={{
                     'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['round', ['to-number', ['get', 'wind_speed']]]], ' km/h'],
                     'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                    'text-size': 13,
-                    'text-offset': [0, 1.5],
+                    'text-size': 12,
+                    'text-offset': [0, 0.5],
                     'text-anchor': 'top',
                     'text-allow-overlap': false,
-                    'text-ignore-placement': false
+                    'text-ignore-placement': false,
+                    'text-padding': 20
                   }}
                   paint={{
-                    'text-color': '#ffffff',
+                    'text-color': '#a7f3d0',
                     'text-halo-color': '#000000',
                     'text-halo-width': 1.5
                   }}
-                  filter={['>', ['to-number', ['get', 'wind_speed']], 0]}
                 />
               </Source>
             )}
@@ -1413,11 +1423,11 @@ function MapaMonitoreo() {
                   {/* Subfiltros de partículas siempre visibles en este panel, pero deshabilitados si está apagado */}
                   <div style={{ paddingLeft: '20px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px', opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
                     {[
-                      { key: 'rain', icon: '🌧️', label: 'Lluvia' },
-                      { key: 'snow', icon: '❄️', label: 'Nieve' },
-                      { key: 'wind', icon: '💨', label: 'Viento' },
-                      { key: 'fog', icon: '🌫️', label: 'Niebla' }
-                    ].map(f => (
+                  { key: 'rain', label: 'Lluvia / Tormentas' },
+                  { key: 'snow', label: 'Nieve' },
+                  { key: 'fog', label: 'Niebla' },
+                  { key: 'wind', label: 'Viento / Tornados' },
+                ].map(f => (
                       <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
                         <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
                           <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
@@ -1432,7 +1442,7 @@ function MapaMonitoreo() {
                               setParticleFilters(prev => {
                                 if (f.key === 'wind' && isChecked) {
                                   // Viento exclusivo: desactiva los demás
-                                  return { rain: false, snow: false, fog: false, thunderstorm: false, tornado_warning: false, wind: true };
+                                  return { rain: false, snow: false, fog: false, wind: true };
                                 } else if (f.key !== 'wind' && isChecked) {
                                   // Activar otro desactiva el viento
                                   return { ...prev, wind: false, [f.key]: true };
@@ -1536,6 +1546,20 @@ function MapaMonitoreo() {
                       <div className="legend-text">
                         <strong>Niebla</strong>
                         <p>Zonas brumosas grises de visibilidad reducida.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-icon" style={{ color: '#fbbf24', textShadow: '0 0 5px #fbbf24' }}>⚡</span>
+                      <div className="legend-text">
+                        <strong>Tormenta Eléctrica</strong>
+                        <p>Relámpagos brillantes y destellos de luz amarilla rápida.</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-icon" style={{ color: '#9333ea', textShadow: '0 0 5px #9333ea' }}>🌪️</span>
+                      <div className="legend-text">
+                        <strong>Alerta de Tornado</strong>
+                        <p>Vórtices púrpuras girando agresivamente en espiral.</p>
                       </div>
                     </div>
 
