@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary'
 import MapaMonitoreo from './pages/MapaMonitoreo/MapaMonitoreo'
 import Reportes from './pages/Reportes/Reportes'
 import Usuarios from './pages/Usuarios/Usuarios'
@@ -17,6 +18,7 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
+    <ErrorBoundary>
     <Routes>
       {/* Rutas públicas (sin sidebar/navbar) */}
       <Route path="/login"    element={<Login />} />
@@ -42,6 +44,7 @@ function App() {
       {/* Ruta fallback: Si la url no existe, o entramos en localhost directamente, vamos al mapa */}
       <Route path="*" element={<Navigate to="/mapa" replace />} />
     </Routes>
+    </ErrorBoundary>
   )
 }
 

@@ -184,7 +184,9 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
             body: JSON.stringify({ country: zState.pais, state: d })
           }).then(r => r.json())
           if (!res.error && res.data) setZ(prev => ({ ...prev, provincias: res.data.sort() }))
-        } catch (err) {}
+        } catch (err) {
+          console.warn('Failed to fetch cities for state:', err.message);
+        }
         setLoadingList(false)
         await fetchGeoForZona({ ...zState, depto: d, prov: '' }, setZ, isZ2)
       }

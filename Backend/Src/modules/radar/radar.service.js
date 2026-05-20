@@ -292,24 +292,31 @@ const runScraper = async () => {
     
     // Migraciones para tablas existentes (initDb se encarga de la creación inicial)
 
-    // Asegurarse de que las columnas nuevas existan si la tabla es antigua
+  // ────────────────────────────────────────────────────────────
+  // Schema migration helper: agrega una columna de manera segura
+  // usando IF NOT EXISTS nativo de PostgreSQL (evita race conditions)
+  // ────────────────────────────────────────────────────────────
+  const ensureColumn = async (table, colDef) => {
     try {
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_speed DECIMAL(5,2)');
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN wind_direction INT');
-    } catch (e) {}
-    try {
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN rafagas DECIMAL(5,2)');
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN presion DECIMAL(6,2)');
-    } catch (e) {}
-    try {
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN cape DECIMAL(8,2)');
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN hlcy DECIMAL(8,2)');
-      await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN refc DECIMAL(8,2)');
-    } catch (e) {}
-    try {
-      await pool.query('ALTER TABLE sensores_cache ADD COLUMN wind_speed DECIMAL(5,2)');
-      await pool.query('ALTER TABLE sensores_cache ADD COLUMN wind_direction INT');
-    } catch (e) {}
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${colDef}`);
+      logger.info(`[Radar Scraper] Columna asegurada: ${table}.${colDef.split(' ')[0]}`);
+    } catch (err) {
+      logger.warn(`[Radar Scraper] No se pudo asegurar columna ${table}: ${err.message}`);
+    }
+  };
+
+    // Asegurar columnas de radar_grid_cache
+    await ensureColumn('radar_grid_cache', 'wind_speed DECIMAL(5,2)');
+    await ensureColumn('radar_grid_cache', 'wind_direction INT');
+    await ensureColumn('radar_grid_cache', 'rafagas DECIMAL(5,2)');
+    await ensureColumn('radar_grid_cache', 'presion DECIMAL(6,2)');
+    await ensureColumn('radar_grid_cache', 'cape DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'hlcy DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'refc DECIMAL(8,2)');
+    // Asegurar columnas de sensores_cache
+    await ensureColumn('sensores_cache', 'wind_speed DECIMAL(5,2)');
+    await ensureColumn('sensores_cache', 'wind_direction INT');
+
     try {
       // Intentar agregar forecast_time y actualizar PK si es necesario
       await pool.query('ALTER TABLE radar_grid_cache ADD COLUMN IF NOT EXISTS forecast_time TIMESTAMPTZ DEFAULT NOW()');

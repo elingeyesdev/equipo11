@@ -680,7 +680,9 @@ function MapaMonitoreo() {
             }
           } : null);
         }
-      } catch { /* ignorar */ }
+      } catch (err) {
+        console.warn('Weather fetch skipped for sensor-radius area:', err.message);
+      }
       return;
     }
 
