@@ -6,6 +6,10 @@
  *      no contiene lógica de negocio.
  */
 require('dotenv').config()
+
+// Validar variables de entorno ANTES de cualquier otro require
+require('./Src/config/env')
+
 const http = require('http')
 const { Server } = require('socket.io')
 const app = require('./Src/app')
@@ -14,8 +18,9 @@ const { registerZonaSocketEvents } = require('./Src/modules/simulacion-zona/simu
 const { runScraper } = require('./Src/modules/radar/radar.service')
 const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
-const { startSensorCron } = require('./Src/modules/sensores/sensores.service')
+const { startSensorCron, stopSensorCron } = require('./Src/modules/sensores/sensores.service')
 const logger = require('./Src/utils/logger');
+const pool = require('./Src/config/db');
 
 const PORT = process.env.PORT || 3000
 
@@ -59,3 +64,38 @@ server.listen(PORT, async () => {
   // Iniciar el bot de Telegram en modo escucha
   startTelegramListener()
 })
+
+// ────────────────────────────────────────────────────────────
+// Graceful shutdown: libera recursos al recibir SIGTERM/SIGINT
+// ────────────────────────────────────────────────────────────
+function gracefulShutdown(signal) {
+  logger.info(`Recibido ${signal}, cerrando servidor ordenadamente...`);
+
+  // 1. Detener cron de sensores
+  stopSensorCron();
+
+  // 2. Cerrar servidor HTTP (rechaza nuevas conexiones, cierra WebSockets)
+  server.close(() => {
+    logger.info('Servidor HTTP cerrado');
+
+    // 3. Cerrar pool de base de datos
+    pool.end()
+      .then(() => {
+        logger.info('Pool de base de datos cerrado');
+        process.exit(0);
+      })
+      .catch(err => {
+        logger.error('Error cerrando pool de DB:', err);
+        process.exit(1);
+      });
+  });
+
+  // 4. Forzar salida si no se completó en 10s
+  setTimeout(() => {
+    logger.error('Cierre forzado tras timeout de 10s');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

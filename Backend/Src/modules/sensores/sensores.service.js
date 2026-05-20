@@ -259,11 +259,21 @@ async function estimarDatosPuntoArbitrario(lat, lng) {
 /**
  * Inicia el cron job de actualización cada 15 minutos.
  */
+let cronIntervalId = null;
+
 function startSensorCron() {
   const INTERVAL_MS = 15 * 60 * 1000; // 15 minutos
   actualizarSensores(); // Primera carga inmediata al arrancar
-  setInterval(actualizarSensores, INTERVAL_MS);
+  cronIntervalId = setInterval(actualizarSensores, INTERVAL_MS);
   logger.info('[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.');
 }
 
-module.exports = { startSensorCron, getSensoresCache, estimarDatosPuntoArbitrario };
+function stopSensorCron() {
+  if (cronIntervalId) {
+    clearInterval(cronIntervalId);
+    cronIntervalId = null;
+    logger.info('[Sensores IoT] Cron detenido.');
+  }
+}
+
+module.exports = { startSensorCron, stopSensorCron, getSensoresCache, estimarDatosPuntoArbitrario };
