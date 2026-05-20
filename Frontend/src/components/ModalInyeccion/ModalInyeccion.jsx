@@ -12,6 +12,8 @@ const METRICS = [
   { key: 'humedad',    label: 'Humedad',           icon: '💦', unit: '%'   },
 ];
 
+// Fuente canónica: GET /api/sensores/metricas-limites
+// TODO: reemplazar con fetch al endpoint al migrar a httpClient (Paso 3.1)
 const METRIC_LIMITS = {
   temperatura: { min: -40, max: 60 },
   aqi:         { min: 0,   max: 500 },

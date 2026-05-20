@@ -28,22 +28,12 @@ const METRIC_CONFIG = {
 }
 
 // Rangos válidos absolutos por métrica (para validar inyección manual)
-const METRIC_LIMITS = {
-  temperatura: { min: -40, max: 60 },
-  aqi: { min: 0, max: 500 },
-  ica: { min: 0, max: 100 },
-  ruido: { min: 0, max: 140 },
-  humedad: { min: 0, max: 100 },
-}
-
-const METRIC_KEYS = Object.keys(METRIC_CONFIG)
+const { METRIC_LIMITS, METRIC_KEYS } = require('../../constants/metricas');
 
 /**
  * Restringe un valor dentro de un rango [min, max].
  */
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value))
-}
+const { clamp } = require('../../utils/math');
 
 /**
  * Genera un delta aleatorio entre -maxDelta y +maxDelta.
@@ -293,6 +283,7 @@ let tickCount = 0
 // --- Integración con Base de Datos ---
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { getDbMapping } = require('../../utils/dbMapping')
 let dbMapping = { localidades: {}, metricas: {} }
 
 // Throttle: solo persistir 1 vez por hora para no llenar la BD
@@ -301,18 +292,14 @@ const PERSIST_INTERVAL_MS = 60 * 60 * 1000  // 1 hora
 
 async function loadDbMapping() {
   try {
-    const locRes = await db.query('SELECT id, nombre FROM localidades')
-    locRes.rows.forEach(r => { dbMapping.localidades[r.nombre.toLowerCase()] = r.id })
-
-    const metRes = await db.query('SELECT id, clave FROM metricas')
-    metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
+    dbMapping = await getDbMapping();
   } catch (err) {
     logger.error('[Simulación] Error cargando DB mapping:', err.message)
   }
 }
 
 /**
- * Persiste el estado actual en la tabla lecturas.
+ * Persiste el estado actual en la tabla lecturas (con throttle para simulación continua).
  */
 async function persistReadings(state) {
   if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
@@ -321,6 +308,15 @@ async function persistReadings(state) {
   if (now - lastPersistTime < PERSIST_INTERVAL_MS) return
   lastPersistTime = now
 
+  await persistToDB(state, 1)
+}
+
+/**
+ * Persiste lecturas en la tabla lecturas (lógica compartida).
+ * @param {Array}  state    — ciudades con { name, data: { metrica: valor } }
+ * @param {number} fuenteId — 1 = simulación continua, 2 = inyección manual
+ */
+async function persistToDB(state, fuenteId) {
   const localidadIds = []
   const metricaIds = []
   const valores = []
@@ -343,11 +339,11 @@ async function persistReadings(state) {
   try {
     await db.query(`
       INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
-      SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 1
+      SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), $4
       ON CONFLICT DO NOTHING
-    `, [localidadIds, metricaIds, valores])
+    `, [localidadIds, metricaIds, valores, fuenteId])
   } catch (err) {
-    logger.error('[Simulación] Error guardando snapshot horario:', err.message)
+    logger.error('[Simulación] Error guardando lecturas:', err.message)
   }
 }
 
@@ -412,31 +408,7 @@ function injectData(cityId, partialData) {
 
 async function persistInjection(state) {
   if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
-  const localidadIds = []
-  const metricaIds = []
-  const valores = []
-  state.forEach(city => {
-    const locId = dbMapping.localidades[city.name.toLowerCase()]
-    if (!locId) return
-    Object.entries(city.data).forEach(([metricKey, val]) => {
-      const metId = dbMapping.metricas[metricKey]
-      if (metId && val !== null) {
-        localidadIds.push(locId)
-        metricaIds.push(metId)
-        valores.push(val)
-      }
-    })
-  })
-  if (!localidadIds.length) return
-  try {
-    await db.query(`
-      INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
-      SELECT NOW(), unnest($1::int[]), unnest($2::int[]), unnest($3::numeric[]), 2
-      ON CONFLICT DO NOTHING
-    `, [localidadIds, metricaIds, valores])
-  } catch (err) {
-    logger.error('[Simulación] Error guardando inyección manual:', err.message)
-  }
+  await persistToDB(state, 2)
 }
 
 module.exports = { start, stop, isRunning, getCurrentState, injectData, simulateRange }

@@ -27,17 +27,11 @@ const METRIC_META = {
   humedad:     { unidad: '%',   nombre: 'Humedad'        },
 };
 
-const METRIC_LIMITS = {
-  temperatura: { min: -50, max: 60  },
-  aqi:         { min: 0,   max: 500 },
-  ica:         { min: 0,   max: 100 },
-  ruido:       { min: 0,   max: 140 },
-  humedad:     { min: 0,   max: 100 },
-};
+const { METRIC_LIMITS } = require('../../constants/metricas');
 
 // ─── Helpers matemáticos ─────────────────────────────────────────────────────
 
-function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+const { clamp } = require('../../utils/math');
 function lerp(a, b, t) { return a + (b - a) * t; }
 
 function calcCentroide(puntos) {

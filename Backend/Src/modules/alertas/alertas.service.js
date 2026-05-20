@@ -21,6 +21,7 @@
 
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { getDbMapping } = require('../../utils/dbMapping')
 
 // ─── CACHÉ DE UMBRALES ────────────────────────────────────────────────────────
 // Map<metricaClave, [{ id, nivel, valor_min, valor_max, label, severidad }]>
@@ -37,11 +38,7 @@ let dbMapping = { localidades: {}, metricas: {} }
 async function cargarUmbralesCache() {
   try {
     // Cargar mapping de localidades y métricas
-    const locRes = await db.query('SELECT id, nombre FROM localidades')
-    locRes.rows.forEach(r => { dbMapping.localidades[r.nombre.toLowerCase()] = r.id })
-
-    const metRes = await db.query('SELECT id, clave FROM metricas')
-    metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
+    dbMapping = await getDbMapping();
 
     // Cargar umbrales en caché
     const { rows } = await db.query(`

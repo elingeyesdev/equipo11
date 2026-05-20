@@ -15,59 +15,12 @@
 const pool = require('../../config/db');
 const LOCALIDADES = require('../simulacion/localidades.data');
 const logger = require('../../utils/logger');
+const { getDbMapping } = require('../../utils/dbMapping');
 
 // ─── Helpers matemáticos ──────────────────────────────────────────────────────
 
-const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-
-/**
- * Estima la Calidad del Agua (ICA 0-100) a partir de:
- *  - humedad relativa (alta humedad → más arrastre de contaminantes)
- *  - AQI (contaminación del aire correlaciona con agua)
- *  - precipitación implícita en weather_code
- */
-function estimateICA(humedad, aqi, weatherCode, ranges) {
-  const [iMin, iMax] = ranges.ica;
-
-  // Base: humedad alta → agua más disponible pero potencialmente contaminada
-  const humNorm = clamp(humedad / 100, 0, 1);
-
-  // AQI alto → peor calidad de agua (correlación negativa media)
-  const aqiNorm = clamp(aqi / 200, 0, 1);
-
-  // Lluvia reciente (codes 51-82) mejora la recarga pero puede arrastrar sedimentos
-  const isRaining = weatherCode >= 51 && weatherCode <= 82;
-
-  let icaEstimado = iMax - aqiNorm * (iMax - iMin) * 0.5
-                      + humNorm * (iMax - iMin) * 0.1
-                      - (isRaining ? 5 : 0);
-
-  // Añadir pequeña variación aleatoria (±3 puntos) para que no sea perfectamente lineal
-  icaEstimado += (Math.random() - 0.5) * 6;
-
-  return Number(clamp(icaEstimado, iMin, iMax).toFixed(1));
-}
-
-/**
- * Estima el nivel de Ruido (dB) basado en la hora del día.
- * Pico en hora punta (7-9h y 17-20h), silencio nocturno (0-6h).
- */
-function estimateRuido(ranges) {
-  const [rMin, rMax] = ranges.ruido;
-  const hour = new Date().getHours();
-
-  let factor;
-  if (hour >= 0 && hour < 6)  factor = 0.15;   // madrugada
-  else if (hour >= 6 && hour < 7)  factor = 0.35; // amanecer
-  else if (hour >= 7 && hour <= 9)  factor = 0.85; // hora punta mañana
-  else if (hour >= 10 && hour < 17) factor = 0.60; // día laboral
-  else if (hour >= 17 && hour <= 20) factor = 0.90; // hora punta tarde
-  else if (hour >= 21 && hour < 23)  factor = 0.45; // noche
-  else factor = 0.20; // medianoche
-
-  const ruido = rMin + factor * (rMax - rMin) + (Math.random() - 0.5) * 4;
-  return Number(clamp(ruido, rMin, rMax).toFixed(1));
-}
+const { clamp } = require('../../utils/math');
+const { estimateICA, estimateRuido } = require('../../utils/estimadores');
 
 // ─── Fetch a Open-Meteo (batch) ───────────────────────────────────────────────
 
@@ -119,11 +72,7 @@ async function actualizarSensores() {
     logger.info(`[Sensores IoT] Datos recibidos para ${weatherResults.length} sensores.`);
 
     // Cargar mapping de BD para persistir en lecturas
-    let dbMapping = { localidades: {}, metricas: {} };
-    const locRes = await pool.query('SELECT id, nombre FROM localidades');
-    locRes.rows.forEach(r => { dbMapping.localidades[r.nombre.toLowerCase()] = r.id; });
-    const metRes = await pool.query('SELECT id, clave FROM metricas');
-    metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id; });
+    const dbMapping = await getDbMapping();
 
     const localidadIds = [], metricaIds = [], valores = [];
 

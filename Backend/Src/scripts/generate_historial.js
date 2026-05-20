@@ -80,8 +80,7 @@ const DEFAULT_RANGES = {
   temperatura: [15, 30], aqi: [40, 100], ica: [40, 80], ruido: [40, 70], humedad: [50, 75]
 }
 
-function clamp(v, min, max) { return Math.max(min, Math.min(max, v)) }
-function rand(min, max) { return min + Math.random() * (max - min) }
+const { clamp, randomBetween } = require('../utils/math');
 
 /**
  * Factor diurno para una hora dada: seno normalizado.
@@ -105,23 +104,23 @@ function generateSnapshot(cityName, hour, ranges) {
   const [tMin, tMax] = ranges.temperatura
   const tCenter = (tMin + tMax) / 2
   const tAmp    = (tMax - tMin) / 2
-  const temperatura = clamp(Math.round(tCenter + d * tAmp * 0.45 + rand(-1.5, 1.5)), tMin, tMax)
+  const temperatura = clamp(Math.round(tCenter + d * tAmp * 0.45 + randomBetween(-1.5, 1.5)), tMin, tMax)
 
   const [hMin, hMax] = ranges.humedad
   const tNorm   = (temperatura - tMin) / (tMax - tMin + 0.01)
-  const humedad = clamp(Math.round(hMax - tNorm * (hMax - hMin) * 0.60 + rand(-3, 3)), hMin, hMax)
+  const humedad = clamp(Math.round(hMax - tNorm * (hMax - hMin) * 0.60 + randomBetween(-3, 3)), hMin, hMax)
 
   const [aMin, aMax] = ranges.aqi
   const aCenter = (aMin + aMax) / 2
   const aAmp    = (aMax - aMin) / 2
-  const aqi     = clamp(Math.round(aCenter + d * aAmp * 0.20 + (rush ? aAmp * 0.15 : 0) + rand(-5, 5)), aMin, aMax)
+  const aqi     = clamp(Math.round(aCenter + d * aAmp * 0.20 + (rush ? aAmp * 0.15 : 0) + randomBetween(-5, 5)), aMin, aMax)
 
   const [iMin, iMax] = ranges.ica
   const aqiNorm = (aqi - aMin) / (aMax - aMin + 0.01)
-  const ica     = clamp(Math.round(iMax - aqiNorm * (iMax - iMin) * 0.50 + rand(-3, 3)), iMin, iMax)
+  const ica     = clamp(Math.round(iMax - aqiNorm * (iMax - iMin) * 0.50 + randomBetween(-3, 3)), iMin, iMax)
 
   const [rMin, rMax] = ranges.ruido
-  const ruido   = clamp(Math.round(rand(rMin, rMax) + (rush ? 8 : 0)), rMin, rMax)
+  const ruido   = clamp(Math.round(randomBetween(rMin, rMax) + (rush ? 8 : 0)), rMin, rMax)
 
   return { temperatura, aqi, ica, ruido, humedad }
 }
