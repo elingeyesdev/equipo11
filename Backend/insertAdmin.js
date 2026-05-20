@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const logger = require('./Src/utils/logger');
 
 const pool = new Pool({
   host: 'localhost',
@@ -23,9 +24,9 @@ async function main() {
         password_hash = EXCLUDED.password_hash, 
         nombre = EXCLUDED.nombre;
     `);
-    console.log('Usuario admin insertado/actualizado correctamente:', res.rowCount);
+    logger.info('Usuario admin insertado/actualizado correctamente:', res.rowCount);
   } catch (err) {
-    console.error('Error insertando usuario:', err);
+    logger.error('Error insertando usuario:', err);
   } finally {
     await pool.end();
   }

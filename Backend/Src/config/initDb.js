@@ -1,4 +1,5 @@
 const db = require('./db');
+const logger = require('../utils/logger');
 
 /**
  * Inicializa datos esenciales si las tablas están vacías.
@@ -38,16 +39,16 @@ async function initDatabase() {
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
-    console.log('✅ Tablas de caché verificadas/creadas.');
+    logger.info('✅ Tablas de caché verificadas/creadas.');
   } catch (err) {
-    console.error('❌ Error creando tablas de caché:', err.message);
+    logger.error('❌ Error creando tablas de caché:', err.message);
   }
 
   // 1. Verificar Notificaciones
   try {
     const { rows: notifs } = await db.query('SELECT count(*) FROM configuracion_notificaciones');
     if (parseInt(notifs[0].count) === 0) {
-      console.log('📦 Poblando tabla configuracion_notificaciones...');
+      logger.info('📦 Poblando tabla configuracion_notificaciones...');
       await db.query(`
         INSERT INTO configuracion_notificaciones (tipo, habilitado, destino) VALUES
         ('email', false, ''),
@@ -56,14 +57,14 @@ async function initDatabase() {
       `);
     }
   } catch (err) {
-    console.warn('⚠️ No se pudo inicializar configuracion_notificaciones (posiblemente la tabla no existe aún):', err.message);
+    logger.warn('⚠️ No se pudo inicializar configuracion_notificaciones (posiblemente la tabla no existe aún):', err.message);
   }
 
   // 2. Verificar Umbrales
   try {
     const { rows: umbrales } = await db.query('SELECT count(*) FROM umbrales');
     if (parseInt(umbrales[0].count) === 0) {
-      console.log('📦 Poblando tabla umbrales con valores por defecto...');
+      logger.info('📦 Poblando tabla umbrales con valores por defecto...');
       await db.query(`
         INSERT INTO umbrales (metrica_id, nivel, valor_min, valor_max, color_hex, label) VALUES
         ((SELECT id FROM metricas WHERE clave='aqi'), 1, 0, 50, '#00e400', 'Bueno'),
@@ -80,7 +81,7 @@ async function initDatabase() {
       `);
     }
   } catch (err) {
-    console.warn('⚠️ No se pudo inicializar umbrales (posiblemente la tabla o métricas no existen aún):', err.message);
+    logger.warn('⚠️ No se pudo inicializar umbrales (posiblemente la tabla o métricas no existen aún):', err.message);
   }
 }
 

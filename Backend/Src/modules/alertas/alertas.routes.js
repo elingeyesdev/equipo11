@@ -22,6 +22,7 @@
 const router = require('express').Router()
 const db = require('../../config/db')
 const alertasService = require('./alertas.service')
+const logger = require('../../utils/logger')
 
 // ─── GET /api/alertas ─────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -114,7 +115,7 @@ router.get('/', async (req, res) => {
       alertas: rows,
     })
   } catch (err) {
-    console.error('[alertas] GET /api/alertas error:', err)
+    logger.error('[alertas] GET /api/alertas error:', err)
     res.status(500).json({ error: 'Error interno al obtener alertas' })
   }
 })
@@ -137,7 +138,7 @@ router.patch('/:id/reconocer', async (req, res) => {
 
     res.json({ ok: true })
   } catch (err) {
-    console.error('[alertas] PATCH reconocer error:', err)
+    logger.error('[alertas] PATCH reconocer error:', err)
     res.status(500).json({ error: 'Error interno al reconocer alerta' })
   }
 })

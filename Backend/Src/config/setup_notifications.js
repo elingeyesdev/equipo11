@@ -1,4 +1,5 @@
 const pool = require('./db');
+const logger = require('../utils/logger');
 
 async function setup() {
   try {
@@ -28,9 +29,9 @@ async function setup() {
       `, [tipo, habilitado, destino]);
     }
 
-    console.log('✅ Tabla configuracion_notificaciones creada y sembrada.');
+    logger.info('✅ Tabla configuracion_notificaciones creada y sembrada.');
   } catch (err) {
-    console.error('❌ Error configurando notificaciones:', err);
+    logger.error('❌ Error configurando notificaciones:', err);
   } finally {
     process.exit();
   }

@@ -20,6 +20,7 @@
  */
 
 const db = require('../../config/db')
+const logger = require('../../utils/logger')
 
 // ─── CACHÉ DE UMBRALES ────────────────────────────────────────────────────────
 // Map<metricaClave, [{ id, nivel, valor_min, valor_max, label, severidad }]>
@@ -77,9 +78,9 @@ async function cargarUmbralesCache() {
       })
     }
 
-    console.log(`[Alertas] Caché cargada: ${umbralesCache.size} métricas con umbrales definidos`)
+    logger.info(`[Alertas] Caché cargada: ${umbralesCache.size} métricas con umbrales definidos`)
   } catch (err) {
-    console.error('[Alertas] Error cargando caché de umbrales:', err.message)
+    logger.error('[Alertas] Error cargando caché de umbrales:', err.message)
   }
 }
 
@@ -222,9 +223,9 @@ async function guardarAlertas(alertas) {
       params
     )
 
-    console.log(`[Alertas] ${alertas.length} alerta(s) guardada(s)`)
+    logger.info(`[Alertas] ${alertas.length} alerta(s) guardada(s)`)
   } catch (err) {
-    console.error('[Alertas] Error guardando alertas:', err.message)
+    logger.error('[Alertas] Error guardando alertas:', err.message)
   }
 }
 

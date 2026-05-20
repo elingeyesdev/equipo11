@@ -2,6 +2,7 @@ const db = require('../../config/db');
 const { sendEmail } = require('../../utils/mailer');
 const { sendWhatsAppMessage } = require('../../utils/whatsapp');
 const { sendTelegramMessage } = require('../../utils/telegram');
+const logger = require('../../utils/logger');
 
 /**
  * Notifica a través de los canales configurados.
@@ -10,10 +11,10 @@ const notifyAlert = async (alerta) => {
   try {
     const { rows: settings } = await db.query('SELECT * FROM configuracion_notificaciones WHERE habilitado = TRUE');
     
-    console.log(`[Notificaciones] Procesando alerta para ${alerta.ciudad_nombre}. Canales activos: ${settings.length}`);
+    logger.info(`[Notificaciones] Procesando alerta para ${alerta.ciudad_nombre}. Canales activos: ${settings.length}`);
 
     if (settings.length === 0) {
-      console.log('[Notificaciones] No hay canales habilitados. Abortando.');
+      logger.info('[Notificaciones] No hay canales habilitados. Abortando.');
       return;
     }
 
@@ -45,7 +46,7 @@ const notifyAlert = async (alerta) => {
       }
     }
   } catch (err) {
-    console.error('[Notificaciones] Error procesando notificación:', err.message);
+    logger.error('[Notificaciones] Error procesando notificación:', err.message);
   }
 };
 

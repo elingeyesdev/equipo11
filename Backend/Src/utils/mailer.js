@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 const { getBasicEmailTemplate } = require('./emailTemplates');
+const logger = require('./logger');
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -23,10 +24,10 @@ const sendEmail = async (to, subject, title, message, actionText = '', actionUrl
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Correo enviado a ${to}: ${info.messageId}`);
+    logger.info(`Correo enviado a ${to}: ${info.messageId}`);
     return true;
   } catch (error) {
-    console.error(`Error enviando correo a ${to}:`, error);
+    logger.error(`Error enviando correo a ${to}:`, error);
     return false;
   }
 };

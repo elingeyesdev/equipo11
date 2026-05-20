@@ -14,6 +14,7 @@
 
 const pool = require('../../config/db');
 const LOCALIDADES = require('../simulacion/localidades.data');
+const logger = require('../../utils/logger');
 
 // ─── Helpers matemáticos ──────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ async function actualizarSensores() {
   isFetching = true;
 
   try {
-    console.log('[Sensores IoT] Iniciando actualización de datos reales...');
+    logger.info('[Sensores IoT] Iniciando actualización de datos reales...');
 
     // Fetch en paralelo (2 peticiones batch)
     const [weatherResults, aqiResults] = await Promise.all([
@@ -115,7 +116,7 @@ async function actualizarSensores() {
       fetchAqiBatch(LOCALIDADES)
     ]);
 
-    console.log(`[Sensores IoT] Datos recibidos para ${weatherResults.length} sensores.`);
+    logger.info(`[Sensores IoT] Datos recibidos para ${weatherResults.length} sensores.`);
 
     // Cargar mapping de BD para persistir en lecturas
     let dbMapping = { localidades: {}, metricas: {} };
@@ -184,9 +185,9 @@ async function actualizarSensores() {
       `, [localidadIds, metricaIds, valores]);
     }
 
-    console.log(`[Sensores IoT] ✅ ${LOCALIDADES.length} sensores actualizados. ${localidadIds.length} lecturas guardadas.`);
+    logger.info(`[Sensores IoT] ✅ ${LOCALIDADES.length} sensores actualizados. ${localidadIds.length} lecturas guardadas.`);
   } catch (err) {
-    console.error('[Sensores IoT] ❌ Error en actualización:', err.message);
+    logger.error('[Sensores IoT] ❌ Error en actualización:', err.message);
   } finally {
     isFetching = false;
   }
@@ -219,7 +220,7 @@ async function getSensoresCache() {
       }
     }));
   } catch (err) {
-    console.error('[Sensores IoT] Error leyendo caché:', err.message);
+    logger.error('[Sensores IoT] Error leyendo caché:', err.message);
     return [];
   }
 }
@@ -262,7 +263,7 @@ function startSensorCron() {
   const INTERVAL_MS = 15 * 60 * 1000; // 15 minutos
   actualizarSensores(); // Primera carga inmediata al arrancar
   setInterval(actualizarSensores, INTERVAL_MS);
-  console.log('[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.');
+  logger.info('[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.');
 }
 
 module.exports = { startSensorCron, getSensoresCache, estimarDatosPuntoArbitrario };

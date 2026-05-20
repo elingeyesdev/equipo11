@@ -1,4 +1,5 @@
 const simulacionService = require('./simulacion.service');
+const logger = require('../../utils/logger');
 
 const simulateRange = async (req, res) => {
   try {
@@ -16,7 +17,7 @@ const simulateRange = async (req, res) => {
       range: { startTime, endTime, intervalMinutes: intervalMinutes || 60 }
     });
   } catch (error) {
-    console.error('[Simulación] Error en rango:', error.message);
+    logger.error('[Simulación] Error en rango:', error.message);
     res.status(400).json({ error: error.message });
   }
 };

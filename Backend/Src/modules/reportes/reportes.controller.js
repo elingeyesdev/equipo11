@@ -1,5 +1,6 @@
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
+const logger = require('../../utils/logger');
 
 const generarReporte = async (req, res) => {
   try {
@@ -95,7 +96,7 @@ const generarReporte = async (req, res) => {
       res.status(400).json({ error: 'Formato no soportado (use "pdf" o "excel")' });
     }
   } catch (error) {
-    console.error('Error al generar reporte:', error);
+    logger.error('Error al generar reporte:', error);
     res.status(500).json({ error: 'Error interno al generar el reporte' });
   }
 };

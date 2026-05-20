@@ -1,4 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
+const logger = require('../../utils/logger');
 
 /**
  * Listener para que el bot responda con el Chat ID del usuario.
@@ -8,14 +9,14 @@ const startTelegramListener = () => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     
     if (!token) {
-        console.warn('[Telegram Listener] No hay token configurado. Listener desactivado.');
+        logger.warn('[Telegram Listener] No hay token configurado. Listener desactivado.');
         return;
     }
 
     // Inicializamos el bot en modo polling (escuchando)
     const bot = new TelegramBot(token, { polling: true });
 
-    console.log('✈️ [Telegram Listener] Escuchando mensajes para dar IDs...');
+    logger.info('✈️ [Telegram Listener] Escuchando mensajes para dar IDs...');
 
     // Escuchar cualquier mensaje
     bot.on('message', (msg) => {
@@ -28,16 +29,16 @@ const startTelegramListener = () => {
                            `Cópialo y pégalo en el panel de EnviroSense para recibir alertas críticas aquí.`;
 
         bot.sendMessage(chatId, welcomeMsg, { parse_mode: 'HTML' });
-        console.log(`[Telegram Listener] ID enviado a ${firstName} (${chatId})`);
+        logger.info(`[Telegram Listener] ID enviado a ${firstName} (${chatId})`);
     });
 
     bot.on('polling_error', (error) => {
-        console.error('[Telegram Listener] Error de polling:', error.message);
+        logger.error('[Telegram Listener] Error de polling:', error.message);
     });
 
     // Detener el polling limpiamente cuando Nodemon o el proceso se cierre
     const stopPolling = () => {
-        console.log('[Telegram Listener] Deteniendo polling de Telegram...');
+        logger.info('[Telegram Listener] Deteniendo polling de Telegram...');
         bot.stopPolling();
     };
 

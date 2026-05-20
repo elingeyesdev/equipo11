@@ -18,6 +18,7 @@ yarn-error.log*
 # Archivos de la configuración de IDEs y del OS que no se deberían subir
 .vscode/
 .idea/
+.opencode/
 *.suo
 *.ntvs*
 *.njsproj
@@ -28,6 +29,13 @@ docker-compose.override.yml
 
 # Archivos innecesarios
 ANALISIS_MEJORAS.md
+AGENTS.md
+EnviroSense_LimpiezaArquitectura.md
+GUIA_MIGRACION_PNPM.md
+SKILLS_GUIDE.md
+SKILL.md
+SKILLS.md
+SKILLS.md
 CLAUDE.md
 implementation_plan.md
 PROPUESTA_MAPAS_DE_CALOR.md

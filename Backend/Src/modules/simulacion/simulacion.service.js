@@ -292,6 +292,7 @@ let tickCount = 0
 
 // --- Integración con Base de Datos ---
 const db = require('../../config/db')
+const logger = require('../../utils/logger')
 let dbMapping = { localidades: {}, metricas: {} }
 
 // Throttle: solo persistir 1 vez por hora para no llenar la BD
@@ -306,7 +307,7 @@ async function loadDbMapping() {
     const metRes = await db.query('SELECT id, clave FROM metricas')
     metRes.rows.forEach(r => { dbMapping.metricas[r.clave] = r.id })
   } catch (err) {
-    console.error('[Simulación] Error cargando DB mapping:', err.message)
+    logger.error('[Simulación] Error cargando DB mapping:', err.message)
   }
 }
 
@@ -346,7 +347,7 @@ async function persistReadings(state) {
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
   } catch (err) {
-    console.error('[Simulación] Error guardando snapshot horario:', err.message)
+    logger.error('[Simulación] Error guardando snapshot horario:', err.message)
   }
 }
 
@@ -434,7 +435,7 @@ async function persistInjection(state) {
       ON CONFLICT DO NOTHING
     `, [localidadIds, metricaIds, valores])
   } catch (err) {
-    console.error('[Simulación] Error guardando inyección manual:', err.message)
+    logger.error('[Simulación] Error guardando inyección manual:', err.message)
   }
 }
 

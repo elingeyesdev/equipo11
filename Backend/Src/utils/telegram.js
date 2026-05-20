@@ -1,10 +1,12 @@
 /**
  * Utility for sending Telegram notifications via Bot API.
  */
+const logger = require('./logger');
+
 const sendTelegramMessage = async (chatId, message) => {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken || !chatId) {
-    console.warn('[Telegram] Bot Token or Chat ID missing. Skipping notification.');
+    logger.warn('[Telegram] Bot Token or Chat ID missing. Skipping notification.');
     return false;
   }
 
@@ -26,10 +28,10 @@ const sendTelegramMessage = async (chatId, message) => {
       throw new Error(errorData.description || 'Error sending message');
     }
 
-    console.log(`[Telegram] Mensaje enviado a ${chatId}`);
+    logger.info(`[Telegram] Mensaje enviado a ${chatId}`);
     return true;
   } catch (error) {
-    console.error(`[Telegram] Error enviando mensaje a ${chatId}:`, error.message);
+    logger.error(`[Telegram] Error enviando mensaje a ${chatId}:`, error.message);
     return false;
   }
 };

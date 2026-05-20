@@ -9,6 +9,7 @@
  */
 
 const db = require('../../config/db');
+const logger = require('../../utils/logger');
 
 // ─── Estado interno ─────────────────────────────────────────────────────────
 let tickIntervalId = null;
@@ -233,11 +234,11 @@ async function iniciarSimulacionZona(config, onTick) {
 
   tickIntervalId = setInterval(() => {
     if (tickIndex >= tickData.length) {
-      console.log('🏁 Simulación finalizada');
+      logger.info('🏁 Simulación finalizada');
       detenerSimulacionZona();
       return;
     }
-    console.log(`⏱ Tick ${tickIndex + 1}/${tickData.length} [${metricaClave} - ${globalEsc.nombre}]`);
+    logger.info(`⏱ Tick ${tickIndex + 1}/${tickData.length} [${metricaClave} - ${globalEsc.nombre}]`);
     const frames = tickData[tickIndex];
     onTick({
       sesionId,

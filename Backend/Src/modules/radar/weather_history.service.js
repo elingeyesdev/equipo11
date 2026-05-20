@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
+const logger = require('../../utils/logger');
 
 // Reutilizamos la lógica de directorios de radar.service si fuera necesario, 
 // pero aquí definimos los específicos de historial
@@ -40,19 +41,19 @@ const downloadHistoricalGrib = async (dateObj, cycleHour, offset) => {
     }
 
     const url = getNOAAUrl(dateObj, cycleHour, offset);
-    console.log(`[Weather History] Descargando ${fileName}...`);
+    logger.info(`[Weather History] Descargando ${fileName}...`);
     
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            console.warn(`[Weather History] No disponible: ${fileName} (${response.status})`);
+            logger.warn(`[Weather History] No disponible: ${fileName} (${response.status})`);
             return null;
         }
         const buffer = await response.arrayBuffer();
         fs.writeFileSync(filePath, Buffer.from(buffer));
         return filePath;
     } catch (e) {
-        console.error(`[Weather History] Error descargando ${fileName}:`, e.message);
+        logger.error(`[Weather History] Error descargando ${fileName}:`, e.message);
         return null;
     }
 };
@@ -61,7 +62,7 @@ const downloadHistoricalGrib = async (dateObj, cycleHour, offset) => {
  * Recolecta los últimos N días de datos para entrenamiento
  */
 const collectTrainingData = async (days = 7) => {
-    console.log(`[Weather History] Iniciando recolección de ${days} días para entrenamiento IA...`);
+    logger.info(`[Weather History] Iniciando recolección de ${days} días para entrenamiento IA...`);
     
     const cycles = ['00', '06', '12', '18'];
     const now = new Date();
@@ -82,7 +83,7 @@ const collectTrainingData = async (days = 7) => {
         }
     }
     
-    console.log(`[Weather History] Recolección completada.`);
+    logger.info(`[Weather History] Recolección completada.`);
 };
 
 module.exports = {

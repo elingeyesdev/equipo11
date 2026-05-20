@@ -4,6 +4,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const path = require('path');
+const logger = require('../../utils/logger');
 
 // Configuración de directorios de datos (Persistentes)
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -19,7 +20,7 @@ const initDirectories = () => {
     if (!fs.existsSync(DATA_PROCESSED_DIR)) fs.mkdirSync(DATA_PROCESSED_DIR, { recursive: true });
     if (!fs.existsSync(DATA_HIST_RAW_DIR)) fs.mkdirSync(DATA_HIST_RAW_DIR, { recursive: true });
     if (!fs.existsSync(DATA_HIST_PROCESSED_DIR)) fs.mkdirSync(DATA_HIST_PROCESSED_DIR, { recursive: true });
-    console.log(`[Radar Scraper] Directorios de datos inicializados.`);
+    logger.info(`[Radar Scraper] Directorios de datos inicializados.`);
 };
 
 let isScraping = false;
@@ -68,7 +69,7 @@ const getNOAAUrlForDate = async (dateObj, hour) => {
             return { url, dateStr, hour };
         }
     } catch(e) {
-       console.warn(`[Radar Scraper] Error conectando a NOMADS para ${dateStr} ${hour}z: ${e.message}`);
+       logger.warn(`[Radar Scraper] Error conectando a NOMADS para ${dateStr} ${hour}z: ${e.message}`);
     }
     return null;
 };
@@ -113,7 +114,7 @@ const extractGribData = async (gribPath, shortName, gridKeys) => {
         }
         return data;
     } catch (err) {
-        console.warn(`[Radar Scraper] Warning: No se pudo extraer ${shortName} o no está en el GRIB. ${err.message}`);
+        logger.warn(`[Radar Scraper] Warning: No se pudo extraer ${shortName} o no está en el GRIB. ${err.message}`);
         return new Map();
     }
 };
@@ -131,23 +132,23 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
 
         // 1. Intentar cargar desde Caché Procesada (JSON)
         if (fs.existsSync(jsonPath)) {
-            console.log(`[Radar Scraper] Encontrada caché procesada (JSON): ${jsonFileName}. Cargando...`);
+            logger.info(`[Radar Scraper] Encontrada caché procesada (JSON): ${jsonFileName}. Cargando...`);
             const rawJson = fs.readFileSync(jsonPath, 'utf8');
             gridData = JSON.parse(rawJson);
         } else {
             // 2. Si no hay JSON, procesar GRIB
             if (fs.existsSync(gribPath)) {
-                console.log(`[Radar Scraper] El archivo GRIB ${gribFileName} ya existe localmente.`);
+                logger.info(`[Radar Scraper] El archivo GRIB ${gribFileName} ya existe localmente.`);
             } else {
-                console.log(`[Radar Scraper] Descargando GRIB desde NOAA para ${forecastTimeStr}...`);
+                logger.info(`[Radar Scraper] Descargando GRIB desde NOAA para ${forecastTimeStr}...`);
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Fallo en descarga GRIB: ${response.statusText}`);
                 const buffer = await response.arrayBuffer();
                 fs.writeFileSync(gribPath, Buffer.from(buffer));
-                console.log(`[Radar Scraper] GRIB guardado en ${gribPath}.`);
+                logger.info(`[Radar Scraper] GRIB guardado en ${gribPath}.`);
             }
 
-            console.log(`[Radar Scraper] Extrayendo datos del GRIB...`);
+            logger.info(`[Radar Scraper] Extrayendo datos del GRIB...`);
             if (!isBackground) scrapeProgress = 40;
             const gridKeys = generateGridKeys();
             
@@ -161,7 +162,7 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                 extractGribData(gribPath, 'vis', gridKeys)
             ]);
 
-            console.log(`[Radar Scraper] Calculando vectores para ${forecastTimeStr}...`);
+            logger.info(`[Radar Scraper] Calculando vectores para ${forecastTimeStr}...`);
             if (!isBackground) scrapeProgress = 70;
 
             for (const key of gridKeys) {
@@ -198,11 +199,11 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
 
             // Guardar JSON para la próxima vez
             fs.writeFileSync(jsonPath, JSON.stringify(gridData));
-            console.log(`[Radar Scraper] Caché JSON creada: ${jsonFileName}`);
+            logger.info(`[Radar Scraper] Caché JSON creada: ${jsonFileName}`);
         }
 
         // 3. Insertar en Base de Datos (Bulk Insert para velocidad)
-        console.log(`[Radar Scraper] Insertando ${gridData.length} nodos en la base de datos...`);
+        logger.info(`[Radar Scraper] Insertando ${gridData.length} nodos en la base de datos...`);
         await pool.query('DELETE FROM radar_grid_cache WHERE forecast_time = $1', [forecastTimeStr]);
         
         // Dividir en chunks para no saturar la conexión
@@ -224,9 +225,9 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
             );
         }
         
-        console.log(`[Radar Scraper] ✅ Completado ${forecastTimeStr}.`);
+        logger.info(`[Radar Scraper] ✅ Completado ${forecastTimeStr}.`);
     } catch (err) {
-        console.error(`[Radar Scraper] ❌ Error procesando ${forecastTimeStr}:`, err);
+        logger.error(`[Radar Scraper] ❌ Error procesando ${forecastTimeStr}:`, err);
     }
 };
 
@@ -240,7 +241,7 @@ const scrapeHistoricalBackground = async () => {
         const { collectTrainingData } = require('./weather_history.service');
         await collectTrainingData(7); // Bajar 7 días de entrenamiento
         
-        console.log('[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...');
+        logger.info('[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...');
         
         const hours = ['00', '06', '12', '18'];
         const now = new Date();
@@ -263,9 +264,9 @@ const scrapeHistoricalBackground = async () => {
                 }
             }
         }
-        console.log('[Radar Scraper] Histórico descargado exitosamente.');
+        logger.info('[Radar Scraper] Histórico descargado exitosamente.');
     } catch (err) {
-        console.error('[Radar Scraper] Error en histórico de fondo:', err);
+        logger.error('[Radar Scraper] Error en histórico de fondo:', err);
     } finally {
         isScrapingHistory = false;
     }
@@ -277,7 +278,7 @@ const runScraper = async () => {
   scrapeProgress = 0;
   
   try {
-    console.log('[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...');
+    logger.info('[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...');
     
     // Migraciones para tablas existentes (initDb se encarga de la creación inicial)
 
@@ -317,16 +318,16 @@ const runScraper = async () => {
         `);
         
         if (parseInt(pkColsRes.rows[0].count) < 3) {
-           console.log(`[Radar Scraper] Actualizando Primary Key de radar_grid_cache (de ${pkColsRes.rows[0].count} a 3 columnas)...`);
+           logger.info(`[Radar Scraper] Actualizando Primary Key de radar_grid_cache (de ${pkColsRes.rows[0].count} a 3 columnas)...`);
            await pool.query(`ALTER TABLE radar_grid_cache DROP CONSTRAINT ${constraintName}`);
            await pool.query('ALTER TABLE radar_grid_cache ADD PRIMARY KEY (latitud, longitud, forecast_time)');
         }
       }
     } catch (e) {
-      console.warn('[Radar Scraper] Warning en migración de PK:', e.message);
+      logger.warn('[Radar Scraper] Warning en migración de PK:', e.message);
     }
 
-    console.log('[Radar Scraper] Buscando último modelo GFS mundial...');
+    logger.info('[Radar Scraper] Buscando último modelo GFS mundial...');
     initDirectories(); // Asegurar carpetas antes de procesar
     const result = await getLatestNOAAUrl();
     const { url, dateStr, hour } = result;
@@ -336,7 +337,7 @@ const runScraper = async () => {
     await processGribForUrl(url, dateStr, hour, forecastTimeStr, false);
     
   } catch (error) {
-    console.error('[Radar Scraper] Error fatal Bulk Data:', error);
+    logger.error('[Radar Scraper] Error fatal Bulk Data:', error);
   } finally {
     isScraping = false;
     scrapeProgress = 100;
@@ -351,7 +352,7 @@ const runScraper = async () => {
  * Descarga y procesa los pronósticos para las próximas 24h (f003, f006, f009, f012)
  */
 const scrapeFutureForecasts = async () => {
-    console.log('[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...');
+    logger.info('[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...');
     const result = await getLatestNOAAUrl(); // Usar el ciclo más reciente
     const { dateStr, hour } = result;
     
@@ -375,7 +376,7 @@ const scrapeFutureForecasts = async () => {
             await processGribForUrl(url, dateStr, `${hour}_${offset}`, forecastTimeStr, true);
         }
     }
-    console.log('[Radar Scraper] Pronósticos futuros completados.');
+    logger.info('[Radar Scraper] Pronósticos futuros completados.');
 };
 
 const getRadarData = async (targetTime = null) => {

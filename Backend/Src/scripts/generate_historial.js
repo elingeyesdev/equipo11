@@ -13,6 +13,7 @@
  */
 
 const { Pool } = require('pg')
+const logger = require('../utils/logger');
 
 const pool = new Pool({
   host:     process.env.DB_HOST     || 'db',
@@ -127,7 +128,7 @@ function generateSnapshot(cityName, hour, ranges) {
 
 async function main() {
   const client = await pool.connect()
-  console.log('✅ Conectado a PostgreSQL')
+  logger.info('✅ Conectado a PostgreSQL')
 
   try {
     // Cargar localidades y métricas
@@ -146,11 +147,11 @@ async function main() {
     // Fallback final: fuente_id = 1
     const fuenteId = fuentes[0]?.id || 1
 
-    console.log(`📦 Localidades: ${localidades.length}, Métricas: ${metricas.length}, Fuente ID: ${fuenteId}`)
+    logger.info(`📦 Localidades: ${localidades.length}, Métricas: ${metricas.length}, Fuente ID: ${fuenteId}`)
 
     // Verificar cuántas filas hay ya
     const { rows: [countRow] } = await client.query('SELECT COUNT(*) FROM lecturas')
-    console.log(`📊 Lecturas existentes: ${countRow.count}`)
+    logger.info(`📊 Lecturas existentes: ${countRow.count}`)
 
     const metricaMap = {}
     metricas.forEach(m => { metricaMap[m.clave] = m.id })
@@ -160,7 +161,7 @@ async function main() {
     const now     = new Date()
     const inserts = []
 
-    console.log(`⏳ Generando ${DIAS} días × ${HORAS} horas × ${localidades.length} ciudades...`)
+    logger.info(`⏳ Generando ${DIAS} días × ${HORAS} horas × ${localidades.length} ciudades...`)
 
     for (let dOffset = DIAS - 1; dOffset >= 0; dOffset--) {
       for (let h = 0; h < HORAS; h++) {
@@ -183,7 +184,7 @@ async function main() {
       }
     }
 
-    console.log(`💾 Insertando ${inserts.length} lecturas en lotes de 5000...`)
+    logger.info(`💾 Insertando ${inserts.length} lecturas en lotes de 5000...`)
 
     // Insertar en lotes para no agotar la memoria
     const BATCH = 5000
@@ -199,13 +200,13 @@ async function main() {
       process.stdout.write(`\r   ${inserted}/${inserts.length} (${Math.round(inserted/inserts.length*100)}%)`)
     }
 
-    console.log(`\n✅ Historial generado: ${inserted} lecturas de ${DIAS * HORAS} snapshots horarios`)
+    logger.info(`\n✅ Historial generado: ${inserted} lecturas de ${DIAS * HORAS} snapshots horarios`)
 
     const { rows: [newCount] } = await client.query('SELECT COUNT(*) FROM lecturas')
-    console.log(`📊 Total lecturas ahora: ${newCount.count}`)
+    logger.info(`📊 Total lecturas ahora: ${newCount.count}`)
 
   } catch (err) {
-    console.error('❌ Error:', err.message)
+    logger.error('❌ Error:', err.message)
     process.exit(1)
   } finally {
     client.release()

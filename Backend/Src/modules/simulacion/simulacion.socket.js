@@ -1,6 +1,7 @@
 const simulacionService = require('./simulacion.service')
 const alertasService   = require('../alertas/alertas.service')
 const notificacionesService = require('../notificaciones/notificaciones.service')
+const logger = require('../../utils/logger')
 
 const DEFAULT_INTERVAL = 3000
 
@@ -11,7 +12,7 @@ const DEFAULT_INTERVAL = 3000
 
 function registerSocketEvents(io) {
   io.on('connection', (socket) => {
-    console.log(`🔌 Cliente conectado: ${socket.id}`)
+    logger.info(`🔌 Cliente conectado: ${socket.id}`)
 
     socket.emit('simulacion:estado', {
       running: simulacionService.isRunning(),
@@ -38,7 +39,7 @@ function registerSocketEvents(io) {
       })
 
       if (started) {
-        console.log(`▶️  Simulación iniciada (intervalo: ${interval}ms)`)
+        logger.info(`▶️  Simulación iniciada (intervalo: ${interval}ms)`)
         io.emit('simulacion:estado', { running: true, interval })
       }
     })
@@ -47,7 +48,7 @@ function registerSocketEvents(io) {
       const stopped = simulacionService.stop()
 
       if (stopped) {
-        console.log('⏹  Simulación detenida')
+        logger.info('⏹  Simulación detenida')
         io.emit('simulacion:estado', { running: false })
       }
     })
@@ -59,7 +60,7 @@ function registerSocketEvents(io) {
       if (ok) {
         const snapshot = simulacionService.getCurrentState()
         io.emit('simulacion:datos', snapshot)
-        console.log(`💉 Datos inyectados en "${cityId}":`, data)
+        logger.info(`💉 Datos inyectados en "${cityId}":`, data)
 
         // ─ Detección de alertas solo para la ciudad inyectada ─
         // Evaluamos un mini-tick que contiene únicamente la ciudad afectada
@@ -82,7 +83,7 @@ function registerSocketEvents(io) {
     })
 
     socket.on('disconnect', () => {
-      console.log(`❌ Cliente desconectado: ${socket.id}`)
+      logger.info(`❌ Cliente desconectado: ${socket.id}`)
     })
   })
 }

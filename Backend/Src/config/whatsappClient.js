@@ -4,12 +4,13 @@ const fs = require('fs');
 const path = require('path');
 
 const { execSync } = require('child_process');
+const logger = require('../utils/logger');
 
 // 1. Matar procesos huérfanos de Chromium que se quedan colgados cuando Nodemon reinicia la app
 try {
     execSync('pkill -f chrome');
     execSync('pkill -f chromium');
-    console.log('🧹 [WhatsApp] Procesos huérfanos de Chrome/Chromium cerrados.');
+    logger.info('🧹 [WhatsApp] Procesos huérfanos de Chrome/Chromium cerrados.');
 } catch (e) {
     // Ignorar si no hay procesos
 }
@@ -26,9 +27,9 @@ const deleteSingletonLock = (dirPath) => {
             } else if (file === 'SingletonLock') {
                 try {
                     fs.unlinkSync(curPath);
-                    console.log('🧹 [WhatsApp] Bloqueo de sesión anterior limpiado en:', curPath);
+                    logger.info('🧹 [WhatsApp] Bloqueo de sesión anterior limpiado en:', curPath);
                 } catch (e) {
-                    console.warn('[WhatsApp] No se pudo borrar el bloqueo, intentando continuar...', e.message);
+                    logger.warn('[WhatsApp] No se pudo borrar el bloqueo, intentando continuar...', e.message);
                 }
             }
         }
@@ -57,23 +58,23 @@ let qrShown = false;
 client.on('qr', (qr) => {
     if (qrShown) return;
     qrShown = true;
-    console.log('---------------------------------------------------------');
-    console.log('SCAN THIS QR CODE WITH WHATSAPP TO CONNECT:');
+    logger.info('---------------------------------------------------------');
+    logger.info('SCAN THIS QR CODE WITH WHATSAPP TO CONNECT:');
     qrcode.generate(qr, { small: true });
-    console.log('---------------------------------------------------------');
-    console.log('💡 El código QR se muestra solo una vez para evitar saturar la consola.');
+    logger.info('---------------------------------------------------------');
+    logger.info('💡 El código QR se muestra solo una vez para evitar saturar la consola.');
 });
 
 client.on('ready', () => {
-    console.log('✅ WhatsApp Web Client is READY!');
+    logger.info('✅ WhatsApp Web Client is READY!');
 });
 
 client.on('authenticated', () => {
-    console.log('✅ WhatsApp Authenticated');
+    logger.info('✅ WhatsApp Authenticated');
 });
 
 client.on('auth_failure', (msg) => {
-    console.error('❌ WhatsApp Auth Failure:', msg);
+    logger.error('❌ WhatsApp Auth Failure:', msg);
 });
 
 // Inicializamos el cliente

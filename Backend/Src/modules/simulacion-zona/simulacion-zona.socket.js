@@ -14,6 +14,7 @@
  */
 
 const zonaService = require('./simulacion-zona.service');
+const logger = require('../../utils/logger');
 
 function registerZonaSocketEvents(io) {
   io.on('connection', (socket) => {
@@ -57,7 +58,7 @@ function registerZonaSocketEvents(io) {
         return;
       }
 
-      console.log(`🔬 Iniciando simulación de zonas: ${metricaClave} (${finalZonas.length} zonas)`);
+      logger.info(`🔬 Iniciando simulación de zonas: ${metricaClave} (${finalZonas.length} zonas)`);
 
       try {
         const resultado = await zonaService.iniciarSimulacionZona(
@@ -67,7 +68,7 @@ function registerZonaSocketEvents(io) {
           }
         );
 
-        console.log(`✅ Zonas iniciadas — sesionId: ${resultado.sesionId}`);
+        logger.info(`✅ Zonas iniciadas — sesionId: ${resultado.sesionId}`);
         io.emit('zona:estado', {
           running: true,
           sesionId: resultado.sesionId,
@@ -79,22 +80,22 @@ function registerZonaSocketEvents(io) {
         });
 
       } catch (err) {
-        console.error('[zona:iniciar] Error:', err.message);
+        logger.error('[zona:iniciar] Error:', err.message);
         socket.emit('zona:error', { message: err.message });
       }
     });
 
     // ─── Detener simulación de zona ──────────────────────────────────────────
     socket.on('zona:detener', async () => {
-      console.log('⏹  Deteniendo simulación de zona');
+      logger.info('⏹  Deteniendo simulación de zona');
       try {
         const stopped = await zonaService.detenerSimulacionZona();
         if (stopped) {
           io.emit('zona:estado', { running: false });
-          console.log('✅ Simulación de zona detenida');
+          logger.info('✅ Simulación de zona detenida');
         }
       } catch (err) {
-        console.error('[zona:detener] Error:', err.message);
+        logger.error('[zona:detener] Error:', err.message);
         socket.emit('zona:error', { message: err.message });
       }
     });

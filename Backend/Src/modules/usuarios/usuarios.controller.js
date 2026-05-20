@@ -1,11 +1,12 @@
 const db = require('../../config/db')
+const logger = require('../../utils/logger')
 
 const getRoles = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM roles ORDER BY id')
     res.json({ ok: true, roles: rows })
   } catch (error) {
-    console.error('Error al obtener roles:', error)
+    logger.error('Error al obtener roles:', error)
     res.status(500).json({ ok: false, mensaje: 'Error al obtener roles' })
   }
 }
@@ -21,7 +22,7 @@ const getUsuarios = async (req, res) => {
     const { rows } = await db.query(query)
     res.json({ ok: true, usuarios: rows })
   } catch (error) {
-    console.error('Error al obtener usuarios:', error)
+    logger.error('Error al obtener usuarios:', error)
     res.status(500).json({ ok: false, mensaje: 'Error al obtener usuarios' })
   }
 }
@@ -42,7 +43,7 @@ const updateUsuarioRol = async (req, res) => {
 
     res.json({ ok: true, mensaje: 'Rol de usuario actualizado' })
   } catch (error) {
-    console.error('Error al actualizar rol de usuario:', error)
+    logger.error('Error al actualizar rol de usuario:', error)
     res.status(500).json({ ok: false, mensaje: 'Error al actualizar el rol' })
   }
 }
@@ -63,7 +64,7 @@ const updateUsuarioEstado = async (req, res) => {
 
     res.json({ ok: true, mensaje: 'Estado del usuario actualizado' })
   } catch (error) {
-    console.error('Error al actualizar estado del usuario:', error)
+    logger.error('Error al actualizar estado del usuario:', error)
     res.status(500).json({ ok: false, mensaje: 'Error al actualizar el estado' })
   }
 }

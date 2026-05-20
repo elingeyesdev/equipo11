@@ -1,4 +1,5 @@
 const db = require('../../config/db')
+const logger = require('../../utils/logger')
 
 const historialController = {
   /**
@@ -34,7 +35,7 @@ const historialController = {
 
       res.json([...horaMap.values()])
     } catch (err) {
-      console.error('[historial/ciudad] error:', err)
+      logger.error('[historial/ciudad] error:', err)
       res.status(500).json({ msg: 'Error obteniendo historial de ciudad', error: err.message })
     }
   },
@@ -80,7 +81,7 @@ const historialController = {
 
       res.json(timeline)
     } catch (err) {
-      console.error('[historial] error:', err)
+      logger.error('[historial] error:', err)
       res.status(500).json({ msg: 'Error obteniendo historial', error: err.message })
     }
   },
@@ -116,7 +117,7 @@ const historialController = {
 
       res.json({ msg: 'Datos de prueba inyectados (24 horas)', count: inserts.length })
     } catch (err) {
-      console.error('[historial] seed error:', err)
+      logger.error('[historial] seed error:', err)
       res.status(500).json({ msg: 'Error en seeding', error: err.message })
     }
   },
@@ -126,7 +127,7 @@ const historialController = {
       await db.query('DELETE FROM lecturas')
       res.json({ msg: 'Todo el historial ha sido borrado exitosamente.' })
     } catch (err) {
-      console.error('[historial] clear error:', err)
+      logger.error('[historial] clear error:', err)
       res.status(500).json({ msg: 'Error limpiando base de datos', error: err.message })
     }
   }

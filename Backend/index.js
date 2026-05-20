@@ -15,6 +15,7 @@ const { runScraper } = require('./Src/modules/radar/radar.service')
 const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
 const { startSensorCron } = require('./Src/modules/sensores/sensores.service')
+const logger = require('./Src/utils/logger');
 
 const PORT = process.env.PORT || 3000
 
@@ -36,16 +37,16 @@ registerZonaSocketEvents(io)
 
 // Iniciar el servidor
 server.listen(PORT, async () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
-  console.log(`🔌 WebSocket activo en el mismo puerto`)
+  logger.info(`🚀 Servidor corriendo en http://localhost:${PORT}`)
+  logger.info(`🔌 WebSocket activo en el mismo puerto`)
   
   // 1. PRIMERO: Verificar y poblar datos iniciales (Asegura que las tablas existan antes que los servicios)
   try {
     const { initDatabase } = require('./Src/config/initDb')
     await initDatabase()
-    console.log('✅ Base de datos inicializada correctamente')
+    logger.info('✅ Base de datos inicializada correctamente')
   } catch (err) {
-    console.error('❌ Error FATAL al inicializar base de datos:', err)
+    logger.error('❌ Error FATAL al inicializar base de datos:', err)
   }
 
   // 2. DESPUÉS: Iniciar servicios que dependen de la base de datos

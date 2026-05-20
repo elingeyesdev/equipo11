@@ -2,6 +2,7 @@
  * Utility for sending WhatsApp notifications via whatsapp-web.js (Real session).
  */
 const client = require('../config/whatsappClient');
+const logger = require('./logger');
 
 const sendWhatsAppMessage = async (number, message) => {
   try {
@@ -15,15 +16,15 @@ const sendWhatsAppMessage = async (number, message) => {
     // Verificamos si el cliente está listo
     // Note: client.pupPage is a way to check if it's initialized
     if (!client.info) {
-        console.warn('[WhatsApp] El cliente no está listo aún. Escanea el QR primero.');
+        logger.warn('[WhatsApp] El cliente no está listo aún. Escanea el QR primero.');
         return false;
     }
 
     await client.sendMessage(chatId, message);
-    console.log(`[WhatsApp] Mensaje enviado correctamente a ${chatId}`);
+        logger.info(`[WhatsApp] Mensaje enviado correctamente a ${chatId}`);
     return true;
   } catch (error) {
-    console.error(`[WhatsApp] Error enviando mensaje a ${number}:`, error.message);
+        logger.error(`[WhatsApp] Error enviando mensaje a ${number}:`, error.message);
     return false;
   }
 };

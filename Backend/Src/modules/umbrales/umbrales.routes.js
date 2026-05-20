@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const db = require('../../config/db')
+const logger = require('../../utils/logger')
 
 /**
  * GET /api/umbrales
@@ -53,7 +54,7 @@ async function getUmbrales(req, res) {
 
     res.json(rows)
   } catch (err) {
-    console.error('[umbrales] Error:', err)
+    logger.error('[umbrales] Error:', err)
     res.status(500).json({ error: 'Error interno al obtener umbrales' })
   }
 }

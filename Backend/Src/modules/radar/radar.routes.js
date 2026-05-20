@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../../config/db');
 const { getRadarData } = require('./radar.service');
+const logger = require('../../utils/logger');
 const router = express.Router();
 
 router.get('/test-db', async (req, res) => {
@@ -18,7 +19,7 @@ router.get('/available-dates', async (req, res) => {
     const dates = result.rows.map(r => r.forecast_time);
     res.json(dates);
   } catch (error) {
-    console.error('Error detallado en available-dates:', error);
+    logger.error('Error detallado en available-dates:', error);
     res.status(500).json({ error: 'Error al obtener fechas disponibles: ' + error.message });
   }
 });
@@ -29,7 +30,7 @@ router.get('/bolivia', async (req, res) => {
     const data = await getRadarData(time);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching radar data:', error);
+    logger.error('Error fetching radar data:', error);
     res.status(500).json({ error: 'Error interno del servidor al obtener datos del radar' });
   }
 });
@@ -41,7 +42,7 @@ router.get('/prediction', async (req, res) => {
     const data = await getAiRefinedRadar(time);
     res.json(data);
   } catch (error) {
-    console.error('Error fetching AI prediction:', error);
+    logger.error('Error fetching AI prediction:', error);
     res.status(500).json({ error: 'Error interno en la predicción IA' });
   }
 });

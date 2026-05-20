@@ -1,5 +1,6 @@
 const pool = require('../../config/db');
 const { getRadarData } = require('./radar.service');
+const logger = require('../../utils/logger');
 
 /**
  * Calcula el sesgo local (Bias) comparando NOAA con sensores reales.
@@ -39,10 +40,10 @@ const calculateLocalBias = async () => {
         }
 
         const avgBias = count > 0 ? totalSpeedDiff / count : 1;
-        console.log(`[Weather AI] Sesgo local calculado: x${avgBias.toFixed(2)} (basado en ${count} sensores)`);
+        logger.info(`[Weather AI] Sesgo local calculado: x${avgBias.toFixed(2)} (basado en ${count} sensores)`);
         return { speedFactor: avgBias };
     } catch (e) {
-        console.error('[Weather AI] Error calculando sesgo:', e.message);
+        logger.error('[Weather AI] Error calculando sesgo:', e.message);
         return { speedFactor: 1 };
     }
 };
