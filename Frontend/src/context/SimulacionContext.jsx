@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
 import { API_URL } from '../config/api'
+import { useToast } from '../components/Toast/Toast'
 
 const SimulacionContext = createContext(null)
 
 const SOCKET_URL = API_URL
 
 export function SimulacionProvider({ children }) {
+  const { addToast } = useToast()
   const socketRef = useRef(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isRunning, setIsRunning]     = useState(false)
@@ -116,7 +118,7 @@ export function SimulacionProvider({ children }) {
 
     socket.on('zona:error', (payload) => {
       console.error('⚠️ Error en simulación de zona:', payload.message)
-      alert(`Error en simulación: ${payload.message}`)
+      addToast(`Error en simulación: ${payload.message}`, 'error')
       setZonaSimActiva(false)
     })
 

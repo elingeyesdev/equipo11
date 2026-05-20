@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
+import { useToast } from '../Toast/Toast'
 import './FronterasPanel.css'
 
 const COUNTRIES_API = 'https://countriesnow.space/api/v0.1'
@@ -60,6 +61,7 @@ function SearchableComboBox({ value, onChange, options, disabled, placeholder })
 }
 
 export default function FronterasPanel({ onBoundarySelect, onStartSimulation, isRunning }) {
+  const { addToast } = useToast()
   const { 
     isComparing, setIsComparing, 
     zona1Cfg: zona1, setZona1Cfg: setZona1, 
@@ -306,8 +308,8 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
   }
 
   const handleStart = () => {
-    if (!zona1.result) return alert("Selecciona al menos una zona válida (País/Departamento/Provincia).")
-    if (isComparing && !zona2.result) return alert("Selecciona la segunda zona para comparar.")
+    if (!zona1.result) return addToast("Selecciona al menos una zona válida (País/Departamento/Provincia).", 'warning')
+    if (isComparing && !zona2.result) return addToast("Selecciona la segunda zona para comparar.", 'warning')
 
     const fronteras = [zona1.result]
     if (isComparing && zona2.result) fronteras.push(zona2.result)

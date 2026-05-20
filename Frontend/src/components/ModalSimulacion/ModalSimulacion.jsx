@@ -5,6 +5,7 @@
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSimulacion } from '../../context/SimulacionContext';
+import { useToast } from '../Toast/Toast';
 import ESCENARIOS from './escenarios.frontend';
 import './ModalSimulacion.css';
 
@@ -85,6 +86,7 @@ function EscenarioCard({ escenario, selected, onSelect, metricaColor }) {
 }
 
 function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
+  const { addToast } = useToast()
   const { iniciarZona, detenerZona, zonaSimActiva } = useSimulacion();
 
   // Métrica activa (global para ambas zonas para simplificar la comparativa)
@@ -152,7 +154,7 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
       onClose();
     } catch (err) {
       console.error('❌ Error al iniciar simulación:', err);
-      alert('No se pudo iniciar la simulación. Revisa la consola.');
+      addToast('No se pudo iniciar la simulación. Revisa la consola.', 'error');
     } finally {
       setIsLaunching(false);
     }

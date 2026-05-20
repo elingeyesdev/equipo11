@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useToast } from '../../components/Toast/Toast'
 import { API_BASE } from '../../config/api'
 import '../PagePlaceholder.css'
 import './Usuarios.css'
@@ -19,6 +20,7 @@ const PERMISOS_BASE = [
 ]
 
 function Usuarios() {
+  const { addToast } = useToast()
   const [usuarios, setUsuarios] = useState([])
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -74,10 +76,10 @@ function Usuarios() {
       if (data.ok) {
         cargarDatos()
       } else {
-        alert('Error al cambiar rol: ' + data.mensaje)
+        addToast('Error al cambiar rol: ' + data.mensaje, 'error')
       }
     } catch (err) {
-      alert('Error de conexión al cambiar rol')
+      addToast('Error de conexión al cambiar rol', 'error')
     }
   }
 
@@ -96,10 +98,10 @@ function Usuarios() {
       if (data.ok) {
         cargarDatos()
       } else {
-        alert('Error al cambiar estado: ' + data.mensaje)
+        addToast('Error al cambiar estado: ' + data.mensaje, 'error')
       }
     } catch (err) {
-      alert('Error de conexión al cambiar estado')
+      addToast('Error de conexión al cambiar estado', 'error')
     }
   }
 

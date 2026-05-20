@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUnidades } from '../../hooks/useUnidades'
 import { formatearValor } from '../../utils/unidades'
+import { useToast } from '../../components/Toast/Toast'
 import { API_BASE } from '../../config/api'
 import './Reportes.css'
 import '../PagePlaceholder.css'
@@ -312,6 +313,7 @@ function KpiCard({ label, sufijo, colorVar, icon, stats }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Reportes() {
+  const { addToast } = useToast()
   const [historial, setHistorial]           = useState([])
   const [loading, setLoading]               = useState(true)
   const [ciudadFiltro, setCiudadFiltro]     = useState('')
@@ -465,7 +467,7 @@ export default function Reportes() {
       a.remove()
       URL.revokeObjectURL(url)
     } catch (err) {
-      alert(err.message)
+      addToast(err.message, 'error')
     }
   }
 

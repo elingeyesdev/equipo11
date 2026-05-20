@@ -9,6 +9,7 @@
  *  - Paginación simple (anterior / siguiente)
  */
 import { useState, useEffect, useCallback } from 'react'
+import { useToast } from '../../components/Toast/Toast'
 import { API_BASE } from '../../config/api'
 import './Alertas.css'
 import '../PagePlaceholder.css'
@@ -39,6 +40,7 @@ function fmtFecha(iso) {
 }
 
 export default function Alertas() {
+  const { addToast } = useToast()
   // ─── Filtros ──────────────────────────────────────────────────────────────
   const [desde,     setDesde]     = useState('')
   const [hasta,     setHasta]     = useState('')
@@ -99,7 +101,7 @@ export default function Alertas() {
         a.id === id ? { ...a, reconocida: true, reconocida_en: new Date().toISOString() } : a
       ))
     } catch (err) {
-      alert('No se pudo reconocer la alerta: ' + err.message)
+      addToast('No se pudo reconocer la alerta: ' + err.message, 'error')
     }
   }
 

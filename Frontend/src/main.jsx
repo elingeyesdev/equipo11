@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { SimulacionProvider } from './context/SimulacionContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { ToastProvider } from './components/Toast/Toast'
 import './index.css'
 import App from './App.jsx'
 
@@ -16,9 +17,11 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
-      <SimulacionProvider>
-        <RouterProvider router={router} />
-      </SimulacionProvider>
+      <ToastProvider>
+        <SimulacionProvider>
+          <RouterProvider router={router} />
+        </SimulacionProvider>
+      </ToastProvider>
     </ThemeProvider>
   </StrictMode>,
 )
