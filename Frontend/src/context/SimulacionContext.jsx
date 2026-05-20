@@ -43,7 +43,7 @@ export function SimulacionProvider({ children }) {
   const [heatmapMetric, setHeatmapMetric] = useState('aqi')
   const [showSensors, setShowSensors] = useState(true)
   const [isParticlesActive, setIsParticlesActive] = useState(false)
-  const [particleFilters, setParticleFilters] = useState({ rain: true, snow: true, wind: true, fog: true })
+  const [particleFilters, setParticleFilters] = useState({ rain: false, snow: false, wind: false, fog: false })
   const [isHistoricalMode, setIsHistoricalMode] = useState(false)
   const [isDynamicHistoricalMode, setIsDynamicHistoricalMode] = useState(false)
 

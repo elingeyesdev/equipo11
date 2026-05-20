@@ -253,7 +253,7 @@ export const getFullDataForPoint = async (lat, lng) => {
       axios.get('https://api.open-meteo.com/v1/forecast', {
         params: {
           latitude: lat, longitude: lng,
-          current: 'temperature_2m,relative_humidity_2m,weather_code',
+          current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
           timezone: 'auto'
         }
       }),
@@ -269,13 +269,14 @@ export const getFullDataForPoint = async (lat, lng) => {
     const temperatura  = wRes.data?.current?.temperature_2m         ?? null;
     const humedad      = wRes.data?.current?.relative_humidity_2m   ?? null;
     const weatherCode  = wRes.data?.current?.weather_code           ?? null;
+    const windSpeed    = wRes.data?.current?.wind_speed_10m         ?? null;
     const aqi          = aRes.data?.current?.european_aqi           ?? null;
 
     // Estimar ICA y Ruido con datos reales — nunca quedan en blanco
     const ica   = (humedad !== null) ? estimateICA(humedad, aqi ?? 50, weatherCode ?? 0) : null;
     const ruido = estimateRuido();
 
-    return { temperatura, humedad, aqi, ica, ruido, weatherCode };
+    return { temperatura, humedad, aqi, ica, ruido, weatherCode, windSpeed };
   } catch (err) {
     console.error('[getFullDataForPoint] Error al obtener datos:', err.message);
     return null;

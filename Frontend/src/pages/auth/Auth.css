@@ -141,7 +141,7 @@
   background: var(--moss);
   margin-left: 4px;
   vertical-align: middle;
-  box-shadow: 0 0 0 3px rgba(87,160,98,.18);
+  box-shadow: 0 0 0 3px var(--border);
 }
 
 .auth-hero-stat .t {
@@ -237,7 +237,7 @@
 
 .auth-field input:focus {
   border-color: var(--moss-ink);
-  background: var(--white);
+  background: var(--bg-card);
 }
 
 .auth-field--error input {
@@ -259,7 +259,7 @@
 .auth-api-error {
   background: var(--rust-soft);
   border: 1px solid var(--rust);
-  color: #8a2a1c;
+  color: var(--rust);
   padding: 10px 14px;
   border-radius: 7px;
   font: 500 12.5px/1.4 var(--font-sans);

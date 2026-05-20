@@ -3,7 +3,7 @@
    ========================================================== */
 .navbar {
   height: var(--navbar-height);
-  background-color: var(--white);
+  background-color: var(--bg-app);
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
@@ -101,7 +101,7 @@
   gap: 8px;
 }
 
-.navbar-logout {
+.navbar-logout, .navbar-theme-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -109,10 +109,16 @@
   height: 30px;
   border: 1px solid var(--line);
   border-radius: 7px;
-  background: var(--white);
+  background: var(--bg-card);
   color: var(--ink-mute);
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.navbar-theme-toggle:hover {
+  background: var(--primary-extra-light);
+  color: var(--primary);
+  border-color: var(--primary);
 }
 
 .navbar-logout:hover {

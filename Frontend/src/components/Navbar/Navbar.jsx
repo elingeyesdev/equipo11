@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTheme } from '../../context/ThemeContext'
 import './Navbar.css'
 
 const pageCrumbs = {
@@ -11,6 +12,7 @@ const pageCrumbs = {
 function Navbar({ onMenuToggle }) {
   const location = useLocation()
   const navigate  = useNavigate()
+  const { theme, toggleTheme } = useTheme()
   const current = pageCrumbs[location.pathname] || { group: 'EnviroSense', leaf: '—' }
 
   const handleLogout = () => {
@@ -50,6 +52,9 @@ function Navbar({ onMenuToggle }) {
           Clima
         </div>
         <div className="navbar-user">
+          <button className="navbar-theme-toggle" onClick={toggleTheme} title="Cambiar tema">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           <div className="navbar-avatar">AD</div>
           <button className="navbar-logout" onClick={handleLogout} title="Cerrar sesión">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">

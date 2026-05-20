@@ -608,8 +608,16 @@ CREATE TABLE radar_grid_cache (
   longitud DECIMAL(10,4) NOT NULL,
   weather_code INT,
   temperatura DECIMAL(5,2),
+  wind_speed DECIMAL(5,2),
+  wind_direction INT,
+  rafagas DECIMAL(5,2),
+  presion DECIMAL(6,2),
+  cape DECIMAL(8,2),
+  hlcy DECIMAL(8,2),
+  refc DECIMAL(8,2),
+  forecast_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (latitud, longitud)
+  PRIMARY KEY (latitud, longitud, forecast_time)
 );
 
 -- =============================================================================

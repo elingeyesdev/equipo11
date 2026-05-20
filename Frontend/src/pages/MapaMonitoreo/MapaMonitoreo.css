@@ -20,7 +20,7 @@
 /* Banner de token faltante */
 .missing-token-banner {
   background: var(--amber-soft);
-  color: #7a4b0c;
+  color: var(--noise);
   padding: 10px 16px;
   text-align: center;
   font: 600 12px/1.4 var(--font-mono);
@@ -123,7 +123,7 @@
 .geocoder-input-wrapper {
   display: flex;
   align-items: center;
-  background: rgba(251, 250, 245, 0.94);
+  background: var(--bg-glass);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line);
@@ -135,7 +135,7 @@
 
 .geocoder-input-wrapper:focus-within {
   border-color: var(--moss-ink);
-  box-shadow: 0 1px 0 rgba(20,26,22,.04), 0 12px 32px -12px rgba(20,26,22,.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .geocoder-icon {
@@ -341,7 +341,7 @@
 .data-item {
   display: flex;
   align-items: center;
-  background: var(--white);
+  background: var(--bg-card);
   border: 1px solid var(--line-soft);
   padding: 10px 12px;
   border-radius: 8px;
@@ -536,7 +536,7 @@
   padding: 5px 8px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  background: var(--white);
+  background: var(--bg-card);
   font: 500 11px/1 var(--font-mono);
   color: var(--ink);
   outline: none;
@@ -588,7 +588,7 @@
   justify-content: center;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.controls-toggle-btn:hover { background: var(--white); transform: scale(1.05); }
+.controls-toggle-btn:hover { background: var(--bg-card); transform: scale(1.05); }
 
 .controls-toggle-icon {
   font-size: 1.4rem; /* Más grande */
@@ -601,7 +601,7 @@
   top: -2px;
   right: -2px;
   background: var(--moss);
-  color: white;
+  color: var(--white);
   font-size: 9px;
   font-weight: 700;
   width: 16px;
@@ -770,7 +770,7 @@
   padding: 7px 10px;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: var(--white);
+  background: var(--bg-card);
   font: 500 12px/1.2 var(--font-mono);
   color: var(--ink);
   outline: none;
