@@ -15,24 +15,29 @@ import './MapaMonitoreo.css';
 import { API_BASE } from '../../config/api';
 import httpClient from '../../config/httpClient';
 import { useSimulacion } from '../../context/SimulacionContext';
+import { useZonaSim } from '../../context/ZonaSimContext';
+import { useMapVisuals } from '../../context/MapVisualsContext';
 import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
 import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
 import axios from 'axios';
-import GridRadarLayer from '../../components/GridRadarLayer/GridRadarLayer';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
 import { formatDateTime, formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
-import Draggable from '../../components/Draggable/Draggable';
+import GeocoderSearch from '../../components/MapaMonitoreo/GeocoderSearch';
+import ComparePanel from '../../components/MapaMonitoreo/ComparePanel';
+import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
+import WeatherOverlay from '../../components/MapaMonitoreo/WeatherOverlay';
 import VoronoiLayer from './layers/VoronoiLayer';
 import ChoroplethLayer from './layers/ChoroplethLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import SimulationZoneLayer from './layers/SimulationZoneLayer';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
+import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import { FALLBACK_DATA } from '../../data/fallbackData';
 
 function MapaMonitoreo() {
@@ -45,13 +50,17 @@ function MapaMonitoreo() {
   // ─── Modo Simulación y Estado del Mapa ───────────────────────────────────
   const {
     isRunning, cities: simulatedCities,
+    fronterasSeleccionadas, setFronterasSeleccionadas,
+    isSimMode, setIsSimMode
+  } = useSimulacion();
+  const {
     zonaSimActiva, zonaSimZonas = [], zonaSimMetrica,
     zonaSimUnidad, zonaSimEscNombre,
     zonaSimProgreso, zonaSimSesionId, zonaSimTotalLecturas,
     zonaSimTiempo,
-    detenerZona, iniciarZona,
-    fronterasSeleccionadas, setFronterasSeleccionadas,
-    isSimMode, setIsSimMode,
+    detenerZona, iniciarZona
+  } = useZonaSim();
+  const {
     isHeatmapActive, setIsHeatmapActive,
     isChoroplethActive, setIsChoroplethActive,
     heatmapMetric, setHeatmapMetric,
@@ -60,7 +69,7 @@ function MapaMonitoreo() {
     particleFilters, setParticleFilters,
     isHistoricalMode, setIsHistoricalMode,
     isDynamicHistoricalMode, setIsDynamicHistoricalMode
-  } = useSimulacion();
+  } = useMapVisuals();
 
   // Umbrales dinámicos de la métrica activa — fuente única de verdad para colores
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
@@ -122,8 +131,6 @@ function MapaMonitoreo() {
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
   const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
   const [weatherCanvases, setWeatherCanvases] = useState({});
-  const [isControlsOpen, setIsControlsOpen] = useState(false);
-  const [activeControlsTab, setActiveControlsTab] = useState('capas'); // 'capas' | 'preferencias' | 'clima_dinamico' | 'leyenda_clima_dinamico'
   const [isFetchingRadar, setIsFetchingRadar] = useState(false);
 
   const [cityHistoryArray, setCityHistoryArray] = useState([]);
@@ -264,8 +271,6 @@ function MapaMonitoreo() {
 
   // Se eliminó la vieja carga estática de climas
 
-  const searchRef = useRef(null);
-  const debounceRef = useRef(null);
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
@@ -325,51 +330,10 @@ function MapaMonitoreo() {
     }
   }, [location.state, location.search]);
 
-  // --- Cerrar dropdown al hacer clic fuera ---
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowResults(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // --- Búsqueda con Mapbox Geocoding API (debounced) ---
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
-  const handleSearch = useCallback((query) => {
-    setSearchQuery(query);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=6&language=es`;
-        const res = await fetch(url);
-        const data = await res.json();
-        setSearchResults(data.features || []);
-        setShowResults(true);
-      } catch (err) {
-        console.error('Error en geocoding:', err);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 350);
-  }, [MAPBOX_TOKEN]);
 
   const handleSelectResult = (result) => {
     const [lng, lat] = result.center;
-    // Determinar zoom según tipo de lugar
     const placeType = result.place_type?.[0] || '';
     let zoom = 10;
     if (placeType === 'country') zoom = 4;
@@ -380,7 +344,6 @@ function MapaMonitoreo() {
 
     mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1500 });
 
-    // Verificar si coincide con uno de los departamentos locales
     const matchedCity = citiesData.find(c =>
       c.name.toLowerCase() === result.text?.toLowerCase() ||
       result.place_name?.toLowerCase().includes(c.name.toLowerCase())
@@ -390,15 +353,6 @@ function MapaMonitoreo() {
     } else {
       setSelectedCity(null);
     }
-
-    setSearchQuery(result.place_name || result.text);
-    setShowResults(false);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowResults(false);
   };
 
   const [dynamicWindLabels, setDynamicWindLabels] = useState(null);
@@ -711,75 +665,18 @@ function MapaMonitoreo() {
             isRunning={zonaSimActiva}
           />
         )}
-        {/* ========== Buscador Geocoder Global ========== */}
-        <Draggable className="geocoder-search-container">
-          <div ref={searchRef}>
-            <div className="geocoder-input-wrapper">
-              <span className="geocoder-icon">🔍</span>
-              <input
-                id="geocoder-search-input"
-                type="text"
-                className="geocoder-input"
-                placeholder="Buscar país, ciudad o lugar…"
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    handleClearSearch();
-                    e.target.blur();
-                  }
-                }}
-                autoComplete="off"
-              />
-              {searchQuery && (
-                <button className="geocoder-clear-btn" onClick={handleClearSearch} aria-label="Limpiar búsqueda">
-                  ×
-                </button>
-              )}
-            </div>
-
-            {showResults && (
-              <ul className="geocoder-results-list">
-                {isSearching && (
-                  <li className="geocoder-result-item geocoder-loading">Buscando…</li>
-                )}
-                {!isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2 && (
-                  <li className="geocoder-result-item geocoder-no-results">Sin resultados</li>
-                )}
-                {!isSearching && searchResults.map((result) => {
-                  const typeIcon = {
-                    country: '🌍',
-                    region: '🏔️',
-                    place: '🏙️',
-                    locality: '📍',
-                    district: '🏘️',
-                    address: '📫',
-                    poi: '⭐',
-                  };
-                  const icon = typeIcon[result.place_type?.[0]] || '📍';
-                  return (
-                    <li
-                      key={result.id}
-                      className="geocoder-result-item"
-                      onClick={() => handleSelectResult(result)}
-                    >
-                      <span className="geocoder-result-icon">{icon}</span>
-                      <div className="geocoder-result-text">
-                        <span className="geocoder-result-name">{result.text}</span>
-                        {result.place_name !== result.text && (
-                          <span className="geocoder-result-context">
-                            {result.place_name?.replace(`${result.text}, `, '')}
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </Draggable>
+        <GeocoderSearch
+          MAPBOX_TOKEN={MAPBOX_TOKEN}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          showResults={showResults}
+          setShowResults={setShowResults}
+          searchResults={searchResults}
+          setSearchResults={setSearchResults}
+          isSearching={isSearching}
+          setIsSearching={setIsSearching}
+          onSelectResult={handleSelectResult}
+        />
         {/* Contenedor del Mapa con soporte para Comparar (Swipe) */}
         <div className="map-main-wrapper" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
           
@@ -902,49 +799,23 @@ function MapaMonitoreo() {
               )
             )}
 
-            {/* Radar (A) */}
-            {isParticlesActive && (
-              <GridRadarLayer 
-                scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data} 
-                currentZoom={viewState.zoom} 
-                particleFilters={particleFilters} 
-              />
-            )}
-
-            {/* Capa de Velocidad de Viento dinámica anclada a las ciudades reales de Mapbox */}
-            {isParticlesActive && particleFilters.wind && dynamicWindLabels && (
-              <Source id="dynamic-wind-source" type="geojson" data={dynamicWindLabels}>
-                <Layer 
-                  id="dynamic-wind-text-layer"
-                  type="symbol"
-                  layout={{
-                    'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['round', ['to-number', ['get', 'wind_speed']]]], ' km/h'],
-                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                    'text-size': 12,
-                    'text-offset': [0, 0.5],
-                    'text-anchor': 'top',
-                    'text-allow-overlap': false,
-                    'text-ignore-placement': false,
-                    'text-padding': 20
-                  }}
-                  paint={{
-                    'text-color': '#a7f3d0',
-                    'text-halo-color': '#000000',
-                    'text-halo-width': 1.5
-                  }}
-                />
-              </Source>
-            )}
+            <WeatherOverlay
+              scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
+              currentZoom={viewState.zoom}
+              particleFilters={particleFilters}
+              isParticlesActive={isParticlesActive}
+              dynamicWindLabels={dynamicWindLabels}
+            />
           </Map>
 
-          {/* MAPA B (Superpuesto / Derecha / Tiempo B) - Solo en Modo Comparar */}
           {isCompareMode && (
-            <div 
-              className="map-b-clip-container" 
-              style={{ 
-                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                clipPath: `inset(0 0 0 ${swipePos}%)`, zIndex: 10, pointerEvents: 'none' 
-              }}
+            <ComparePanel
+              swipePos={swipePos}
+              setSwipePos={setSwipePos}
+              compareIndexA={compareIndexA}
+              compareIndexB={compareIndexB}
+              globalHistoryArray={globalHistoryArray}
+              formatTime={formatTime}
             >
               <Map
                 id="mapB"
@@ -1031,53 +902,15 @@ function MapaMonitoreo() {
                   )
                 )}
 
-                {/* Radar (B) */}
-                {isParticlesActive && (
-                  <GridRadarLayer 
-                    scannedGrid={scannedGridB.data} 
-                    currentZoom={viewState.zoom} 
-                    particleFilters={particleFilters} 
-                  />
-                )}
+                <WeatherOverlay
+                  scannedGrid={scannedGridB.data}
+                  currentZoom={viewState.zoom}
+                  particleFilters={particleFilters}
+                  isParticlesActive={isParticlesActive}
+                  dynamicWindLabels={dynamicWindLabels}
+                />
               </Map>
-            </div>
-          )}
-
-          {/* Barra de Swipe (Control de Cortina) */}
-          {isCompareMode && (
-            <div 
-              className="map-swipe-handle"
-              style={{
-                position: 'absolute', top: 0, bottom: 0, left: `${swipePos}%`, width: '4px',
-                background: 'white', boxShadow: '0 0 10px rgba(0,0,0,0.5)', zIndex: 20,
-                cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-              onMouseDown={(e) => {
-                const startX = e.pageX;
-                const startPos = swipePos;
-                const handleMouseMove = (mv) => {
-                  const delta = ((mv.pageX - startX) / window.innerWidth) * 100;
-                  setSwipePos(Math.max(0, Math.min(100, startPos + delta)));
-                };
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                };
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-              }}
-            >
-              <div style={{ width: '40px', height: '40px', background: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.3)', color: '#333' }}>
-                ↔
-              </div>
-              
-              <div style={{ position: 'absolute', top: '20px', left: '-130px', background: 'rgba(0,0,0,0.8)', color: '#06b6d4', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #06b6d4' }}>
-                IZQ: {globalHistoryArray[compareIndexA]?.timestamp ? formatTime(globalHistoryArray[compareIndexA].timestamp) : '...'}
-              </div>
-              <div style={{ position: 'absolute', top: '20px', right: '-130px', background: 'rgba(0,0,0,0.8)', color: '#f59e0b', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #f59e0b' }}>
-                DER: {globalHistoryArray[compareIndexB]?.timestamp ? formatTime(globalHistoryArray[compareIndexB].timestamp) : '...'}
-              </div>
-            </div>
+            </ComparePanel>
           )}
         </div>
 
@@ -1089,451 +922,34 @@ function MapaMonitoreo() {
           unidad={unidades[heatmapMetric]}
         />
 
-        {/* Panel Flotante de Información — arrastrable, visible en ambos modos */}
-        {activeCity && (
-          <Draggable className="city-info-panel-wrapper">
-            <div className="city-info-panel">
-              <button className="close-panel-btn" onClick={() => setSelectedCity(null)} aria-label="Cerrar panel">×</button>
-              <div className="panel-header">
-                {activeCity.isLoading
-                  ? <div className="panel-skeleton-title" />
-                  : <h3>{activeCity.name}</h3>
-                }
-                <p className="panel-subtitle">
-                  {activeCity.isLoading
-                    ? 'Consultando datos...'
-                    : activeCity.subtitle
-                      ? <><span className="panel-source-badge">📡 API</span> {activeCity.subtitle}</>
-                      : isRunning
-                        ? <><span className="panel-source-badge sim">🔬 Simulado</span> Tiempo real</>
-                        : 'Datos estáticos'
-                  }
-                </p>
-              </div>
-              <div className="panel-body">
-                {[
-                  { icon: '🌡️', label: 'Temperatura', key: 'temperatura', unit: unidades.temperatura },
-                  { icon: '🌫️', label: 'Calidad del Aire', key: 'aqi', unit: unidades.aqi },
-                  { icon: '💧', label: 'Calidad del Agua', key: 'ica', unit: unidades.ica },
-                  { icon: '🔊', label: 'Nivel de Ruido', key: 'ruido', unit: unidades.ruido },
-                  { icon: '💦', label: 'Humedad', key: 'humedad', unit: unidades.humedad },
-                  { icon: '💨', label: 'Viento', key: 'windSpeed', unit: 'km/h' },
-                ].map(({ icon, label, key, unit }) => (
-                  <div key={key} className="data-item">
-                    <div className="data-icon">{icon}</div>
-                    <div className="data-content">
-                      <span className="data-label">{label}</span>
-                      {activeCity.isLoading
-                        ? <div className="panel-skeleton-value" />
-                        : <span className="data-value" style={{ color: getDynamicColor(key, activeCity.data[key]), fontWeight: 'bold' }}>
-                          {formatearValor(key, activeCity.data[key], unit)}
-                        </span>
-                      }
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Draggable>
-        )}
+        <CityHistoryPanel
+          activeCity={activeCity}
+          setSelectedCity={setSelectedCity}
+          isRunning={isRunning}
+          unidades={unidades}
+          formatearValor={formatearValor}
+          getDynamicColor={getDynamicColor}
+        />
 
-        {/* ═══ Toolbar Unificado de Controles (Ajustes) ═══ */}
-        <div className="map-controls-toolbar">
-          <button
-            className="controls-toggle-btn"
-            onClick={() => setIsControlsOpen(!isControlsOpen)}
-            title="Ajustes del mapa"
-          >
-            <span className={`controls-toggle-icon ${isControlsOpen ? 'open' : ''}`}>⚙️</span>
-            {activeControlsCount > 0 && !isControlsOpen && (
-              <span className="control-status-badge">{activeControlsCount}</span>
-            )}
-          </button>
-
-          <button
-            className="controls-toggle-btn"
-            style={{ marginLeft: '10px' }}
-            onClick={() => setIsInjectModalOpen(true)}
-            title="Inyectar datos manualmente"
-          >
-            <span className="controls-toggle-icon">💉</span>
-          </button>
-
-          {isControlsOpen && (
-            <div className="controls-dropdown">
-              <div className="controls-tabs">
-                <button
-                  className={`controls-tab ${activeControlsTab === 'capas' ? 'active' : ''}`}
-                  onClick={() => setActiveControlsTab('capas')}
-                >
-                  Capas
-                </button>
-                <button
-                  className={`controls-tab ${activeControlsTab === 'preferencias' ? 'active' : ''}`}
-                  onClick={() => setActiveControlsTab('preferencias')}
-                >
-                  Preferencias
-                </button>
-              </div>
-
-              {activeControlsTab === 'capas' ? (
-                <div className="controls-tab-content">
-                  <div className="controls-section-title">Capas Visuales</div>
-
-                  {/* ─── Modo Simulación ─── */}
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">🔬</span>
-                      <span className="control-text">Modo Simulación</span>
-                      {isSimMode && (
-                        <span className="control-status on">ON</span>
-                      )}
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isSimMode}
-                        onChange={(e) => handleToggleSimMode(e.target.checked)}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  <div className="controls-divider"></div>
-
-                  {/* Clima 3D (Botón de navegación) */}
-                  <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveControlsTab('clima_dinamico')}>
-                    <div className="control-row-label">
-                      <span className="control-icon">🌦️</span>
-                      <span className="control-text">Clima dinámico</span>
-                      {isParticlesActive && (
-                        <span className="control-status on" style={{ marginLeft: '6px' }}>ON</span>
-                      )}
-                    </div>
-                    <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
-                  </div>
-
-                  {/* Sensores IoT */}
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">📡</span>
-                      <span className="control-text">Sensores IoT</span>
-                      {iotLoading && <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>cargando…</span>}
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={showSensors}
-                        onChange={(e) => setShowSensors(e.target.checked)}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  {/* Mapa de calor */}
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">🗺️</span>
-                      <span className="control-text">Mapa de calor</span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isHeatmapActive}
-                        onChange={(e) => {
-                          setIsHeatmapActive(e.target.checked);
-                          // Al activar heatmap → auto-activar sensores para ver los grupos
-                          if (e.target.checked) {
-                            setSelectedCity(null);
-                            setShowSensors(true);
-                          }
-                        }}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  {/* Selector de métrica — solo visible cuando el heatmap está activo */}
-                  {isHeatmapActive && (
-                    <div className="heatmap-expanded-section">
-                      <div className="heatmap-metric-label">Métrica activa</div>
-                      <select
-                        className="heatmap-metric-select"
-                        value={heatmapMetric}
-                        onChange={(e) => setHeatmapMetric(e.target.value)}
-                      >
-                        <option value="aqi">Calidad de Aire (AQI)</option>
-                        <option value="ica">Calidad del Agua (ICA)</option>
-                        <option value="temperatura">Temperatura</option>
-                        <option value="ruido">Nivel de Ruido</option>
-                        <option value="humedad">Humedad</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Divisiones administrativas (coropletas) */}
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">🗾</span>
-                      <span className="control-text">Div. administrativas</span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isChoroplethActive}
-                        onChange={(e) => setIsChoroplethActive(e.target.checked)}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  <div className="controls-divider"></div>
-
-                  {/* Histórico */}
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">⏳</span>
-                      <span className="control-text">Histórico</span>
-                      <span className={`control-status ${isHistoricalMode ? 'on' : 'off'}`}>
-                        {isHistoricalMode ? 'ON' : 'OFF'}
-                      </span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isHistoricalMode}
-                        onChange={(e) => {
-                          const val = e.target.checked;
-                          setIsHistoricalMode(val);
-                          if (val) setIsDynamicHistoricalMode(false);
-                        }}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-                </div>
-              ) : activeControlsTab === 'preferencias' ? (
-                <div className="controls-tab-content">
-                  <div className="controls-section-title">Preferencias de Usuario</div>
-                  <div className="units-content-dropdown">
-                    {Object.entries(METRICAS_UNIDADES).map(([key, cfg]) => (
-                      <div key={key} className="units-row-dropdown">
-                        <span className="units-icon">{cfg.icon}</span>
-                        <span className="units-label">{key === 'aqi' ? 'Aire' : key === 'ica' ? 'Agua' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
-                        {cfg.unidades.length > 1 ? (
-                          <select
-                            className="units-select-mini"
-                            value={unidades[key]}
-                            onChange={e => cambiarUnidad(key, e.target.value)}
-                          >
-                            {cfg.unidades.map(u => (
-                              <option key={u.key} value={u.key}>{u.label}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="units-fixed-mini">{cfg.unidades[0].label}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : activeControlsTab === 'clima_dinamico' ? (
-                <div className="controls-tab-content">
-                  <div className="controls-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveControlsTab('capas')}>
-                    <span style={{ fontSize: '1.2rem', color: 'var(--sage)' }}>‹</span>
-                    Volver a Capas
-                  </div>
-
-                  <div className="control-row">
-                    <div className="control-row-label">
-                      <span className="control-icon">🌦️</span>
-                      <span className="control-text">Motor de Partículas</span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isParticlesActive}
-                        onChange={(e) => setIsParticlesActive(e.target.checked)}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  <div className="controls-divider"></div>
-
-                  {/* Subfiltros de partículas siempre visibles en este panel, pero deshabilitados si está apagado */}
-                  <div style={{ paddingLeft: '20px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px', opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
-                    {[
-                  { key: 'rain', label: 'Lluvia / Tormentas' },
-                  { key: 'snow', label: 'Nieve' },
-                  { key: 'fog', label: 'Niebla' },
-                  { key: 'wind', label: 'Viento / Tornados' },
-                ].map(f => (
-                      <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
-                        <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
-                          <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
-                          <span className="control-text">{f.label}</span>
-                        </div>
-                        <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
-                          <input
-                            type="checkbox"
-                            checked={particleFilters[f.key]}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              setParticleFilters(prev => {
-                                if (f.key === 'wind' && isChecked) {
-                                  // Viento exclusivo: desactiva los demás
-                                  return { rain: false, snow: false, fog: false, wind: true };
-                                } else if (f.key !== 'wind' && isChecked) {
-                                  // Activar otro desactiva el viento
-                                  return { ...prev, wind: false, [f.key]: true };
-                                }
-                                return { ...prev, [f.key]: isChecked };
-                              });
-                            }}
-                          />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="controls-divider"></div>
-
-                  {/* Histórico Global del Clima Dinámico */}
-                  <div className="control-row" style={{ opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
-                    <div className="control-row-label">
-                      <span className="control-icon">⏳</span>
-                      <span className="control-text">Histórico de Clima</span>
-                      <span className={`control-status ${isDynamicHistoricalMode ? 'on' : 'off'}`}>
-                        {isDynamicHistoricalMode ? 'ON' : 'OFF'}
-                      </span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isDynamicHistoricalMode}
-                        onChange={(e) => {
-                          const val = e.target.checked;
-                          setIsDynamicHistoricalMode(val);
-                          if (val) {
-                            setIsHistoricalMode(false);
-                            if (isCompareMode && compareIndexA === null) setCompareIndexA(globalTimelineIndex);
-                          }
-                        }}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  {/* Nuevo: Switch Modo Comparar (Fase 2) */}
-                  <div className="control-row" style={{ opacity: isParticlesActive && isDynamicHistoricalMode ? 1 : 0.5, pointerEvents: isParticlesActive && isDynamicHistoricalMode ? 'auto' : 'none' }}>
-                    <div className="control-row-label">
-                      <span className="control-icon">⚖️</span>
-                      <span className="control-text">Modo Comparar</span>
-                    </div>
-                    <label className="ios-switch">
-                      <input
-                        type="checkbox"
-                        checked={isCompareMode}
-                        onChange={(e) => {
-                          const val = e.target.checked;
-                          setIsCompareMode(val);
-                          if (val) {
-                            if (compareIndexA === null) setCompareIndexA(globalTimelineIndex);
-                            if (compareIndexB === null) setCompareIndexB(Math.min(globalTimelineIndex + 1, globalHistoryArray.length - 1));
-                          }
-                        }}
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  <div className="controls-divider"></div>
-
-                  {/* Leyenda de Clima Dinámico (Botón de navegación) */}
-                  <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveControlsTab('leyenda_clima_dinamico')}>
-                    <div className="control-row-label">
-                      <span className="control-icon">📖</span>
-                      <span className="control-text">Leyenda de Clima</span>
-                    </div>
-                    <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
-                  </div>
-                </div>
-              ) : activeControlsTab === 'leyenda_clima_dinamico' ? (
-                <div className="controls-tab-content">
-                  <div className="controls-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveControlsTab('clima_dinamico')}>
-                    <span style={{ fontSize: '1.2rem', color: 'var(--sage)' }}>‹</span>
-                    Leyenda de Partículas
-                  </div>
-
-                  <div className="legend-dynamic-clima">
-                    <div className="legend-item">
-                      <span className="legend-icon">🌧️</span>
-                      <div className="legend-text">
-                        <strong>Lluvia</strong>
-                        <p>Gotas azules cayendo con inclinación según viento.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-icon">❄️</span>
-                      <div className="legend-text">
-                        <strong>Nieve</strong>
-                        <p>Puntos blancos con movimiento suave y oscilante.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-icon">🌫️</span>
-                      <div className="legend-text">
-                        <strong>Niebla</strong>
-                        <p>Zonas brumosas grises de visibilidad reducida.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-icon" style={{ color: '#fbbf24', textShadow: '0 0 5px #fbbf24' }}>⚡</span>
-                      <div className="legend-text">
-                        <strong>Tormenta Eléctrica</strong>
-                        <p>Relámpagos brillantes y destellos de luz amarilla rápida.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <span className="legend-icon" style={{ color: '#9333ea', textShadow: '0 0 5px #9333ea' }}>🌪️</span>
-                      <div className="legend-text">
-                        <strong>Alerta de Tornado</strong>
-                        <p>Vórtices púrpuras girando agresivamente en espiral.</p>
-                      </div>
-                    </div>
-
-                    <div className="controls-divider"></div>
-                    <div className="legend-section-title">Niveles de Viento</div>
-
-                    <div className="legend-item">
-                      <div className="legend-line" style={{ background: 'rgba(180, 230, 255, 0.7)' }}></div>
-                      <div className="legend-text">
-                        <strong>Viento Normal</strong>
-                        <p>Velocidad &gt; 15 km/h. Brisas y vientos estándar.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <div className="legend-line" style={{ background: 'rgba(255, 140, 0, 0.7)' }}></div>
-                      <div className="legend-text">
-                        <strong>Viento Fuerte / Tormenta</strong>
-                        <p>Ráfagas &gt; 60 km/h o Presión &lt; 1005 hPa.</p>
-                      </div>
-                    </div>
-                    <div className="legend-item">
-                      <div className="legend-line" style={{ background: 'rgba(220, 20, 150, 0.7)' }}></div>
-                      <div className="legend-text">
-                        <strong>Huracán / Severo</strong>
-                        <p>Ráfagas &gt; 90 km/h o Presión &lt; 990 hPa.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
+        <ControlPanel
+          activeControlsCount={activeControlsCount}
+          setIsInjectModalOpen={setIsInjectModalOpen}
+          isSimMode={isSimMode} handleToggleSimMode={handleToggleSimMode}
+          isParticlesActive={isParticlesActive} setIsParticlesActive={setIsParticlesActive}
+          isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}
+          heatmapMetric={heatmapMetric} setHeatmapMetric={setHeatmapMetric}
+          isChoroplethActive={isChoroplethActive} setIsChoroplethActive={setIsChoroplethActive}
+          isHistoricalMode={isHistoricalMode} setIsHistoricalMode={setIsHistoricalMode}
+          showSensors={showSensors} setShowSensors={setShowSensors} setSelectedCity={setSelectedCity}
+          iotLoading={iotLoading}
+          unidades={unidades} cambiarUnidad={cambiarUnidad} METRICAS_UNIDADES={METRICAS_UNIDADES}
+          isDynamicHistoricalMode={isDynamicHistoricalMode} setIsDynamicHistoricalMode={setIsDynamicHistoricalMode}
+          isCompareMode={isCompareMode} setIsCompareMode={setIsCompareMode}
+          compareIndexA={compareIndexA} compareIndexB={compareIndexB}
+          setCompareIndexA={setCompareIndexA} setCompareIndexB={setCompareIndexB}
+          globalTimelineIndex={globalTimelineIndex} globalHistoryArray={globalHistoryArray}
+          particleFilters={particleFilters} setParticleFilters={setParticleFilters}
+        />
       </div>
 
 

@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { SimulacionProvider } from './context/SimulacionContext'
+import { ZonaSimProvider } from './context/ZonaSimContext'
+import { MapVisualsProvider } from './context/MapVisualsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { ToastProvider } from './components/Toast/Toast'
 import './index.css'
@@ -19,7 +21,11 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <ToastProvider>
         <SimulacionProvider>
-          <RouterProvider router={router} />
+          <ZonaSimProvider>
+            <MapVisualsProvider>
+              <RouterProvider router={router} />
+            </MapVisualsProvider>
+          </ZonaSimProvider>
         </SimulacionProvider>
       </ToastProvider>
     </ThemeProvider>

@@ -4,7 +4,7 @@
  * Permite configurar escenarios independientes para cada zona seleccionada.
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useSimulacion } from '../../context/SimulacionContext';
+import { useZonaSim } from '../../context/ZonaSimContext';
 import { useToast } from '../Toast/Toast';
 import { calcCenter } from '../../utils/geo';
 import httpClient from '../../config/httpClient';
@@ -89,7 +89,7 @@ function EscenarioCard({ escenario, selected, onSelect, metricaColor }) {
 
 function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
   const { addToast } = useToast()
-  const { iniciarZona, detenerZona, zonaSimActiva } = useSimulacion();
+  const { iniciarZona, detenerZona, zonaSimActiva } = useZonaSim();
 
   const [ESCENARIOS, setESCENARIOS] = useState(FALLBACK_ESCENARIOS);
 
