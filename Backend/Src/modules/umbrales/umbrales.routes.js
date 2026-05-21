@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { success, error } = require('../../utils/response')
 
 /**
  * GET /api/umbrales
@@ -49,13 +50,13 @@ async function getUmbrales(req, res) {
     const { rows } = await db.query(sql, metrica ? [metrica] : [])
 
     if (metrica && rows.length === 0) {
-      return res.status(404).json({ error: `Métrica '${metrica}' no encontrada` })
+      return error(res, `Métrica '${metrica}' no encontrada`, 404)
     }
 
-    res.json(rows)
+    success(res, rows)
   } catch (err) {
     logger.error('[umbrales] Error:', err)
-    res.status(500).json({ error: 'Error interno al obtener umbrales' })
+    error(res, 'Error interno al obtener umbrales', 500)
   }
 }
 

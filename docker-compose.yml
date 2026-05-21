@@ -39,6 +39,12 @@ services:
       - /app/node_modules
       - ./data:/app/data
       - whatsapp_session:/app/.wwebjs_auth
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # ─── Frontend (React + Vite) ───
   frontend:
@@ -47,11 +53,18 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     # Sincroniza tu código local con el contenedor (hot-reload)
     volumes:
       - ./Frontend:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 # Volumen nombrado para persistir los datos de PostgreSQL
 volumes:

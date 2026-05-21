@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { success, error } = require('../../utils/response')
 
 /**
  * GET /api/geografia/localidades
@@ -56,10 +57,10 @@ router.get('/localidades', async (req, res) => {
     `
 
     const { rows } = await db.query(sql, params)
-    res.json(rows)
+    success(res, rows)
   } catch (err) {
     logger.error('[geografia] Error:', err)
-    res.status(500).json({ error: 'Error al obtener localidades' })
+    error(res, 'Error al obtener localidades', 500)
   }
 })
 
@@ -101,13 +102,13 @@ router.get('/regiones-geojson', async (req, res) => {
       },
     }))
 
-    res.json({
+    success(res, {
       type: 'FeatureCollection',
       features,
     })
   } catch (err) {
     logger.error('[geografia] Error en /regiones-geojson:', err)
-    res.status(500).json({ error: 'Error al obtener regiones GeoJSON' })
+    error(res, 'Error al obtener regiones GeoJSON', 500)
   }
 })
 

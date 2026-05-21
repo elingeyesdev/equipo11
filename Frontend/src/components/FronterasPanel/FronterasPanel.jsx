@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
 import { useToast } from '../Toast/Toast'
 import { calcCenter } from '../../utils/geo'
@@ -124,11 +124,14 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
   }, [])
 
   // Al montar, si ya hay fronteras seleccionadas, notificamos al mapa
+  const mountedRef = useRef(false);
   useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
     if (zona1.result || (isComparing && zona2.result)) {
       emitBoundaries(zona1, zona2, 'init')
     }
-  }, [])
+  }, [zona1, zona2, isComparing, emitBoundaries])
 
   // -- Helpers Zona --
   const updateZona = (setZ, key, val) => setZ(prev => ({ ...prev, [key]: val }))

@@ -3,6 +3,7 @@ const router = express.Router();
 const { getSensoresCache, estimarDatosPuntoArbitrario } = require('./sensores.service');
 const { estimateICA, estimateRuido } = require('../../utils/estimadores');
 const { METRIC_LIMITS } = require('../../constants/metricas');
+const { success, error } = require('../../utils/response');
 
 /**
  * GET /api/sensores
@@ -11,9 +12,9 @@ const { METRIC_LIMITS } = require('../../constants/metricas');
 router.get('/', async (req, res) => {
   try {
     const sensores = await getSensoresCache();
-    res.json({ status: 'ok', count: sensores.length, data: sensores });
+    success(res, { count: sensores.length, data: sensores });
   } catch (err) {
-    res.status(500).json({ error: 'Error obteniendo sensores', detail: err.message });
+    error(res, 'Error obteniendo sensores: ' + err.message, 500);
   }
 });
 
@@ -27,14 +28,14 @@ router.get('/punto', async (req, res) => {
   const lng = parseFloat(req.query.lng);
 
   if (isNaN(lat) || isNaN(lng)) {
-    return res.status(400).json({ error: 'Parámetros lat y lng requeridos y deben ser numéricos.' });
+    return error(res, 'Parámetros lat y lng requeridos y deben ser numéricos.', 400);
   }
 
   try {
     const datos = await estimarDatosPuntoArbitrario(lat, lng);
-    res.json({ status: 'ok', data: datos });
+    success(res, datos);
   } catch (err) {
-    res.status(500).json({ error: 'Error estimando datos', detail: err.message });
+    error(res, 'Error estimando datos: ' + err.message, 500);
   }
 });
 
@@ -51,7 +52,7 @@ router.get('/estimaciones', (req, res) => {
     : null;
   const ruido = estimateRuido({ ruido: [METRIC_LIMITS.ruido.min, METRIC_LIMITS.ruido.max] });
 
-  res.json({ ok: true, data: { ica, ruido } });
+  success(res, { ica, ruido });
 });
 
 /**
@@ -59,7 +60,7 @@ router.get('/estimaciones', (req, res) => {
  * Devuelve los límites canónicos de métricas (fuente única de verdad).
  */
 router.get('/metricas-limites', (req, res) => {
-  res.json({ ok: true, data: METRIC_LIMITS });
+  success(res, METRIC_LIMITS);
 });
 
 module.exports = router;

@@ -2,6 +2,8 @@ const express = require('express')
 const cors    = require('cors')
 const authRoutes = require('./modules/auth/auth.routes')
 const { globalLimiter, authLimiter } = require('./middleware/rateLimiter')
+const { success, error } = require('./utils/response')
+const whatsappClient = require('./config/whatsappClient')
 
 const app = express()
 
@@ -24,6 +26,8 @@ app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.
 app.use('/api/sensores', require('./modules/sensores/sensores.routes'))
 
 // Ruta de prueba
-app.get('/', (req, res) => res.json({ mensaje: 'API EnviroSense activa ✅' }))
+app.get('/', (req, res) => success(res, { mensaje: 'API EnviroSense activa ✅' }))
+app.get('/api/health', (req, res) => success(res, { uptime: process.uptime() }))
+app.get('/api/health/whatsapp', (req, res) => success(res, { status: whatsappClient.getStatus() }))
 
 module.exports = app

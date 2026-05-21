@@ -1,13 +1,14 @@
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { success, error } = require('../../utils/response')
 
 const getRoles = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM roles ORDER BY id')
-    res.json({ ok: true, roles: rows })
+    success(res, { roles: rows })
   } catch (error) {
     logger.error('Error al obtener roles:', error)
-    res.status(500).json({ ok: false, mensaje: 'Error al obtener roles' })
+    error(res, 'Error al obtener roles', 500)
   }
 }
 
@@ -20,10 +21,10 @@ const getUsuarios = async (req, res) => {
       ORDER BY u.id DESC
     `
     const { rows } = await db.query(query)
-    res.json({ ok: true, usuarios: rows })
+    success(res, { usuarios: rows })
   } catch (error) {
     logger.error('Error al obtener usuarios:', error)
-    res.status(500).json({ ok: false, mensaje: 'Error al obtener usuarios' })
+    error(res, 'Error al obtener usuarios', 500)
   }
 }
 
@@ -38,13 +39,13 @@ const updateUsuarioRol = async (req, res) => {
     )
 
     if (rows.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: 'Usuario no encontrado' })
+      return error(res, 'Usuario no encontrado', 404)
     }
 
-    res.json({ ok: true, mensaje: 'Rol de usuario actualizado' })
+    success(res, { mensaje: 'Rol de usuario actualizado' })
   } catch (error) {
     logger.error('Error al actualizar rol de usuario:', error)
-    res.status(500).json({ ok: false, mensaje: 'Error al actualizar el rol' })
+    error(res, 'Error al actualizar el rol', 500)
   }
 }
 
@@ -59,13 +60,13 @@ const updateUsuarioEstado = async (req, res) => {
     )
 
     if (rows.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: 'Usuario no encontrado' })
+      return error(res, 'Usuario no encontrado', 404)
     }
 
-    res.json({ ok: true, mensaje: 'Estado del usuario actualizado' })
+    success(res, { mensaje: 'Estado del usuario actualizado' })
   } catch (error) {
     logger.error('Error al actualizar estado del usuario:', error)
-    res.status(500).json({ ok: false, mensaje: 'Error al actualizar el estado' })
+    error(res, 'Error al actualizar el estado', 500)
   }
 }
 

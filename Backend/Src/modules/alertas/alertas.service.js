@@ -59,6 +59,7 @@ async function cargarUmbralesCache() {
     `)
 
     umbralesCache.clear()
+    estadoNivelActual.clear()
     for (const row of rows) {
       if (!umbralesCache.has(row.metrica_clave)) {
         umbralesCache.set(row.metrica_clave, [])
@@ -82,7 +83,20 @@ async function cargarUmbralesCache() {
 }
 
 // ─── ESTADO ANTI-TORMENTA ─────────────────────────────────────────────────────
-// Map<`${localidadId}:${metricaClave}`, nivelActual>
+/**
+ * Mapa de estado global modificable a nivel de módulo.
+ * 
+ * Clave:   `${localidadId}:${metricaClave}`
+ * Valor:   nivel actual del umbral (number)
+ * 
+ * Propósito: Cache del último nivel de alerta activo por (localidad, métrica).
+ * Solo se emite una alerta cuando el nivel CAMBIA respecto al estado anterior,
+ * evitando tormentas de alertas repetidas para el mismo nivel en ticks consecutivos.
+ * 
+ * ⚠️  Estado mutable global — hace que evaluarTick() no sea pura.
+ *     Si se necesita testing, mover este Map como parámetro de evaluarTick().
+ *     Se limpia automáticamente al recargar umbrales (cargarUmbralesCache).
+ */
 const estadoNivelActual = new Map()
 
 // Cooldown de emisión: una vez que (ciudad, métrica) emite una alerta de
@@ -242,6 +256,61 @@ async function reconocerAlerta(id, usuarioId) {
 }
 
 /**
+ * Obtiene alertas paginadas con filtros dinámicos.
+ * @param {Object} filters — { desde, hasta, metrica, severidad, reconocida, page, limit }
+ * @returns {{ total, rows }}
+ */
+async function getAlertas(filters) {
+  const { desde, hasta, metrica, severidad, reconocida, page, limit } = filters;
+  const limitNum = limit;
+  const offset   = (page - 1) * limitNum;
+
+  const conditions = [];
+  const params     = [];
+  let idx = 1;
+
+  if (desde)       { conditions.push(`a.tiempo >= $${idx++}`); params.push(desde); }
+  if (hasta)       { conditions.push(`a.tiempo <= $${idx++}`); params.push(hasta); }
+  if (metrica)     { conditions.push(`m.clave = $${idx++}`);   params.push(metrica); }
+  if (severidad)   { conditions.push(`u.severidad = $${idx++}`); params.push(severidad); }
+  if (reconocida !== undefined) { conditions.push(`a.reconocida = $${idx++}`); params.push(reconocida === 'true'); }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const { rows: countRows } = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM alertas a
+    JOIN localidades l ON l.id = a.localidad_id
+    JOIN metricas m    ON m.id = a.metrica_id
+    JOIN umbrales u    ON u.id = a.umbral_id
+    ${where}
+  `, params);
+  const total = parseInt(countRows[0].total);
+
+  const { rows } = await db.query(`
+    SELECT
+      a.id, a.tiempo, a.valor, a.reconocida, a.reconocida_en,
+      l.nombre           AS ciudad,
+      m.clave            AS metrica,
+      m.nombre           AS metrica_nombre,
+      un.simbolo         AS unidad,
+      u.label, u.severidad, u.color_hex,
+      ur.nombre          AS reconocida_por
+    FROM alertas a
+    JOIN localidades l  ON l.id = a.localidad_id
+    JOIN metricas m     ON m.id = a.metrica_id
+    JOIN umbrales u     ON u.id = a.umbral_id
+    JOIN unidades un    ON un.id = m.unidad_base_id
+    LEFT JOIN usuarios ur ON ur.id = a.reconocida_por
+    ${where}
+    ORDER BY a.tiempo DESC
+    LIMIT $${idx++} OFFSET $${idx++}
+  `, [...params, limitNum, offset]);
+
+  return { total, rows };
+}
+
+/**
  * Devuelve true si la caché ya fue cargada (al menos 1 métrica disponible).
  */
 function cacheCargada() {
@@ -254,5 +323,6 @@ module.exports = {
   filtrarParaEmision,
   guardarAlertas,
   reconocerAlerta,
+  getAlertas,
   cacheCargada,
 }

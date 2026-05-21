@@ -7,7 +7,7 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useMemo, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { useLocation } from 'react-router-dom';
 import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -21,7 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
-import { getWeatherAtLocation, getAqiAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
+import { getWeatherAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
 import axios from 'axios';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
@@ -35,7 +35,6 @@ import VoronoiLayer from './layers/VoronoiLayer';
 import ChoroplethLayer from './layers/ChoroplethLayer';
 import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
-import SimulationZoneLayer from './layers/SimulationZoneLayer';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import { FALLBACK_DATA } from '../../data/fallbackData';
@@ -267,7 +266,7 @@ function MapaMonitoreo() {
       };
       fetchHistory();
     }
-  }, [isHistoricalMode, selectedCity?.latitude, selectedCity?.longitude]);
+  }, [isHistoricalMode, selectedCity]);
 
   // Se eliminó la vieja carga estática de climas
 

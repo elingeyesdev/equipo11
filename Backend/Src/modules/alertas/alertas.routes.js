@@ -20,106 +20,26 @@
  */
 
 const router = require('express').Router()
-const db = require('../../config/db')
 const alertasService = require('./alertas.service')
 const logger = require('../../utils/logger')
 const { verificarToken } = require('../auth/auth.middleware')
 const { validate } = require('../../middleware/validate')
 const { alertasQuerySchema, reconocerBodySchema } = require('./alertas.schema')
+const { success, error } = require('../../utils/response')
 
 // ─── GET /api/alertas ─────────────────────────────────────────────────────────
 router.get('/', validate(alertasQuerySchema, 'query'), async (req, res) => {
   try {
-    const {
-      desde,
-      hasta,
-      metrica,
-      severidad,
-      reconocida,
-      page,
-      limit,
-    } = req.query
-
-    const limitNum = limit
-    const offset   = (page - 1) * limitNum
-
-    // Construcción dinámica del WHERE
-    const conditions = []
-    const params     = []
-    let idx = 1
-
-    if (desde) {
-      conditions.push(`a.tiempo >= $${idx++}`)
-      params.push(desde)
-    }
-    if (hasta) {
-      conditions.push(`a.tiempo <= $${idx++}`)
-      params.push(hasta)
-    }
-    if (metrica) {
-      conditions.push(`m.clave = $${idx++}`)
-      params.push(metrica)
-    }
-    if (severidad) {
-      conditions.push(`u.severidad = $${idx++}`)
-      params.push(severidad)
-    }
-    if (reconocida !== undefined) {
-      conditions.push(`a.reconocida = $${idx++}`)
-      params.push(reconocida === 'true')
-    }
-
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-
-    // Total para paginación
-    const countSql = `
-      SELECT COUNT(*) AS total
-      FROM alertas a
-      JOIN localidades l ON l.id = a.localidad_id
-      JOIN metricas m    ON m.id = a.metrica_id
-      JOIN umbrales u    ON u.id = a.umbral_id
-      ${where}
-    `
-    const { rows: countRows } = await db.query(countSql, params)
-    const total = parseInt(countRows[0].total)
-
-    // Datos paginados
-    const dataSql = `
-      SELECT
-        a.id,
-        a.tiempo,
-        l.nombre           AS ciudad,
-        m.clave            AS metrica,
-        m.nombre           AS metrica_nombre,
-        un.simbolo         AS unidad,
-        a.valor,
-        u.label,
-        u.severidad,
-        u.color_hex,
-        a.reconocida,
-        a.reconocida_en,
-        ur.nombre          AS reconocida_por
-      FROM alertas a
-      JOIN localidades l  ON l.id = a.localidad_id
-      JOIN metricas m     ON m.id = a.metrica_id
-      JOIN umbrales u     ON u.id = a.umbral_id
-      JOIN unidades un    ON un.id = m.unidad_base_id
-      LEFT JOIN usuarios ur ON ur.id = a.reconocida_por
-      ${where}
-      ORDER BY a.tiempo DESC
-      LIMIT $${idx++} OFFSET $${idx++}
-    `
-    const { rows } = await db.query(dataSql, [...params, limitNum, offset])
-
-    res.json({
+    const { total, rows } = await alertasService.getAlertas(req.query)
+    success(res, {
       total,
-      pagina:  parseInt(page) || 1,
-      limite:  limitNum,
+      pagina:  parseInt(req.query.page) || 1,
+      limite:  req.query.limit,
       alertas: rows,
     })
   } catch (err) {
     logger.error('[alertas] GET /api/alertas error:', err)
-    res.status(500).json({ error: 'Error interno al obtener alertas' })
+    error(res, 'Error interno al obtener alertas', 500)
   }
 })
 
@@ -130,19 +50,19 @@ router.patch('/:id/reconocer', verificarToken, validate(reconocerBodySchema, 'bo
     const usuarioId = parseInt(req.body.usuarioId)
 
     if (!id || !usuarioId) {
-      return res.status(400).json({ error: 'Se requieren id (path) y usuarioId (body)' })
+      return error(res, 'Se requieren id (path) y usuarioId (body)', 400)
     }
 
     const ok = await alertasService.reconocerAlerta(id, usuarioId)
 
     if (!ok) {
-      return res.status(404).json({ error: 'Alerta no encontrada o ya reconocida' })
+      return error(res, 'Alerta no encontrada o ya reconocida', 404)
     }
 
-    res.json({ ok: true })
+    success(res, null)
   } catch (err) {
     logger.error('[alertas] PATCH reconocer error:', err)
-    res.status(500).json({ error: 'Error interno al reconocer alerta' })
+    error(res, 'Error interno al reconocer alerta', 500)
   }
 })
 

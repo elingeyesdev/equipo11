@@ -15,7 +15,7 @@ const sendWhatsAppMessage = async (number, message) => {
 
     // Verificamos si el cliente está listo
     // Note: client.pupPage is a way to check if it's initialized
-    if (!client.info) {
+    if (!client.isReady || !client.isReady()) {
         logger.warn('[WhatsApp] El cliente no está listo aún. Escanea el QR primero.');
         return false;
     }

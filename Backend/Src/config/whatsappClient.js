@@ -77,7 +77,32 @@ client.on('auth_failure', (msg) => {
     logger.error('❌ WhatsApp Auth Failure:', msg);
 });
 
+client.on('disconnected', (reason) => {
+    logger.warn(`⚠️ WhatsApp Client Disconnected: ${reason}`);
+    if (reason === 'LOGOUT') {
+        logger.warn('📱 WhatsApp session expired. QR re-scan required.');
+    }
+    // Reintentar inicialización después de 30s
+    setTimeout(() => {
+        logger.info('🔄 Attempting WhatsApp reconnection...');
+        client.initialize();
+    }, 30000);
+});
+
+// Exported helpers for healthcheck
+function isReady() {
+    return !!(client.info && client.pupPage);
+}
+
+function getStatus() {
+    if (!client.info) return 'uninitialized';
+    if (!client.pupPage) return 'connecting';
+    return 'ready';
+}
+
 // Inicializamos el cliente
 client.initialize();
 
 module.exports = client;
+module.exports.isReady = isReady;
+module.exports.getStatus = getStatus;

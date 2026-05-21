@@ -1,5 +1,6 @@
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
+const { success, error } = require('../../utils/response')
 
 const historialController = {
   /**
@@ -33,10 +34,10 @@ const historialController = {
         horaMap.get(key).data[r.metrica] = Number(r.valor)
       }
 
-      res.json([...horaMap.values()])
+      success(res, [...horaMap.values()])
     } catch (err) {
       logger.error('[historial/ciudad] error:', err)
-      res.status(500).json({ msg: 'Error obteniendo historial de ciudad', error: err.message })
+      error(res, 'Error obteniendo historial de ciudad: ' + err.message, 500)
     }
   },
 
@@ -79,10 +80,10 @@ const historialController = {
         cities: [...g.cities.values()]
       }))
 
-      res.json(timeline)
+      success(res, timeline)
     } catch (err) {
       logger.error('[historial] error:', err)
-      res.status(500).json({ msg: 'Error obteniendo historial', error: err.message })
+      error(res, 'Error obteniendo historial: ' + err.message, 500)
     }
   },
 
@@ -93,7 +94,7 @@ const historialController = {
       const { rows: fuentes }     = await db.query("SELECT id FROM fuentes_datos WHERE clave = 'simulacion'")
 
       if (!fuentes.length) {
-        return res.status(400).json({ msg: 'Fuente de datos "simulacion" no encontrada en la BD' })
+        return error(res, 'Fuente de datos "simulacion" no encontrada en la BD', 400)
       }
 
       const fuenteId = fuentes[0].id
@@ -115,20 +116,20 @@ const historialController = {
         ON CONFLICT DO NOTHING
       `)
 
-      res.json({ msg: 'Datos de prueba inyectados (24 horas)', count: inserts.length })
+      success(res, { mensaje: 'Datos de prueba inyectados (24 horas)', count: inserts.length })
     } catch (err) {
       logger.error('[historial] seed error:', err)
-      res.status(500).json({ msg: 'Error en seeding', error: err.message })
+      error(res, 'Error en seeding: ' + err.message, 500)
     }
   },
 
   clearHistorial: async (req, res) => {
     try {
       await db.query('DELETE FROM lecturas')
-      res.json({ msg: 'Todo el historial ha sido borrado exitosamente.' })
+      success(res, { mensaje: 'Todo el historial ha sido borrado exitosamente.' })
     } catch (err) {
       logger.error('[historial] clear error:', err)
-      res.status(500).json({ msg: 'Error limpiando base de datos', error: err.message })
+      error(res, 'Error limpiando base de datos: ' + err.message, 500)
     }
   }
 }

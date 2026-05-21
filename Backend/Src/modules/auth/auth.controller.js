@@ -1,5 +1,6 @@
 const { register, login, forgotPassword, resetPassword } = require('./auth.service')
 const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('./auth.schema')
+const { success, error } = require('../../utils/response')
 
 const registerController = async (req, res) => {
   // Paso 1: Validar datos con Zod
@@ -9,15 +10,15 @@ const registerController = async (req, res) => {
       campo: e.path[0],
       mensaje: e.message
     }))
-    return res.status(400).json({ ok: false, mensaje: errores[0].mensaje, errores })
+    return error(res, errores[0].mensaje, 400)
   }
 
   // Paso 2: Procesar registro con datos validados
   try {
     const usuario = await register(parsed.data)
-    res.status(201).json({ ok: true, mensaje: 'Usuario registrado correctamente', usuario })
+    success(res, { mensaje: 'Usuario registrado correctamente', usuario }, 201)
   } catch (error) {
-    res.status(400).json({ ok: false, mensaje: error.message })
+    error(res, error.message, 400)
   }
 }
 
@@ -29,43 +30,43 @@ const loginController = async (req, res) => {
       campo: e.path[0],
       mensaje: e.message
     }))
-    return res.status(400).json({ ok: false, mensaje: errores[0].mensaje, errores })
+    return error(res, errores[0].mensaje, 400)
   }
 
   // Paso 2: Procesar login con datos validados
   try {
     const usuario = await login(parsed.data)
-    res.status(200).json({ ok: true, mensaje: 'Sesión iniciada', usuario })
+    success(res, { mensaje: 'Sesión iniciada', usuario })
   } catch (error) {
-    res.status(401).json({ ok: false, mensaje: error.message })
+    error(res, error.message, 401)
   }
 }
 
 const forgotPasswordController = async (req, res) => {
   const parsed = forgotPasswordSchema.safeParse(req.body)
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, mensaje: parsed.error.errors[0].message })
+    return error(res, parsed.error.errors[0].message, 400)
   }
 
   try {
     await forgotPassword(parsed.data)
-    res.status(200).json({ ok: true, mensaje: 'Código de recuperación enviado al correo' })
+    success(res, { mensaje: 'Código de recuperación enviado al correo' })
   } catch (error) {
-    res.status(400).json({ ok: false, mensaje: error.message })
+    error(res, error.message, 400)
   }
 }
 
 const resetPasswordController = async (req, res) => {
   const parsed = resetPasswordSchema.safeParse(req.body)
   if (!parsed.success) {
-    return res.status(400).json({ ok: false, mensaje: parsed.error.errors[0].message })
+    return error(res, parsed.error.errors[0].message, 400)
   }
 
   try {
     await resetPassword(parsed.data)
-    res.status(200).json({ ok: true, mensaje: 'Contraseña actualizada correctamente' })
+    success(res, { mensaje: 'Contraseña actualizada correctamente' })
   } catch (error) {
-    res.status(400).json({ ok: false, mensaje: error.message })
+    error(res, error.message, 400)
   }
 }
 

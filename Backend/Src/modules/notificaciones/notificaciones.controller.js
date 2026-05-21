@@ -1,11 +1,12 @@
 const db = require('../../config/db');
+const { success, error } = require('../../utils/response');
 
 const getSettings = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM configuracion_notificaciones ORDER BY id ASC');
-    res.json(rows);
+    success(res, rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error(res, err.message, 500);
   }
 };
 
@@ -13,7 +14,7 @@ const updateSettings = async (req, res) => {
   const { settings } = req.body; // Array of { tipo, habilitado, destino }
   
   if (!Array.isArray(settings)) {
-    return res.status(400).json({ error: 'Settings must be an array' });
+    return error(res, 'Settings must be an array', 400);
   }
 
   try {
@@ -25,10 +26,10 @@ const updateSettings = async (req, res) => {
       );
     }
     await db.query('COMMIT');
-    res.json({ msg: 'Configuración actualizada correctamente' });
+    success(res, { mensaje: 'Configuración actualizada correctamente' });
   } catch (err) {
     await db.query('ROLLBACK');
-    res.status(500).json({ error: err.message });
+    error(res, err.message, 500);
   }
 };
 

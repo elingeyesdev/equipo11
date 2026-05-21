@@ -1,13 +1,14 @@
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 const logger = require('../../utils/logger');
+const { success, error } = require('../../utils/response');
 
 const generarReporte = async (req, res) => {
   try {
     const { formato, titulo, columnas, datos } = req.body;
 
     if (!datos || !Array.isArray(datos) || !columnas || !Array.isArray(columnas)) {
-      return res.status(400).json({ error: 'Datos o columnas inválidas' });
+      return error(res, 'Datos o columnas inválidas', 400);
     }
 
     if (formato === 'pdf') {
@@ -93,11 +94,11 @@ const generarReporte = async (req, res) => {
       res.end();
 
     } else {
-      res.status(400).json({ error: 'Formato no soportado (use "pdf" o "excel")' });
+      error(res, 'Formato no soportado (use "pdf" o "excel")', 400);
     }
   } catch (error) {
     logger.error('Error al generar reporte:', error);
-    res.status(500).json({ error: 'Error interno al generar el reporte' });
+    error(res, 'Error interno al generar el reporte', 500);
   }
 };
 

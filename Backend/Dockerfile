@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Instalar dependencias para Puppeteer/Chromium y eccodes para archivos GRIB2
 RUN apk add --no-cache \
-    chromium nss freetype harfbuzz ca-certificates ttf-freefont && \
+    chromium nss freetype harfbuzz ca-certificates ttf-freefont curl && \
     apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 # Configurar variables de entorno para Puppeteer y Corepack
