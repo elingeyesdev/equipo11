@@ -33,57 +33,7 @@ import MarkersLayer from './layers/MarkersLayer';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import SimulationZoneLayer from './layers/SimulationZoneLayer';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
-// Fallback estático con cobertura de Sudamérica (usado cuando la simulación NO está activa)
-const FALLBACK_DATA = [
-  // Bolivia
-  { id: 'lapaz', name: 'La Paz', latitude: -16.4897, longitude: -68.1193, data: { temperatura: 12, aqi: 65, ica: 78, ruido: 72, humedad: 45 } },
-  { id: 'cochabamba', name: 'Cochabamba', latitude: -17.3895, longitude: -66.1568, data: { temperatura: 24, aqi: 95, ica: 82, ruido: 65, humedad: 30 } },
-  { id: 'santacruz', name: 'Santa Cruz', latitude: -17.7833, longitude: -63.1812, data: { temperatura: 30, aqi: 110, ica: 55, ruido: 78, humedad: 70 } },
-  { id: 'oruro', name: 'Oruro', latitude: -17.9624, longitude: -67.1061, data: { temperatura: 8, aqi: 42, ica: 88, ruido: 45, humedad: 35 } },
-  { id: 'potosi', name: 'Potosí', latitude: -19.5836, longitude: -65.7531, data: { temperatura: 5, aqi: 38, ica: 91, ruido: 40, humedad: 28 } },
-  { id: 'sucre', name: 'Sucre', latitude: -19.0353, longitude: -65.2592, data: { temperatura: 18, aqi: 55, ica: 85, ruido: 58, humedad: 42 } },
-  { id: 'tarija', name: 'Tarija', latitude: -21.5355, longitude: -64.7296, data: { temperatura: 22, aqi: 48, ica: 79, ruido: 52, humedad: 55 } },
-  { id: 'trinidad', name: 'Trinidad', latitude: -14.8333, longitude: -64.9000, data: { temperatura: 32, aqi: 78, ica: 65, ruido: 62, humedad: 82 } },
-  { id: 'cobija', name: 'Cobija', latitude: -11.0267, longitude: -68.7692, data: { temperatura: 28, aqi: 72, ica: 60, ruido: 55, humedad: 88 } },
-  // Argentina
-  { id: 'buenos_aires', name: 'Buenos Aires', latitude: -34.6037, longitude: -58.3816, data: { temperatura: 22, aqi: 95, ica: 68, ruido: 80, humedad: 65 } },
-  { id: 'cordoba_ar', name: 'Córdoba', latitude: -31.4135, longitude: -64.1811, data: { temperatura: 20, aqi: 80, ica: 72, ruido: 70, humedad: 58 } },
-  { id: 'mendoza', name: 'Mendoza', latitude: -32.8908, longitude: -68.8272, data: { temperatura: 18, aqi: 55, ica: 75, ruido: 58, humedad: 30 } },
-  { id: 'salta', name: 'Salta', latitude: -24.7821, longitude: -65.4232, data: { temperatura: 24, aqi: 60, ica: 78, ruido: 55, humedad: 48 } },
-  { id: 'bariloche', name: 'Bariloche', latitude: -41.1335, longitude: -71.3103, data: { temperatura: 8, aqi: 22, ica: 92, ruido: 35, humedad: 62 } },
-  { id: 'ushuaia', name: 'Ushuaia', latitude: -54.8019, longitude: -68.3030, data: { temperatura: 2, aqi: 12, ica: 96, ruido: 28, humedad: 72 } },
-  // Brasil
-  { id: 'sao_paulo', name: 'São Paulo', latitude: -23.5505, longitude: -46.6333, data: { temperatura: 24, aqi: 145, ica: 58, ruido: 88, humedad: 72 } },
-  { id: 'rio_de_janeiro', name: 'Rio de Janeiro', latitude: -22.9068, longitude: -43.1729, data: { temperatura: 30, aqi: 120, ica: 62, ruido: 82, humedad: 78 } },
-  { id: 'manaus', name: 'Manaus', latitude: -3.1019, longitude: -60.0250, data: { temperatura: 32, aqi: 65, ica: 55, ruido: 60, humedad: 90 } },
-  { id: 'fortaleza', name: 'Fortaleza', latitude: -3.7172, longitude: -38.5433, data: { temperatura: 30, aqi: 90, ica: 65, ruido: 72, humedad: 78 } },
-  { id: 'porto_alegre', name: 'Porto Alegre', latitude: -30.0346, longitude: -51.2177, data: { temperatura: 20, aqi: 75, ica: 70, ruido: 68, humedad: 68 } },
-  // Chile
-  { id: 'santiago', name: 'Santiago', latitude: -33.4489, longitude: -70.6693, data: { temperatura: 18, aqi: 110, ica: 72, ruido: 75, humedad: 45 } },
-  { id: 'antofagasta', name: 'Antofagasta', latitude: -23.6509, longitude: -70.3975, data: { temperatura: 18, aqi: 45, ica: 80, ruido: 48, humedad: 15 } },
-  { id: 'punta_arenas', name: 'Punta Arenas', latitude: -53.1638, longitude: -70.9171, data: { temperatura: 4, aqi: 18, ica: 92, ruido: 32, humedad: 68 } },
-  // Colombia
-  { id: 'bogota', name: 'Bogotá', latitude: 4.7110, longitude: -74.0721, data: { temperatura: 14, aqi: 105, ica: 65, ruido: 78, humedad: 72 } },
-  { id: 'medellin', name: 'Medellín', latitude: 6.2442, longitude: -75.5812, data: { temperatura: 22, aqi: 115, ica: 62, ruido: 80, humedad: 72 } },
-  { id: 'cartagena', name: 'Cartagena', latitude: 10.3910, longitude: -75.4794, data: { temperatura: 32, aqi: 80, ica: 58, ruido: 72, humedad: 82 } },
-  // Perú
-  { id: 'lima', name: 'Lima', latitude: -12.0464, longitude: -77.0428, data: { temperatura: 20, aqi: 95, ica: 70, ruido: 78, humedad: 82 } },
-  { id: 'cusco', name: 'Cusco', latitude: -13.5319, longitude: -71.9675, data: { temperatura: 10, aqi: 48, ica: 80, ruido: 45, humedad: 48 } },
-  { id: 'iquitos', name: 'Iquitos', latitude: -3.7491, longitude: -73.2538, data: { temperatura: 30, aqi: 55, ica: 52, ruido: 52, humedad: 92 } },
-  // Ecuador
-  { id: 'quito', name: 'Quito', latitude: -0.2295, longitude: -78.5243, data: { temperatura: 14, aqi: 70, ica: 72, ruido: 65, humedad: 65 } },
-  { id: 'guayaquil', name: 'Guayaquil', latitude: -2.1894, longitude: -79.8891, data: { temperatura: 30, aqi: 95, ica: 62, ruido: 78, humedad: 78 } },
-  // Paraguay
-  { id: 'asuncion', name: 'Asunción', latitude: -25.2867, longitude: -57.6470, data: { temperatura: 28, aqi: 88, ica: 65, ruido: 70, humedad: 65 } },
-  // Uruguay
-  { id: 'montevideo', name: 'Montevideo', latitude: -34.9011, longitude: -56.1645, data: { temperatura: 18, aqi: 72, ica: 75, ruido: 65, humedad: 72 } },
-  // Venezuela
-  { id: 'caracas', name: 'Caracas', latitude: 10.4806, longitude: -66.9036, data: { temperatura: 22, aqi: 110, ica: 62, ruido: 78, humedad: 72 } },
-  { id: 'maracaibo', name: 'Maracaibo', latitude: 10.6544, longitude: -71.6011, data: { temperatura: 36, aqi: 105, ica: 58, ruido: 75, humedad: 78 } },
-  // Otros
-  { id: 'georgetown', name: 'Georgetown', latitude: 6.8013, longitude: -58.1551, data: { temperatura: 30, aqi: 60, ica: 60, ruido: 55, humedad: 85 } },
-  { id: 'paramaribo', name: 'Paramaribo', latitude: 5.8520, longitude: -55.2038, data: { temperatura: 30, aqi: 55, ica: 62, ruido: 52, humedad: 85 } },
-];
+import { FALLBACK_DATA } from '../../data/fallbackData';
 
 function MapaMonitoreo() {
   const location = useLocation();
