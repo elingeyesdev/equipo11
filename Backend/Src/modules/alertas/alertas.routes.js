@@ -23,6 +23,7 @@ const router = require('express').Router()
 const db = require('../../config/db')
 const alertasService = require('./alertas.service')
 const logger = require('../../utils/logger')
+const { verificarToken } = require('../auth/auth.middleware')
 
 // ─── GET /api/alertas ─────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
@@ -121,7 +122,7 @@ router.get('/', async (req, res) => {
 })
 
 // ─── PATCH /api/alertas/:id/reconocer ────────────────────────────────────────
-router.patch('/:id/reconocer', async (req, res) => {
+router.patch('/:id/reconocer', verificarToken, async (req, res) => {
   try {
     const id        = parseInt(req.params.id)
     const usuarioId = parseInt(req.body.usuarioId)

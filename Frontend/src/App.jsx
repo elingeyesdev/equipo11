@@ -11,8 +11,8 @@ import Register from './pages/auth/Register'
 
 // Protege las rutas que requieren sesión activa (Desactivado para MVP)
 function ProtectedRoute({ children }) {
-  // const usuario = localStorage.getItem('usuario')
-  // if (!usuario) return <Navigate to="/login" replace />
+  const usuario = localStorage.getItem('usuario')
+  if (!usuario) return <Navigate to="/login" replace />
   return children
 }
 
