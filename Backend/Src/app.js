@@ -1,15 +1,17 @@
 const express = require('express')
 const cors    = require('cors')
 const authRoutes = require('./modules/auth/auth.routes')
+const { globalLimiter, authLimiter } = require('./middleware/rateLimiter')
 
 const app = express()
 
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'
 app.use(cors({ origin: corsOrigin }))
 app.use(express.json())
+app.use('/api', globalLimiter)
 
 // Rutas
-app.use('/api/auth', authRoutes)
+app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/historial', require('./modules/historial/historial.routes'))
 app.use('/api/umbrales', require('./modules/umbrales/umbrales.routes'))
 app.use('/api/geografia', require('./modules/geografia/geografia.routes'))

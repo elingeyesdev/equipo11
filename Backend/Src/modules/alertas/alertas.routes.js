@@ -24,9 +24,11 @@ const db = require('../../config/db')
 const alertasService = require('./alertas.service')
 const logger = require('../../utils/logger')
 const { verificarToken } = require('../auth/auth.middleware')
+const { validate } = require('../../middleware/validate')
+const { alertasQuerySchema, reconocerBodySchema } = require('./alertas.schema')
 
 // ─── GET /api/alertas ─────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', validate(alertasQuerySchema, 'query'), async (req, res) => {
   try {
     const {
       desde,
@@ -34,12 +36,12 @@ router.get('/', async (req, res) => {
       metrica,
       severidad,
       reconocida,
-      page  = 1,
-      limit = 20,
+      page,
+      limit,
     } = req.query
 
-    const limitNum = Math.min(parseInt(limit) || 20, 100)
-    const offset   = (Math.max(parseInt(page) || 1, 1) - 1) * limitNum
+    const limitNum = limit
+    const offset   = (page - 1) * limitNum
 
     // Construcción dinámica del WHERE
     const conditions = []
@@ -122,7 +124,7 @@ router.get('/', async (req, res) => {
 })
 
 // ─── PATCH /api/alertas/:id/reconocer ────────────────────────────────────────
-router.patch('/:id/reconocer', verificarToken, async (req, res) => {
+router.patch('/:id/reconocer', verificarToken, validate(reconocerBodySchema, 'body'), async (req, res) => {
   try {
     const id        = parseInt(req.params.id)
     const usuarioId = parseInt(req.body.usuarioId)
