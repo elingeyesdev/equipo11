@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '../../components/Toast/Toast'
 import { formatDateTime } from '../../utils/formatters'
-import { API_BASE } from '../../config/api'
+import httpClient from '../../config/httpClient'
 import './Alertas.css'
 import '../PagePlaceholder.css'
 
@@ -53,16 +53,15 @@ export default function Alertas() {
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ page, limit: LIMIT })
-      if (desde)     params.set('desde', new Date(desde).toISOString())
-      if (hasta)     params.set('hasta', new Date(hasta + 'T23:59:59').toISOString())
-      if (metrica)   params.set('metrica', metrica)
-      if (severidad) params.set('severidad', severidad)
-      if (soloNoReconocidas) params.set('reconocida', 'false')
+      const params = { page, limit: LIMIT }
+      if (desde)     params.desde = new Date(desde).toISOString()
+      if (hasta)     params.hasta = new Date(hasta + 'T23:59:59').toISOString()
+      if (metrica)   params.metrica = metrica
+      if (severidad) params.severidad = severidad
+      if (soloNoReconocidas) params.reconocida = 'false'
 
-      const res = await fetch(`${API_BASE}/alertas?${params}`)
-      if (!res.ok) throw new Error(`Error ${res.status}`)
-      const data = await res.json()
+      const res = await httpClient.get('/alertas', { params })
+      const data = res.data
       setAlertas(data.alertas)
       setTotal(data.total)
     } catch (err) {
@@ -82,12 +81,7 @@ export default function Alertas() {
   async function reconocer(id) {
     try {
       // usuarioId 1 por defecto (sin auth completa en MVP)
-      const res = await fetch(`${API_BASE}/alertas/${id}/reconocer`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuarioId: 1 }),
-      })
-      if (!res.ok) throw new Error(`Error ${res.status}`)
+      await httpClient.patch(`/alertas/${id}/reconocer`, { usuarioId: 1 })
       // Actualizar solo esa fila en memoria (sin refetch completo)
       setAlertas(prev => prev.map(a =>
         a.id === id ? { ...a, reconocida: true, reconocida_en: new Date().toISOString() } : a

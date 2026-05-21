@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
 import { API_URL } from '../config/api'
+import httpClient from '../config/httpClient'
 import { useToast } from '../components/Toast/Toast'
 
 const SimulacionContext = createContext(null)
@@ -154,14 +155,8 @@ export function SimulacionProvider({ children }) {
   }, [])
 
   const simularRango = useCallback(async (startTime, endTime, intervalMinutes) => {
-    const res = await fetch(`${SOCKET_URL}/api/simulacion/range`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startTime, endTime, intervalMinutes })
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Error en la simulación por rango')
-    return data
+    const res = await httpClient.post('/simulacion/range', { startTime, endTime, intervalMinutes })
+    return res.data
   }, [])
 
   // ─── Control de simulación de ZONA ──────────────────────────────────────

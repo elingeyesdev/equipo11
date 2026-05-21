@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useToast } from '../../components/Toast/Toast'
-import { API_BASE } from '../../config/api'
+import httpClient from '../../config/httpClient'
 import '../PagePlaceholder.css'
 import './Usuarios.css'
 
@@ -41,16 +41,13 @@ function Usuarios() {
   const cargarDatos = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const headers = { 'Authorization': `Bearer ${token}` }
-      
       const [resUsers, resRoles] = await Promise.all([
-        fetch(`${API_BASE}/usuarios`, { headers }),
-        fetch(`${API_BASE}/usuarios/roles`, { headers })
+        httpClient.get('/usuarios'),
+        httpClient.get('/usuarios/roles')
       ])
       
-      const dataUsers = await resUsers.json()
-      const dataRoles = await resRoles.json()
+      const dataUsers = resUsers.data
+      const dataRoles = resRoles.data
 
       if (dataUsers.ok) setUsuarios(dataUsers.usuarios)
       if (dataRoles.ok) setRoles(dataRoles.roles)
@@ -63,16 +60,8 @@ function Usuarios() {
 
   const handleRoleChange = async (userId, newRoleId) => {
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/usuarios/${userId}/rol`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ rol_id: newRoleId })
-      })
-      const data = await res.json()
+      const res = await httpClient.put(`/usuarios/${userId}/rol`, { rol_id: newRoleId })
+      const data = res.data
       if (data.ok) {
         cargarDatos()
       } else {
@@ -85,16 +74,8 @@ function Usuarios() {
 
   const handleEstadoChange = async (userId, newEstado) => {
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/usuarios/${userId}/estado`, {
-        method: 'PUT',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ activo: newEstado })
-      })
-      const data = await res.json()
+      const res = await httpClient.put(`/usuarios/${userId}/estado`, { activo: newEstado })
+      const data = res.data
       if (data.ok) {
         cargarDatos()
       } else {

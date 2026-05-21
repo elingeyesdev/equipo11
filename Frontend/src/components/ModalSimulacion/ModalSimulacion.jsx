@@ -7,7 +7,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useToast } from '../Toast/Toast';
 import { calcCenter } from '../../utils/geo';
-import { API_BASE } from '../../config/api';
+import httpClient from '../../config/httpClient';
 import FALLBACK_ESCENARIOS from './escenarios.frontend';
 import './ModalSimulacion.css';
 
@@ -94,9 +94,8 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
   const [ESCENARIOS, setESCENARIOS] = useState(FALLBACK_ESCENARIOS);
 
   useEffect(() => {
-    fetch(`${API_BASE}/simulacion/escenarios`)
-      .then(r => r.json())
-      .then(data => { if (data.ok) setESCENARIOS(data.data); })
+    httpClient.get('/simulacion/escenarios')
+      .then(res => { if (res.data.ok) setESCENARIOS(res.data.data); })
       .catch(() => { /* mantiene fallback */ });
   }, []);
 

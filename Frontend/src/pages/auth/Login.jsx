@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthHero from './AuthHero'
-import { API_BASE } from '../../config/api'
+import httpClient from '../../config/httpClient'
 import './Auth.css'
 
 const VALIDACIONES = {
@@ -51,12 +51,8 @@ function Login() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
+      const res = await httpClient.post('/auth/login', form)
+      const data = res.data
       if (!data.ok) throw new Error(data.mensaje)
 
       localStorage.setItem('token', data.usuario.token)
@@ -80,12 +76,8 @@ function Login() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email }),
-      })
-      const data = await res.json()
+      const res = await httpClient.post('/auth/forgot-password', { email: form.email })
+      const data = res.data
       if (!data.ok) throw new Error(data.mensaje)
 
       setSuccessMsg(data.mensaje)
@@ -108,12 +100,8 @@ function Login() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, code: form.code, newPassword: form.newPassword }),
-      })
-      const data = await res.json()
+      const res = await httpClient.post('/auth/reset-password', { email: form.email, code: form.code, newPassword: form.newPassword })
+      const data = res.data
       if (!data.ok) throw new Error(data.mensaje)
 
       setSuccessMsg('Contraseña restablecida correctamente. Inicia sesión.')

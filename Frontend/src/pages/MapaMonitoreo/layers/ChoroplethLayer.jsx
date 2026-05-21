@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Source, Layer } from 'react-map-gl/mapbox'
 import { colorPorValor, umbralPorValor } from '../../../hooks/useUmbrales'
-import { API_BASE } from '../../../config/api'
-
-const ENDPOINT = `${API_BASE}/geografia/regiones-geojson`
+import httpClient from '../../../config/httpClient'
 
 let _cachedGeoJSON = null
 
@@ -22,9 +20,8 @@ export default function ChoroplethLayer({ metrica, umbrales, cities, activeFilte
 
   useEffect(() => {
     if (!_cachedGeoJSON) {
-      fetch(ENDPOINT)
-        .then(r => r.json())
-        .then(data => { _cachedGeoJSON = data; setRegionGeo(data) })
+      httpClient.get('/geografia/regiones-geojson')
+        .then(res => { _cachedGeoJSON = res.data; setRegionGeo(res.data) })
         .catch(err => console.error('[ChoroplethLayer] Error fetching:', err))
     } else {
       setRegionGeo(_cachedGeoJSON)

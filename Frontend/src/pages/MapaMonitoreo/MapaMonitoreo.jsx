@@ -13,6 +13,7 @@ import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, So
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { API_BASE } from '../../config/api';
+import httpClient from '../../config/httpClient';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
@@ -266,8 +267,7 @@ function MapaMonitoreo() {
         // 1. Intentar historial en BD local (datos del simulador)
         try {
           // Buscar localidad_id en la BD por nombre
-          const locRes = await fetch(`${API_BASE}/historial`);
-          const allData = await locRes.json();
+          const { data: allData } = await httpClient.get('/historial');
 
           // Intentar con el nuevo endpoint por ciudad si tiene id numérico de BD
           // El id de la ciudad en el simulador puede no coincidir con localidad_id de BD

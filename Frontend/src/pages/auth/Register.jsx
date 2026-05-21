@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthHero from './AuthHero'
-import { API_BASE } from '../../config/api'
+import httpClient from '../../config/httpClient'
 import './Auth.css'
 
 const VALIDACIONES = {
@@ -49,17 +49,13 @@ function Register() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: form.nombre,
-          apellido: form.apellido,
-          email: form.email,
-          password: form.password,
-        }),
+      const res = await httpClient.post('/auth/register', {
+        nombre: form.nombre,
+        apellido: form.apellido,
+        email: form.email,
+        password: form.password,
       })
-      const data = await res.json()
+      const data = res.data
       if (!data.ok) throw new Error(data.mensaje)
 
       setSuccess('¡Cuenta creada exitosamente! Redirigiendo...')

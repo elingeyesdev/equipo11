@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config/api'
+import httpClient from '../config/httpClient'
 
 // Cache en módulo para evitar refetches entre re-renders
 const _cache = new Map()
@@ -25,12 +25,8 @@ export function useUmbrales(metrica) {
     }
 
     setLoading(true)
-    // Usar la ruta absoluta al API de acuerdo a la config del cliente (o rely en el proxy/Vite)
-    fetch(`${API_BASE}/umbrales/${metrica}`)
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json()
-      })
+    httpClient.get(`/umbrales/${metrica}`)
+      .then(res => res.data)
       .then(rows => {
         _cache.set(metrica, rows)
         setUmbrales(rows)

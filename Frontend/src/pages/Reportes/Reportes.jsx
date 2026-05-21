@@ -3,7 +3,7 @@ import { useUnidades } from '../../hooks/useUnidades'
 import { formatearValor } from '../../utils/unidades'
 import { useToast } from '../../components/Toast/Toast'
 import { formatDateTime, formatDate, formatTime } from '../../utils/formatters'
-import { API_BASE } from '../../config/api'
+import httpClient from '../../config/httpClient'
 import './Reportes.css'
 import '../PagePlaceholder.css'
 
@@ -326,8 +326,8 @@ export default function Reportes() {
   const { unidades } = useUnidades()
 
   useEffect(() => {
-    fetch(`${API_BASE}/historial`)
-      .then(r => r.json())
+    httpClient.get('/historial')
+      .then(res => res.data)
       .then(data => {
         const flat = []
         data.forEach(t => {
@@ -451,13 +451,8 @@ export default function Reportes() {
         })),
       }
 
-      const res = await fetch(`${API_BASE}/reportes/generar`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Error al generar el reporte')
-      const blob = await res.blob()
+      const res = await httpClient.post('/reportes/generar', payload, { responseType: 'blob' })
+      const blob = res.data
       const url  = URL.createObjectURL(blob)
       const a    = Object.assign(document.createElement('a'), {
         href:     url,
