@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useUnidades } from '../../hooks/useUnidades'
 import { formatearValor } from '../../utils/unidades'
 import { useToast } from '../../components/Toast/Toast'
+import { formatDateTime, formatDate, formatTime } from '../../utils/formatters'
 import { API_BASE } from '../../config/api'
 import './Reportes.css'
 import '../PagePlaceholder.css'
@@ -139,10 +140,10 @@ function LineChart({ series, metrica }) {
           
           {/* Eje X (Fechas) */}
           <text x={PX} y={H - 8} textAnchor="start" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
-            {new Date(minT).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} {new Date(minT).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+            {formatDate(minT)} {formatTime(minT)}
           </text>
           <text x={W - PX} y={H - 8} textAnchor="end" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
-            {new Date(maxT).toLocaleDateString('es-BO', { day: '2-digit', month: 'short' })} {new Date(maxT).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+            {formatDate(maxT)} {formatTime(maxT)}
           </text>
           
           {/* Series */}
@@ -192,9 +193,9 @@ function LineChart({ series, metrica }) {
             top: 10
           }}>
             <div className="rep-tooltip-date">
-              {new Date(hoverData.t).toLocaleDateString('es-BO', { weekday: 'long', day: '2-digit', month: 'short' })}
+              {formatDate(hoverData.t)}
               <br />
-              <span className="rep-tooltip-time">{new Date(hoverData.t).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="rep-tooltip-time">{formatTime(hoverData.t)}</span>
             </div>
             <div className="rep-tooltip-items">
               {hoverData.points.map((p, i) => (
@@ -440,7 +441,7 @@ export default function Reportes() {
           { header: 'ICA',           key: 'icaFmt' },
         ],
         datos: datosFiltrados.map(d => ({
-          fechaFmt:       new Date(d.fecha).toLocaleString('es-BO'),
+          fechaFmt:       formatDateTime(d.fecha),
           ciudad:         d.ciudad,
           temperaturaFmt: formatearValor('temperatura', d.temperatura, unidades.temperatura),
           aqiFmt:         formatearValor('aqi',         d.aqi,         unidades.aqi),
@@ -642,10 +643,7 @@ export default function Reportes() {
               {datosPagina.map((row, i) => (
                 <tr key={i}>
                   <td className="rep-td-fecha">
-                    {new Date(row.fecha).toLocaleString('es-BO', {
-                      day: '2-digit', month: '2-digit', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit',
-                    })}
+                    {formatDateTime(row.fecha)}
                   </td>
                   <td className="rep-td-ciudad">{row.ciudad}</td>
                   <td className="rep-td-valor">{formatearValor('temperatura', row.temperatura, unidades.temperatura)}</td>

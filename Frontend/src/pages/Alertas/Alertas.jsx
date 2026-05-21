@@ -10,6 +10,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '../../components/Toast/Toast'
+import { formatDateTime } from '../../utils/formatters'
 import { API_BASE } from '../../config/api'
 import './Alertas.css'
 import '../PagePlaceholder.css'
@@ -29,15 +30,6 @@ const SEVERIDADES = [
   { value: 'critica',     label: 'Crítica' },
   { value: 'emergencia',  label: 'Emergencia' },
 ]
-
-// Formatear fecha ISO a string legible
-function fmtFecha(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-BO', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
 
 export default function Alertas() {
   const { addToast } = useToast()
@@ -215,7 +207,7 @@ export default function Alertas() {
             <tbody>
               {alertas.map(a => (
                 <tr key={a.id} className={a.reconocida ? 'alertas-fila--reconocida' : ''}>
-                  <td className="alertas-td-fecha">{fmtFecha(a.tiempo)}</td>
+                  <td className="alertas-td-fecha">{formatDateTime(a.tiempo)}</td>
                   <td className="alertas-td-ciudad">{a.ciudad}</td>
                   <td className="alertas-td-metrica">{a.metrica_nombre}</td>
                   <td className="alertas-td-valor">

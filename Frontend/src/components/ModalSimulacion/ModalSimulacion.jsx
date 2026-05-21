@@ -7,7 +7,8 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useToast } from '../Toast/Toast';
 import { calcCenter } from '../../utils/geo';
-import ESCENARIOS from './escenarios.frontend';
+import { API_BASE } from '../../config/api';
+import FALLBACK_ESCENARIOS from './escenarios.frontend';
 import './ModalSimulacion.css';
 
 const OPCIONES_GUARDADO = [
@@ -89,6 +90,15 @@ function EscenarioCard({ escenario, selected, onSelect, metricaColor }) {
 function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
   const { addToast } = useToast()
   const { iniciarZona, detenerZona, zonaSimActiva } = useSimulacion();
+
+  const [ESCENARIOS, setESCENARIOS] = useState(FALLBACK_ESCENARIOS);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/simulacion/escenarios`)
+      .then(r => r.json())
+      .then(data => { if (data.ok) setESCENARIOS(data.data); })
+      .catch(() => { /* mantiene fallback */ });
+  }, []);
 
   // Métrica activa (global para ambas zonas para simplificar la comparativa)
   const [metricIdx, setMetricIdx] = useState(0);

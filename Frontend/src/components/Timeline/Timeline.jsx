@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { formatTime, formatDate } from '../../utils/formatters';
 import './Timeline.css';
 
 const Timeline = ({ 
@@ -108,8 +109,7 @@ const Timeline = ({
           const isB = isCompareMode && index === compareIndexB;
           const isCurrentHour = index === currentHourIndex;
 
-          const dateObj = new Date(entry.timestamp);
-          const timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const timeString = formatTime(entry.timestamp);
 
           return (
             <div
@@ -123,7 +123,7 @@ const Timeline = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <span className="history-card-date">
-                  {dateObj.toLocaleDateString([], { day: '2-digit', month: 'short' })}
+                  {formatDate(entry.timestamp)}
                 </span>
                 <span className="history-card-time">{timeString}</span>
               </div>

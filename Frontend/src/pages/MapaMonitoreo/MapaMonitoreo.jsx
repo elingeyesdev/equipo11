@@ -23,6 +23,7 @@ import axios from 'axios';
 import GridRadarLayer from '../../components/GridRadarLayer/GridRadarLayer';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
+import { formatDateTime, formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
 import Draggable from '../../components/Draggable/Draggable';
 import VoronoiLayer from './layers/VoronoiLayer';
@@ -126,18 +127,6 @@ function MapaMonitoreo() {
   const zonaSimColor = firstZone.color || '#38bdf8';
   const zonaSimValor = firstZone.valor ?? null;
   const zonaSimUmbralLabel = firstZone.umbralLabel || '—';
-
-  // Formatear el tiempo de la simulación
-  const formatSimTime = (isoStr) => {
-    if (!isoStr) return '—';
-    const date = new Date(isoStr);
-    return date.toLocaleString('es-BO', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const handleBoundarySelect = useCallback(({ z1, z2, changed }) => {
     const arr = [];
@@ -1133,10 +1122,10 @@ function MapaMonitoreo() {
               </div>
               
               <div style={{ position: 'absolute', top: '20px', left: '-130px', background: 'rgba(0,0,0,0.8)', color: '#06b6d4', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #06b6d4' }}>
-                IZQ: {globalHistoryArray[compareIndexA]?.timestamp ? new Date(globalHistoryArray[compareIndexA].timestamp).toLocaleTimeString() : '...'}
+                IZQ: {globalHistoryArray[compareIndexA]?.timestamp ? formatTime(globalHistoryArray[compareIndexA].timestamp) : '...'}
               </div>
               <div style={{ position: 'absolute', top: '20px', right: '-130px', background: 'rgba(0,0,0,0.8)', color: '#f59e0b', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #f59e0b' }}>
-                DER: {globalHistoryArray[compareIndexB]?.timestamp ? new Date(globalHistoryArray[compareIndexB].timestamp).toLocaleTimeString() : '...'}
+                DER: {globalHistoryArray[compareIndexB]?.timestamp ? formatTime(globalHistoryArray[compareIndexB].timestamp) : '...'}
               </div>
             </div>
           )}
@@ -1680,7 +1669,7 @@ function MapaMonitoreo() {
           </div>
           <div className="zona-sim-info-row">
             <span className="zona-sim-info-label">Fecha/Hora Sim</span>
-            <span className="zona-sim-info-val">{formatSimTime(zonaSimTiempo)}</span>
+            <span className="zona-sim-info-val">{formatDateTime(zonaSimTiempo)}</span>
           </div>
 
           {/* Barra de progreso */}
