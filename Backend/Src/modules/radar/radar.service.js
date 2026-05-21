@@ -5,6 +5,7 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 const path = require('path');
 const logger = require('../../utils/logger');
+const { buildNOAAUrl } = require('../../utils/noaa');
 
 // Configuración de directorios de datos (Persistentes)
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -61,7 +62,7 @@ const getNOAAUrlForDate = async (dateObj, hour) => {
     const dd = String(dateObj.getUTCDate()).padStart(2, '0');
     const dateStr = `${yyyy}${mm}${dd}`;
 
-    const url = `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${hour}z.pgrb2.0p25.f000&lev_10_m_above_ground=on&lev_mean_sea_level=on&lev_surface=on&lev_3000-0_m_above_ground=on&lev_entire_atmosphere=on&var_UGRD=on&var_VGRD=on&var_GUST=on&var_PRMSL=on&var_CRAIN=on&var_CSNOW=on&var_VIS=on&var_CAPE=on&var_HLCY=on&var_REFC=on&dir=%2Fgfs.${dateStr}%2F${hour}%2Fatmos`;
+    const url = buildNOAAUrl(dateStr, hour, 'f000');
     
     try {
         const response = await fetch(url, { method: 'HEAD' });
@@ -382,7 +383,7 @@ const scrapeFutureForecasts = async () => {
     const offsets = ['f003', 'f006', 'f009', 'f012', 'f015', 'f018', 'f021', 'f024'];
     
     for (const offset of offsets) {
-        const url = `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${hour}z.pgrb2.0p25.${offset}&lev_10_m_above_ground=on&lev_mean_sea_level=on&lev_surface=on&lev_3000-0_m_above_ground=on&lev_entire_atmosphere=on&var_UGRD=on&var_VGRD=on&var_GUST=on&var_PRMSL=on&var_CRAIN=on&var_CSNOW=on&var_VIS=on&var_CAPE=on&var_HLCY=on&var_REFC=on&dir=%2Fgfs.${dateStr}%2F${hour}%2Fatmos`;
+        const url = buildNOAAUrl(dateStr, hour, offset);
         
         // Calcular el tiempo de este forecast
         const offsetHours = parseInt(offset.substring(1));

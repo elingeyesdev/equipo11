@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
 import { useToast } from '../Toast/Toast'
+import { calcCenter } from '../../utils/geo'
 import './FronterasPanel.css'
 
 const COUNTRIES_API = 'https://countriesnow.space/api/v0.1'
@@ -19,13 +20,6 @@ const ESCENARIOS_OPTS = [
   { id: 'crisis', nombre: 'Crisis Repentina', inicio: 10, fin: 90, curva: 'exponencial' },
   { id: 'pico', nombre: 'Pico y Descenso', inicio: 30, fin: 80, curva: 'pico' },
 ]
-
-function calcCenter(bbox) {
-  // bbox: [[lonMin, latMin], [lonMax, latMax]]
-  const lng = (bbox[0][0] + bbox[1][0]) / 2
-  const lat = (bbox[0][1] + bbox[1][1]) / 2
-  return { lng, lat }
-}
 
 function SearchableComboBox({ value, onChange, options, disabled, placeholder }) {
   const [query, setQuery] = useState('')

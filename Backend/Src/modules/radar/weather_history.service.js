@@ -4,6 +4,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 const logger = require('../../utils/logger');
+const { buildNOAAUrl } = require('../../utils/noaa');
 
 // Reutilizamos la lógica de directorios de radar.service si fuera necesario, 
 // pero aquí definimos los específicos de historial
@@ -19,9 +20,7 @@ const getNOAAUrl = (dateObj, cycleHour, forecastOffset) => {
     const mm = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(dateObj.getUTCDate()).padStart(2, '0');
     const dateStr = `${yyyy}${mm}${dd}`;
-
-    // Ejemplo: gfs.t12z.pgrb2.0p25.f024
-    return `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${cycleHour}z.pgrb2.0p25.${forecastOffset}&lev_10_m_above_ground=on&lev_mean_sea_level=on&lev_surface=on&lev_3000-0_m_above_ground=on&lev_entire_atmosphere=on&var_UGRD=on&var_VGRD=on&var_GUST=on&var_PRMSL=on&var_CRAIN=on&var_CSNOW=on&var_VIS=on&var_CAPE=on&var_HLCY=on&var_REFC=on&dir=%2Fgfs.${dateStr}%2F${cycleHour}%2Fatmos`;
+    return buildNOAAUrl(dateStr, cycleHour, forecastOffset);
 };
 
 /**

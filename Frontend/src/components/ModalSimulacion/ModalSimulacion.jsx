@@ -6,6 +6,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useToast } from '../Toast/Toast';
+import { calcCenter } from '../../utils/geo';
 import ESCENARIOS from './escenarios.frontend';
 import './ModalSimulacion.css';
 
@@ -159,14 +160,6 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
       setIsLaunching(false);
     }
   };
-
-  function calcCenter(bbox) {
-    // bbox: [[lonMin, latMin], [lonMax, latMax]]
-    return {
-      lng: (bbox[0][0] + bbox[1][0]) / 2,
-      lat: (bbox[0][1] + bbox[1][1]) / 2
-    };
-  }
 
   if (!isOpen || zoneConfigs.length === 0) return null;
 
