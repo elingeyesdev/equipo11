@@ -55,8 +55,8 @@ function Register() {
         email: form.email,
         password: form.password,
       })
-      const data = res.data
-      if (!data.ok) throw new Error(data.mensaje)
+      const body = res.data
+      if (!body.ok) throw new Error(body.error)
 
       setSuccess('¡Cuenta creada exitosamente! Redirigiendo...')
       setTimeout(() => navigate('/login'), 1500)

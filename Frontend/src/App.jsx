@@ -8,42 +8,41 @@ import Alertas from './pages/Alertas/Alertas'
 import Notificaciones from './pages/Notificaciones/Notificaciones'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import { isAuthenticated } from './utils/auth'
 
-// Protege las rutas que requieren sesión activa (Desactivado para MVP)
+function RootRedirect() {
+  return <Navigate to={isAuthenticated() ? '/mapa' : '/login'} replace />
+}
+
 function ProtectedRoute({ children }) {
-  const usuario = localStorage.getItem('usuario')
-  if (!usuario) return <Navigate to="/login" replace />
+  if (!isAuthenticated()) return <Navigate to="/login" replace />
+  return children
+}
+
+function GuestRoute({ children }) {
+  if (isAuthenticated()) return <Navigate to="/mapa" replace />
   return children
 }
 
 function App() {
   return (
     <ErrorBoundary>
-    <Routes>
-      {/* Rutas públicas (sin sidebar/navbar) */}
-      <Route path="/login"    element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Routes>
+        <Route path="/" element={<RootRedirect />} />
 
-      {/* Rutas con layout principal (Ahora sin bloqueo de auth obligatoria) */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Navigate to="/mapa" replace />} />
-        <Route path="mapa"       element={<MapaMonitoreo />} />
-        <Route path="reportes"   element={<Reportes />} />
-        <Route path="usuarios"   element={<Usuarios />} />
-        <Route path="alertas"    element={<Alertas />} />
-        <Route path="notificaciones" element={<Notificaciones />} />
-      </Route>
+        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
-      {/* Ruta fallback: Si la url no existe, o entramos en localhost directamente, vamos al mapa */}
-      <Route path="*" element={<Navigate to="/mapa" replace />} />
-    </Routes>
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="mapa" element={<MapaMonitoreo />} />
+          <Route path="reportes" element={<Reportes />} />
+          <Route path="usuarios" element={<Usuarios />} />
+          <Route path="alertas" element={<Alertas />} />
+          <Route path="notificaciones" element={<Notificaciones />} />
+        </Route>
+
+        <Route path="*" element={<RootRedirect />} />
+      </Routes>
     </ErrorBoundary>
   )
 }

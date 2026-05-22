@@ -17,9 +17,9 @@ const simulateRange = async (req, res) => {
       dataPointsPerCity: count,
       range: { startTime, endTime, intervalMinutes: intervalMinutes || 60 }
     });
-  } catch (error) {
-    logger.error('[Simulación] Error en rango:', error.message);
-    error(res, error.message, 400);
+  } catch (err) {
+    logger.error('[Simulación] Error en rango:', err.message);
+    error(res, err.message, 400);
   }
 };
 

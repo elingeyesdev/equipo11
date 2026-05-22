@@ -26,7 +26,7 @@ export function useUmbrales(metrica) {
 
     setLoading(true)
     httpClient.get(`/umbrales/${metrica}`)
-      .then(res => res.data)
+      .then(res => res.data.data)
       .then(rows => {
         _cache.set(metrica, rows)
         setUmbrales(rows)

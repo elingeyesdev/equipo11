@@ -6,7 +6,9 @@ Frontend/node_modules/
 # Ignorar archivos de entorno (variables de bases de datos/passwords)
 .env
 .env.*
+stitch_export.js
 !.env.example
+.env.stitch
 
 # Ignorar archivos locales generados por diferentes herramientas
 npm-debug.log*
@@ -31,6 +33,7 @@ docker-compose.override.yml
 ANALISIS_MEJORAS.md
 AGENTS.md
 EnviroSense_LimpiezaArquitectura.md
+EnviroSense_PromptsFix.md
 GUIA_MIGRACION_PNPM.md
 SKILLS_GUIDE.md
 SKILL.md

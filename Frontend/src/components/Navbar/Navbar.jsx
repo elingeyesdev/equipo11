@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../context/ThemeContext'
+import { clearSession } from '../../utils/auth'
 import './Navbar.css'
 
 const pageCrumbs = {
@@ -16,8 +17,8 @@ function Navbar({ onMenuToggle }) {
   const current = pageCrumbs[location.pathname] || { group: 'EnviroSense', leaf: '—' }
 
   const handleLogout = () => {
-    localStorage.removeItem('usuario')
-    navigate('/login')
+    clearSession()
+    navigate('/login', { replace: true })
   }
 
   return (

@@ -52,14 +52,15 @@ function Login() {
     setLoading(true)
     try {
       const res = await httpClient.post('/auth/login', form)
-      const data = res.data
-      if (!data.ok) throw new Error(data.mensaje)
+      const body = res.data
+      if (!body.ok) throw new Error(body.error)
 
-      localStorage.setItem('token', data.usuario.token)
-      localStorage.setItem('usuario', JSON.stringify(data.usuario))
+      localStorage.setItem('token', body.data.usuario.token)
+      localStorage.setItem('usuario', JSON.stringify(body.data.usuario))
       navigate('/mapa')
     } catch (err) {
-      setApiError(err.message)
+      const msg = err.response?.data?.error || err.message
+      setApiError(msg)
     } finally {
       setLoading(false)
     }
@@ -69,21 +70,23 @@ function Login() {
     e.preventDefault()
     setApiError('')
     setSuccessMsg('')
-    if (!VALIDACIONES.email(form.email) === '') {
-      setErrors({ email: VALIDACIONES.email(form.email) })
+    const emailError = VALIDACIONES.email(form.email)
+    if (emailError !== '') {
+      setErrors({ email: emailError })
       return
     }
 
     setLoading(true)
     try {
       const res = await httpClient.post('/auth/forgot-password', { email: form.email })
-      const data = res.data
-      if (!data.ok) throw new Error(data.mensaje)
+      const body = res.data
+      if (!body.ok) throw new Error(body.error)
 
-      setSuccessMsg(data.mensaje)
+      setSuccessMsg(body.data.mensaje)
       setView('reset')
     } catch (err) {
-      setApiError(err.message)
+      const msg = err.response?.data?.error || err.message
+      setApiError(msg)
     } finally {
       setLoading(false)
     }
@@ -100,15 +103,14 @@ function Login() {
 
     setLoading(true)
     try {
-      const res = await httpClient.post('/auth/reset-password', { email: form.email, code: form.code, newPassword: form.newPassword })
-      const data = res.data
-      if (!data.ok) throw new Error(data.mensaje)
+      await httpClient.post('/auth/reset-password', { email: form.email, code: form.code, newPassword: form.newPassword })
 
       setSuccessMsg('Contraseña restablecida correctamente. Inicia sesión.')
       setView('login')
       setForm(prev => ({ ...prev, password: '', code: '', newPassword: '' }))
     } catch (err) {
-      setApiError(err.message)
+      const msg = err.response?.data?.error || err.message
+      setApiError(msg)
     } finally {
       setLoading(false)
     }

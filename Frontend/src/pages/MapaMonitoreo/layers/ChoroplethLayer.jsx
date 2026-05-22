@@ -21,7 +21,7 @@ export default function ChoroplethLayer({ metrica, umbrales, cities, activeFilte
   useEffect(() => {
     if (!_cachedGeoJSON) {
       httpClient.get('/geografia/regiones-geojson')
-        .then(res => { _cachedGeoJSON = res.data; setRegionGeo(res.data) })
+        .then(res => { _cachedGeoJSON = res.data.data; setRegionGeo(res.data.data) })
         .catch(err => console.error('[ChoroplethLayer] Error fetching:', err))
     } else {
       setRegionGeo(_cachedGeoJSON)

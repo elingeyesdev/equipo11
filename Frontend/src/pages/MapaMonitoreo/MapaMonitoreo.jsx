@@ -7,13 +7,11 @@
  *        Los datos reales vienen de useSimulacion() (misma fuente para todos).
  * - KISS: Misma estructura que antes, solo cambiamos la fuente de datos.
  */
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import Map, { Marker, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/mapbox';
+import Map, { NavigationControl, FullscreenControl, GeolocateControl } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
-import { API_BASE } from '../../config/api';
-import httpClient from '../../config/httpClient';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useZonaSim } from '../../context/ZonaSimContext';
 import { useMapVisuals } from '../../context/MapVisualsContext';
@@ -21,22 +19,22 @@ import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
-import { getWeatherAtLocation, getPlaceName, getHistoricalWeatherAtLocation, getSensoresIoT, getFullDataForPoint } from '../../utils/weatherApi';
-import axios from 'axios';
+import { getWeatherAtLocation, getPlaceName, getFullDataForPoint } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
-import { formatDateTime, formatTime } from '../../utils/formatters';
+import { formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
 import GeocoderSearch from '../../components/MapaMonitoreo/GeocoderSearch';
 import ComparePanel from '../../components/MapaMonitoreo/ComparePanel';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
-import WeatherOverlay from '../../components/MapaMonitoreo/WeatherOverlay';
-import VoronoiLayer from './layers/VoronoiLayer';
-import ChoroplethLayer from './layers/ChoroplethLayer';
-import MarkersLayer from './layers/MarkersLayer';
+import MapLayers from '../../components/MapaMonitoreo/MapLayers';
+import useRadarData from '../../hooks/useRadarData';
+import useCityHistory from '../../hooks/useCityHistory';
+import useSensors from '../../hooks/useSensors';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
+import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
 
 function MapaMonitoreo() {
@@ -76,16 +74,7 @@ function MapaMonitoreo() {
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [injectedCityId, setInjectedCityId] = useState(null);
-  // Sensores IoT — datos reales de la API externa
-  const [iotSensors, setIotSensors] = useState([]);
-  const [iotLoading, setIotLoading] = useState(true);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
-
-  // Variables derivadas para el panel de estado (usan la primera zona como resumen)
-  const firstZone = (zonaSimZonas && zonaSimZonas[0]) || {};
-  const zonaSimColor = firstZone.color || '#38bdf8';
-  const zonaSimValor = firstZone.valor ?? null;
-  const zonaSimUmbralLabel = firstZone.umbralLabel || '—';
 
   const handleBoundarySelect = useCallback(({ z1, z2, changed }) => {
     const arr = [];
@@ -128,147 +117,24 @@ function MapaMonitoreo() {
   const [weatherCode, setWeatherCode] = useState(null);
   const [isLegendOpen, setIsLegendOpen] = useState(true);
   const [activeLegendTab, setActiveLegendTab] = useState('unidades');
-  const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
   const [weatherCanvases, setWeatherCanvases] = useState({});
-  const [isFetchingRadar, setIsFetchingRadar] = useState(false);
 
-  const [cityHistoryArray, setCityHistoryArray] = useState([]);
-  const [timelineIndex, setTimelineIndex] = useState(0);
-
-  const [globalHistoryArray, setGlobalHistoryArray] = useState([]);
-  const [globalTimelineIndex, setGlobalTimelineIndex] = useState(0);
-  const [availableRadarDates, setAvailableRadarDates] = useState([]);
+  const { cityHistoryArray, timelineIndex, setTimelineIndex } = useCityHistory({ isHistoricalMode, selectedCity });
 
   // --- Estados de Modo Comparar (Fase 2) ---
   const [isCompareMode, setIsCompareMode] = useState(false);
   const [compareIndexA, setCompareIndexA] = useState(null); 
   const [compareIndexB, setCompareIndexB] = useState(null); 
   const [swipePos, setSwipePos] = useState(50);
-  const [scannedGridA, setScannedGridA] = useState({ status: 'idle', data: [] });
-  const [scannedGridB, setScannedGridB] = useState({ status: 'idle', data: [] });
 
-  // Fetch available dates from backend
-  const fetchAvailableDates = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/radar/available-dates`);
-      setAvailableRadarDates(res.data);
-    } catch (e) {
-      console.error('Error fetching available dates', e);
-    }
-  }, []);
+  const {
+    availableRadarDates,
+    globalHistoryArray, globalTimelineIndex, setGlobalTimelineIndex,
+    scannedGrid, scannedGridA, scannedGridB,
+    isFetchingRadar
+  } = useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode });
 
-  useEffect(() => {
-    fetchAvailableDates();
-    const interval = setInterval(fetchAvailableDates, 30000); // Cada 30s
-    return () => clearInterval(interval);
-  }, [fetchAvailableDates]);
-
-  // Generate global history array for the last 3 days + next 24h
-  useEffect(() => {
-    const arr = [];
-    const now = new Date();
-
-    // Inicio: Hace 3 días a las 00:00
-    const start = new Date(now);
-    start.setUTCDate(start.getUTCDate() - 3);
-    start.setUTCHours(0, 0, 0, 0);
-
-    // Fin: Dentro de 24 horas
-    const futureEnd = new Date(now);
-    futureEnd.setUTCDate(futureEnd.getUTCDate() + 1);
-    futureEnd.setUTCHours(23, 0, 0, 0);
-
-    let index = 0;
-    let curr = start;
-    let initialIndex = 0;
-    const nowTs = now.getTime();
-    let minDiff = Infinity;
-
-    while (curr <= futureEnd) {
-      const ts = curr.getTime();
-      const diff = Math.abs(ts - nowTs);
-
-      // Encontrar el índice más cercano al momento actual para seleccionarlo por defecto
-      if (diff < minDiff) {
-        minDiff = diff;
-        initialIndex = index;
-      }
-
-      const isAvailable = availableRadarDates.some(d => {
-        const d1 = new Date(d).getTime();
-        const d2 = curr.getTime();
-        return Math.abs(d1 - d2) < 1000 * 60 * 60; // Tolerancia de 1 hora
-      });
-
-      arr.push({
-        index,
-        timestamp: curr.toISOString(),
-        isPrediction: curr > now,
-        isAvailable: isAvailable || curr < now, // Por ahora el pasado lo consideramos disponible (fallback)
-        data: { temperatura: null }
-      });
-
-      curr = new Date(curr.getTime() + 3 * 60 * 60 * 1000); // Pasos de 3h para coincidir con NOAA
-      index++;
-    }
-    setGlobalHistoryArray(arr);
-    // Solo establecer el índice inicial la primera vez para no perder la selección del usuario
-    setGlobalTimelineIndex(prev => prev === 0 ? initialIndex : prev);
-  }, [availableRadarDates]);
-
-  // Fetch historical data — prioriza BD local (lecturas del simulador)
-  useEffect(() => {
-    if (isHistoricalMode && selectedCity) {
-      const fetchHistory = async () => {
-        // 1. Intentar historial en BD local (datos del simulador)
-        try {
-          // Buscar localidad_id en la BD por nombre
-          const { data: allData } = await httpClient.get('/historial');
-
-          // Intentar con el nuevo endpoint por ciudad si tiene id numérico de BD
-          // El id de la ciudad en el simulador puede no coincidir con localidad_id de BD
-          // Usamos el endpoint general y filtramos por nombre
-          if (allData && allData.length > 0) {
-            const fallbackMapped = allData.map((snapshot, idx) => {
-              const cData = snapshot.cities.find(
-                c => c.name?.toLowerCase() === selectedCity.name?.toLowerCase()
-              );
-              return {
-                index: idx,
-                timestamp: snapshot.timestamp,
-                data: cData ? cData.data : null
-              };
-            }).filter(e => e.data !== null);
-
-            if (fallbackMapped.length > 0) {
-              setCityHistoryArray(fallbackMapped);
-              setTimelineIndex(fallbackMapped.length - 1);
-              return; // BD local tiene datos → no usar Open-Meteo
-            }
-          }
-        } catch (err) {
-          console.warn('[Histórico] BD local falló, usando Open-Meteo:', err.message);
-        }
-
-        // 2. Fallback: Open-Meteo (clima real si no hay datos simulados)
-        try {
-          const apiData = await getHistoricalWeatherAtLocation(selectedCity.latitude, selectedCity.longitude);
-          if (apiData && apiData.length > 0) {
-            setCityHistoryArray(apiData);
-            setTimelineIndex(apiData.length - 1);
-          } else {
-            setCityHistoryArray([]);
-          }
-        } catch (err) {
-          console.error('Historical Fallback failed', err);
-          setCityHistoryArray([]);
-        }
-      };
-      fetchHistory();
-    }
-  }, [isHistoricalMode, selectedCity]);
-
-  // Se eliminó la vieja carga estática de climas
+  const { iotSensors, iotLoading, dynamicWindLabels, citiesData } = useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters });
 
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
@@ -354,59 +220,6 @@ function MapaMonitoreo() {
     }
   };
 
-  const [dynamicWindLabels, setDynamicWindLabels] = useState(null);
-
-  useEffect(() => {
-    if (!scannedGrid?.data || !isParticlesActive || !particleFilters.wind) return;
-    
-    let activeCities = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
-
-    const newFeatures = activeCities.map((city) => {
-      let nearestCell = null;
-      let minDist = Infinity;
-      const lng = city.longitude;
-      const lat = city.latitude;
-      
-      const roughGrid = scannedGrid.data.filter(c => Math.abs(c.latitud - lat) < 1.5 && Math.abs(c.longitud - lng) < 1.5);
-      const searchSpace = roughGrid.length > 0 ? roughGrid : scannedGrid.data;
-
-      searchSpace.forEach(cell => {
-        const dist = Math.hypot(cell.latitud - lat, cell.longitud - lng);
-        if (dist < minDist) {
-          minDist = dist;
-          nearestCell = cell;
-        }
-      });
-
-      return {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [lng, lat] },
-        properties: { 
-          name: city.name || city.ciudad || 'Desconocido', 
-          wind_speed: nearestCell ? nearestCell.wind_speed : 0 
-        }
-      };
-    });
-
-    setDynamicWindLabels({ type: 'FeatureCollection', features: newFeatures });
-  }, [scannedGrid, simulatedCities, iotSensors, isParticlesActive, particleFilters.wind]);
-
-  // Cargar sensores IoT al montar el componente y refrescar cada 15 min
-  useEffect(() => {
-    const loadSensors = async () => {
-      setIotLoading(true);
-      const data = await getSensoresIoT();
-      if (data && data.length > 0) setIotSensors(data);
-      setIotLoading(false);
-    };
-    loadSensors();
-    const interval = setInterval(loadSensors, 15 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Usar datos del contexto si existen (simulación activa), sino sensores IoT reales, sino fallback estático
-  let citiesData = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
-
   // Si la ciudad seleccionada se actualizó por la simulación, sincronizar sus datos básicos
   let activeCity = selectedCity
     ? citiesData.find(c => c.id === selectedCity.id) || selectedCity
@@ -458,70 +271,6 @@ function MapaMonitoreo() {
     if (metricKey === 'aqi') return getAqiColor(value);
     return 'var(--ink)';
   };
-
-  // Disparo inicial de clima al encender el Switch
-  useEffect(() => {
-    let intervalId;
-    if (isParticlesActive) {
-      const fetchRadar = async () => {
-        try {
-          if (isDynamicHistoricalMode) setIsFetchingRadar(true);
-
-          if (isCompareMode) {
-            // --- MODO COMPARAR: Descarga A y B ---
-            const fetchSide = async (timeIndex, setter) => {
-              const entry = globalHistoryArray[timeIndex];
-              if (!entry) return;
-              let url = entry.isPrediction ? `${API_BASE}/radar/prediction` : `${API_BASE}/radar/bolivia`;
-              const r = await axios.get(url, { params: { time: entry.timestamp } });
-              setter(r.data);
-              return r.data.status;
-            };
-
-            const [statusA, statusB] = await Promise.all([
-              fetchSide(compareIndexA ?? globalTimelineIndex, setScannedGridA),
-              fetchSide(compareIndexB ?? globalTimelineIndex, setScannedGridB)
-            ]);
-
-            if (statusA === 'ready' && statusB === 'ready') {
-              clearInterval(intervalId);
-              setIsFetchingRadar(false);
-            }
-          } else {
-            // --- MODO NORMAL ---
-            let url = `${API_BASE}/radar/bolivia`;
-            const selectedEntry = globalHistoryArray[globalTimelineIndex];
-
-            if (isDynamicHistoricalMode && selectedEntry) {
-              if (selectedEntry.isPrediction) url = `${API_BASE}/radar/prediction`;
-              url += `?time=${encodeURIComponent(selectedEntry.timestamp)}`;
-            }
-
-            const res = await axios.get(url);
-            setScannedGrid(res.data);
-
-            if (res.data.status === 'ready') {
-              clearInterval(intervalId);
-              setIsFetchingRadar(false);
-            } else {
-              setIsFetchingRadar(true);
-            }
-          }
-        } catch (e) {
-          console.error('Error fetching radar:', e);
-          setIsFetchingRadar(false);
-        }
-      };
-
-      fetchRadar();
-      intervalId = setInterval(fetchRadar, 1000);
-    } else {
-      setScannedGrid({ status: 'idle', progress: 0, data: [] });
-      setScannedGridA({ status: 'idle', data: [] });
-      setScannedGridB({ status: 'idle', data: [] });
-    }
-    return () => { if (intervalId) clearInterval(intervalId); };
-  }, [isParticlesActive, isCompareMode, isDynamicHistoricalMode, globalTimelineIndex, compareIndexA, compareIndexB, globalHistoryArray]);
 
   const handleMapMoveEnd = async (evt) => {
     if (!isParticlesActive || !mapRef.current) return;
@@ -624,6 +373,20 @@ function MapaMonitoreo() {
   // Contar cuántos controles están activos para el badge
   const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
+  const handleCityClick = useCallback(async (city) => {
+    setSelectedCity(city);
+    try {
+      const weather = await getWeatherAtLocation(city.latitude, city.longitude);
+      if (weather?.current) {
+        setWeatherCode(weather.current.weather_code);
+        setSelectedCity(prev => prev ? {
+          ...prev,
+          data: { ...prev.data, windSpeed: weather.current.wind_speed_10m }
+        } : null);
+      }
+    } catch (err) { console.error(err); }
+  }, []);
+
   return (
     <div className="mapa-page-container" ref={containerRef}>
       <ModalSimulacion
@@ -707,103 +470,27 @@ function MapaMonitoreo() {
             <FullscreenControl position="bottom-left" />
             <NavigationControl position="bottom-left" />
 
-            {/* Fronteras (A) */}
-            {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
-              const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
-              const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
-              return (
-                <Fragment key={`frontera-a-${idx}`}>
-                  <Source id={`frontera-source-a-${idx}`} type="geojson" data={frontera.geojson}>
-                    <Layer id={`frontera-fill-a-${idx}`} type="fill" paint={{ 'fill-color': color, 'fill-opacity': simData ? 0.3 : 0.2 }} />
-                    <Layer id={`frontera-line-a-${idx}`} type="line" paint={{ 'line-color': color, 'line-width': 2 }} />
-                  </Source>
-                </Fragment>
-              );
-            })}
-
-            {/* Capas Globales (A) */}
-            {isHeatmapActive && (
-              <VoronoiLayer
-                metrica={heatmapMetric}
-                umbrales={umbrales}
-                cities={citiesData}
-                activeFilter={activeUmbralFilter}
-              />
-            )}
-            {isChoroplethActive && (
-              <ChoroplethLayer
-                metrica={heatmapMetric}
-                umbrales={umbrales}
-                cities={citiesData}
-                activeFilter={activeUmbralFilter}
-              />
-            )}
-            
-            {showSensors && (
-              isHeatmapActive ? (
-                <MarkersLayer
-                  cities={citiesData}
-                  metrica={heatmapMetric}
-                  umbrales={umbrales}
-                  activeFilter={activeUmbralFilter}
-                  unidad={unidades[heatmapMetric]}
-                  currentZoom={viewState.zoom}
-                  onCityClick={async (city) => {
-                    setSelectedCity(city);
-                    try {
-                      const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                      if (weather && weather.current) {
-                        setWeatherCode(weather.current.weather_code);
-                        setSelectedCity(prev => prev ? {
-                          ...prev,
-                          data: {
-                            ...prev.data,
-                            windSpeed: weather.current.wind_speed_10m
-                          }
-                        } : null);
-                      }
-                    } catch (err) { console.error(err); }
-                  }}
-                />
-              ) : (
-                citiesData.map((city) => (
-                  <Marker
-                    key={`marker-a-${city.id}`}
-                    longitude={city.longitude}
-                    latitude={city.latitude}
-                    anchor="bottom"
-                    onClick={async (e) => {
-                      e.originalEvent.stopPropagation();
-                      setSelectedCity(city);
-                      try {
-                        const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                        if (weather?.current) {
-                          setWeatherCode(weather.current.weather_code);
-                          setSelectedCity(prev => prev ? {
-                            ...prev,
-                            data: {
-                              ...prev.data,
-                              windSpeed: weather.current.wind_speed_10m
-                            }
-                          } : null);
-                        }
-                      } catch (err) { console.error(err); }
-                    }}
-                  >
-                    <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                      <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
-                    </div>
-                  </Marker>
-                ))
-              )
-            )}
-
-            <WeatherOverlay
-              scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
+            <MapLayers
+              idPrefix="a"
+              fronterasSeleccionadas={fronterasSeleccionadas}
+              zonaSimZonas={zonaSimZonas}
+              isSimMode={isSimMode}
+              zonaSimActiva={zonaSimActiva}
+              isHeatmapActive={isHeatmapActive}
+              heatmapMetric={heatmapMetric}
+              umbrales={umbrales}
+              citiesData={citiesData}
+              activeUmbralFilter={activeUmbralFilter}
+              isChoroplethActive={isChoroplethActive}
+              showSensors={showSensors}
+              unidades={unidades}
               currentZoom={viewState.zoom}
-              particleFilters={particleFilters}
+              injectedCityId={injectedCityId}
               isParticlesActive={isParticlesActive}
+              particleFilters={particleFilters}
               dynamicWindLabels={dynamicWindLabels}
+              scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
+              onCityClick={handleCityClick}
             />
           </Map>
 
@@ -828,85 +515,27 @@ function MapaMonitoreo() {
                 dragRotate={false}
                 style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'auto' }}
               >
-                {/* Fronteras (B) */}
-                {(isSimMode || zonaSimActiva) && fronterasSeleccionadas.map((frontera, idx) => {
-                  const simData = zonaSimZonas.find(z => z.nombre === frontera.nombre);
-                  const color = simData?.color || (idx === 0 ? '#38bdf8' : '#a855f7');
-                  return (
-                    <Fragment key={`frontera-b-${idx}`}>
-                      <Source id={`frontera-source-b-${idx}`} type="geojson" data={frontera.geojson}>
-                        <Layer id={`frontera-fill-b-${idx}`} type="fill" paint={{ 'fill-color': color, 'fill-opacity': simData ? 0.3 : 0.2 }} />
-                        <Layer id={`frontera-line-b-${idx}`} type="line" paint={{ 'line-color': color, 'line-width': 2 }} />
-                      </Source>
-                    </Fragment>
-                  );
-                })}
-
-                {/* Capas Globales (B) */}
-                {isHeatmapActive && (
-                  <VoronoiLayer
-                    metrica={heatmapMetric}
-                    umbrales={umbrales}
-                    cities={citiesData}
-                    activeFilter={activeUmbralFilter}
-                  />
-                )}
-                {isChoroplethActive && (
-                  <ChoroplethLayer
-                    metrica={heatmapMetric}
-                    umbrales={umbrales}
-                    cities={citiesData}
-                    activeFilter={activeUmbralFilter}
-                  />
-                )}
-                
-                {showSensors && (
-                  isHeatmapActive ? (
-                    <MarkersLayer
-                      cities={citiesData}
-                      metrica={heatmapMetric}
-                      umbrales={umbrales}
-                      activeFilter={activeUmbralFilter}
-                      unidad={unidades[heatmapMetric]}
-                      currentZoom={viewState.zoom}
-                      onCityClick={async (city) => {
-                        setSelectedCity(city);
-                        try {
-                          const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                          if (weather && weather.current) setWeatherCode(weather.current.weather_code);
-                        } catch (err) { console.error(err); }
-                      }}
-                    />
-                  ) : (
-                    citiesData.map((city) => (
-                      <Marker
-                        key={`marker-b-${city.id}`}
-                        longitude={city.longitude}
-                        latitude={city.latitude}
-                        anchor="bottom"
-                        onClick={async (e) => {
-                          e.originalEvent.stopPropagation();
-                          setSelectedCity(city);
-                          try {
-                            const weather = await getWeatherAtLocation(city.latitude, city.longitude);
-                            if (weather?.current) setWeatherCode(weather.current.weather_code);
-                          } catch (err) { console.error(err); }
-                        }}
-                      >
-                        <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                          <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
-                        </div>
-                      </Marker>
-                    ))
-                  )
-                )}
-
-                <WeatherOverlay
-                  scannedGrid={scannedGridB.data}
+                <MapLayers
+                  idPrefix="b"
+                  fronterasSeleccionadas={fronterasSeleccionadas}
+                  zonaSimZonas={zonaSimZonas}
+                  isSimMode={isSimMode}
+                  zonaSimActiva={zonaSimActiva}
+                  isHeatmapActive={isHeatmapActive}
+                  heatmapMetric={heatmapMetric}
+                  umbrales={umbrales}
+                  citiesData={citiesData}
+                  activeUmbralFilter={activeUmbralFilter}
+                  isChoroplethActive={isChoroplethActive}
+                  showSensors={showSensors}
+                  unidades={unidades}
                   currentZoom={viewState.zoom}
-                  particleFilters={particleFilters}
+                  injectedCityId={injectedCityId}
                   isParticlesActive={isParticlesActive}
+                  particleFilters={particleFilters}
                   dynamicWindLabels={dynamicWindLabels}
+                  scannedGrid={scannedGridB.data}
+                  onCityClick={handleCityClick}
                 />
               </Map>
             </ComparePanel>
@@ -990,82 +619,18 @@ function MapaMonitoreo() {
         />
       )}
 
-      {/* ─── Panel flotante de estado de simulación de zona ────────── */}
-      {zonaSimActiva && (
-        <div className="zona-sim-status-panel">
-          {/* Header */}
-          <div className="zona-sim-header">
-            <div className="zona-sim-pulse">
-              <span className="zona-sim-dot" style={{ background: zonaSimColor || '#38bdf8' }} />
-            </div>
-            <span className="zona-sim-title">Simulación Activa</span>
-            <button className="zona-sim-close-btn" onClick={detenerZona} title="Detener simulación">
-              ⏹
-            </button>
-          </div>
-
-          {/* Valor actual */}
-          <div className="zona-sim-valor-row">
-            <div
-              className="zona-sim-valor-big"
-              style={{ color: zonaSimColor || '#38bdf8' }}
-            >
-              {zonaSimValor !== null ? zonaSimValor : '—'}
-              <span className="zona-sim-unidad">{zonaSimUnidad}</span>
-            </div>
-            <div className="zona-sim-badge-wrap">
-              <span
-                className="zona-sim-severity-badge"
-                style={{ background: `${zonaSimColor || '#38bdf8'}22`, color: zonaSimColor || '#38bdf8', borderColor: `${zonaSimColor || '#38bdf8'}55` }}
-              >
-                {zonaSimUmbralLabel || '—'}
-              </span>
-            </div>
-          </div>
-
-          {/* Info del escenario */}
-          <div className="zona-sim-info-row">
-            <span className="zona-sim-info-label">Escenario</span>
-            <span className="zona-sim-info-val">{zonaSimEscNombre || '—'}</span>
-          </div>
-          <div className="zona-sim-info-row">
-            <span className="zona-sim-info-label">Métrica</span>
-            <span className="zona-sim-info-val">{zonaSimMetrica} ({zonaSimUnidad})</span>
-          </div>
-          <div className="zona-sim-info-row">
-            <span className="zona-sim-info-label">Fecha/Hora Sim</span>
-            <span className="zona-sim-info-val">{formatDateTime(zonaSimTiempo)}</span>
-          </div>
-
-          {/* Barra de progreso */}
-          <div className="zona-sim-progress-wrap">
-            <div className="zona-sim-progress-label">
-              <span>Progreso</span>
-              <span>{zonaSimProgreso}%</span>
-            </div>
-            <div className="zona-sim-progress-bar">
-              <div
-                className="zona-sim-progress-fill"
-                style={{
-                  width: `${zonaSimProgreso}%`,
-                  background: zonaSimColor || '#38bdf8',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Confirmación BD */}
-          {zonaSimSesionId && (
-            <div className="zona-sim-db-badge">
-              <span className="zona-sim-db-icon">✓</span>
-              <span>
-                <strong>{zonaSimTotalLecturas}</strong> lecturas guardadas en BD
-                &nbsp;·&nbsp; sesión #{zonaSimSesionId}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+      <SimulationStatus
+        zonaSimActiva={zonaSimActiva}
+        zonaSimZonas={zonaSimZonas}
+        zonaSimUnidad={zonaSimUnidad}
+        zonaSimEscNombre={zonaSimEscNombre}
+        zonaSimMetrica={zonaSimMetrica}
+        zonaSimProgreso={zonaSimProgreso}
+        zonaSimTiempo={zonaSimTiempo}
+        zonaSimSesionId={zonaSimSesionId}
+        zonaSimTotalLecturas={zonaSimTotalLecturas}
+        detenerZona={detenerZona}
+      />
     </div>
   );
 }

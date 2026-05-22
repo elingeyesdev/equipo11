@@ -96,7 +96,7 @@ const generarReporte = async (req, res) => {
     } else {
       error(res, 'Formato no soportado (use "pdf" o "excel")', 400);
     }
-  } catch (error) {
+  } catch (err) {
     logger.error('Error al generar reporte:', error);
     error(res, 'Error interno al generar el reporte', 500);
   }

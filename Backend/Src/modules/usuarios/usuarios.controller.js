@@ -6,7 +6,7 @@ const getRoles = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM roles ORDER BY id')
     success(res, { roles: rows })
-  } catch (error) {
+  } catch (err) {
     logger.error('Error al obtener roles:', error)
     error(res, 'Error al obtener roles', 500)
   }
@@ -22,7 +22,7 @@ const getUsuarios = async (req, res) => {
     `
     const { rows } = await db.query(query)
     success(res, { usuarios: rows })
-  } catch (error) {
+  } catch (err) {
     logger.error('Error al obtener usuarios:', error)
     error(res, 'Error al obtener usuarios', 500)
   }
@@ -43,7 +43,7 @@ const updateUsuarioRol = async (req, res) => {
     }
 
     success(res, { mensaje: 'Rol de usuario actualizado' })
-  } catch (error) {
+  } catch (err) {
     logger.error('Error al actualizar rol de usuario:', error)
     error(res, 'Error al actualizar el rol', 500)
   }
@@ -64,7 +64,7 @@ const updateUsuarioEstado = async (req, res) => {
     }
 
     success(res, { mensaje: 'Estado del usuario actualizado' })
-  } catch (error) {
+  } catch (err) {
     logger.error('Error al actualizar estado del usuario:', error)
     error(res, 'Error al actualizar el estado', 500)
   }

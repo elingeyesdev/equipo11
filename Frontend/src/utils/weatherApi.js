@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE } from '../config/api';
+import httpClient from '../config/httpClient';
 
 // Get current weather from Open-Meteo
 export const getWeatherAtLocation = async (lat, lng) => {
@@ -197,7 +197,7 @@ export const getLatestRadarTimestamp = async () => {
  */
 export const getSensoresIoT = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/sensores`);
+    const res = await httpClient.get('/sensores');
     return res.data?.data || [];
   } catch (err) {
     console.error('[Sensores IoT] Error al obtener sensores:', err);

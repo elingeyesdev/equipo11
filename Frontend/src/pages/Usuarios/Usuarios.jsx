@@ -61,11 +61,11 @@ function Usuarios() {
   const handleRoleChange = async (userId, newRoleId) => {
     try {
       const res = await httpClient.put(`/usuarios/${userId}/rol`, { rol_id: newRoleId })
-      const data = res.data
-      if (data.ok) {
+      const body = res.data
+      if (body.ok) {
         cargarDatos()
       } else {
-        addToast('Error al cambiar rol: ' + data.mensaje, 'error')
+        addToast('Error al cambiar rol: ' + (body.error || ''), 'error')
       }
     } catch (err) {
       addToast('Error de conexión al cambiar rol', 'error')
@@ -75,11 +75,11 @@ function Usuarios() {
   const handleEstadoChange = async (userId, newEstado) => {
     try {
       const res = await httpClient.put(`/usuarios/${userId}/estado`, { activo: newEstado })
-      const data = res.data
-      if (data.ok) {
+      const body = res.data
+      if (body.ok) {
         cargarDatos()
       } else {
-        addToast('Error al cambiar estado: ' + data.mensaje, 'error')
+        addToast('Error al cambiar estado: ' + (body.error || ''), 'error')
       }
     } catch (err) {
       addToast('Error de conexión al cambiar estado', 'error')

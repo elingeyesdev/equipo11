@@ -61,7 +61,7 @@ export default function Alertas() {
       if (soloNoReconocidas) params.reconocida = 'false'
 
       const res = await httpClient.get('/alertas', { params })
-      const data = res.data
+      const data = res.data.data
       setAlertas(data.alertas)
       setTotal(data.total)
     } catch (err) {

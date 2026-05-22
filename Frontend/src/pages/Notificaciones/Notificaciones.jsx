@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useBlocker } from 'react-router-dom';
-import axios from 'axios';
-import { API_BASE } from '../../config/api';
+import httpClient from '../../config/httpClient';
 import './Notificaciones.css';
 
 const Notificaciones = () => {
@@ -70,9 +69,9 @@ const Notificaciones = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/notificaciones`);
-      setSettings(res.data);
-      setOriginalSettings(res.data);
+      const { data } = await httpClient.get('/notificaciones');
+      setSettings(data);
+      setOriginalSettings(data);
     } catch (err) {
       console.error('Error fetching settings:', err);
       setMessage({ text: 'Error al cargar la configuración', type: 'error' });
@@ -112,7 +111,7 @@ const Notificaciones = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API_BASE}/notificaciones`, { settings });
+      await httpClient.put('/notificaciones', { settings });
       setOriginalSettings(settings);
       setMessage({ text: 'Configuración guardada con éxito', type: 'success' });
       setTimeout(() => setMessage({ text: '', type: '' }), 3000);

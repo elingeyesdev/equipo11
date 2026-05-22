@@ -17,8 +17,8 @@ const registerController = async (req, res) => {
   try {
     const usuario = await register(parsed.data)
     success(res, { mensaje: 'Usuario registrado correctamente', usuario }, 201)
-  } catch (error) {
-    error(res, error.message, 400)
+  } catch (err) {
+    error(res, err.message, 400)
   }
 }
 
@@ -37,8 +37,8 @@ const loginController = async (req, res) => {
   try {
     const usuario = await login(parsed.data)
     success(res, { mensaje: 'Sesión iniciada', usuario })
-  } catch (error) {
-    error(res, error.message, 401)
+  } catch (err) {
+    error(res, err.message, 401)
   }
 }
 
@@ -51,8 +51,8 @@ const forgotPasswordController = async (req, res) => {
   try {
     await forgotPassword(parsed.data)
     success(res, { mensaje: 'Código de recuperación enviado al correo' })
-  } catch (error) {
-    error(res, error.message, 400)
+  } catch (err) {
+    error(res, err.message, 400)
   }
 }
 
@@ -65,8 +65,8 @@ const resetPasswordController = async (req, res) => {
   try {
     await resetPassword(parsed.data)
     success(res, { mensaje: 'Contraseña actualizada correctamente' })
-  } catch (error) {
-    error(res, error.message, 400)
+  } catch (err) {
+    error(res, err.message, 400)
   }
 }
 
