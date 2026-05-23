@@ -118,8 +118,25 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     
     let animationId;
     let lastTime = performance.now();
-    let particles = [];
+    
+    // ----------------------------------------------------
+    // OBJECT POOLING PARA PREVENIR MEMORY LEAKS
+    // ----------------------------------------------------
+    const MAX_PARTICLES = 5000;
+    const particlePool = Array.from({ length: MAX_PARTICLES }, () => ({
+      active: false,
+      node: null,
+      offsetX: 0,
+      offsetY: 0,
+      speed: 0,
+      phase: 0,
+      life: 0,
+      baseRadius: 0,
+      flashTimer: 0,
+      lightningForks: null
+    }));
     let visibleNodes = [];
+    const nodeProjections = new Map(); // Instanciado una sola vez, sin recrear por fotograma
 
     // Función para filtrar qué nodos están en el viewport
     const updateVisibleNodes = () => {
@@ -146,11 +163,17 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     };
 
     const initParticles = () => {
-      particles = [];
+      // Reciclaje de objetos: Desactivar todas las partículas en lugar de instanciar un arreglo nuevo
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        particlePool[i].active = false;
+      }
+      
       const currentMapZoom = map.getZoom();
       const baseRadius = Math.max(5, 40 * Math.pow(2, currentMapZoom - 6));
       
-      visibleNodes.forEach(node => {
+      let poolIndex = 0;
+
+      for (const node of visibleNodes) {
         let pCount = currentMapZoom > 5 ? (node.type === 'wind' ? 4 : 10) : (currentMapZoom > 3 ? 2 : 1);
         if (node.type === 'thunderstorm' || node.type === 'tornado_warning') pCount = currentMapZoom > 5 ? 3 : 1;
         
@@ -158,18 +181,20 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         if (currentMapZoom < 4 && Math.random() > 0.4) pCount = 0; 
 
         for (let i = 0; i < pCount; i++) {
-          particles.push({
-            node,
-            offsetX: (Math.random() - 0.5) * baseRadius * 2,
-            offsetY: (Math.random() - 0.5) * baseRadius * 2,
-            speed: Math.random() * 0.5 + 0.5,
-            phase: Math.random() * Math.PI * 2,
-            life: Math.random(),
-            baseRadius,
-            flashTimer: Math.random() * 50 // Para relámpagos
-          });
+          if (poolIndex >= MAX_PARTICLES) return; // Límite estricto de partículas
+          
+          const p = particlePool[poolIndex++];
+          p.active = true;
+          p.node = node;
+          p.offsetX = (Math.random() - 0.5) * baseRadius * 2;
+          p.offsetY = (Math.random() - 0.5) * baseRadius * 2;
+          p.speed = Math.random() * 0.5 + 0.5;
+          p.phase = Math.random() * Math.PI * 2;
+          p.life = Math.random();
+          p.baseRadius = baseRadius;
+          p.flashTimer = Math.random() * 50; // Para relámpagos
         }
-      });
+      }
     };
     
     const updateSize = () => {
@@ -188,25 +213,13 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const bounds = map.getBounds();
-      const boundN = bounds.getNorth() + 2;
-      const boundS = bounds.getSouth() - 2;
-      const boundE = bounds.getEast() + 2;
-      const boundW = bounds.getWest() - 2;
-      
-      const nodeProjections = new Map();
-
-      // Calcular el worldWidth para el mapa infinito una sola vez
-      let worldWidth = 0;
-      if (currentMapZoom < 4) {
-         let rightPos = map.project([360, 0]);
-         let centerPos = map.project([0, 0]);
-         worldWidth = Math.abs(rightPos.x - centerPos.x);
-      }
-      const offsets = worldWidth > 0 ? [0, -worldWidth, worldWidth] : [0];
+      nodeProjections.clear(); // Limpiamos caché de proyecciones por fotograma
 
       // ACTUALIZACIÓN DE FÍSICA
-      particles.forEach(p => {
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        const p = particlePool[i];
+        if (!p.active) continue;
+
         const { type, direction, wind_speed } = p.node;
         
         if (type === 'rain') {
@@ -266,7 +279,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         } else if (type === 'fog') {
           p.offsetX += Math.sin(time / 1500 + p.phase) * (p.baseRadius * 0.01);
         }
-      });
+      }
 
       const drawParticle = (p, isThunderstormPass) => {
         const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
@@ -274,13 +287,14 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         // Separamos las capas: las tormentas se dibujan en una segunda pasada para que estén por encima
         if ((type === 'thunderstorm') !== isThunderstormPass) return;
         
-        let pixelPosMain = nodeProjections.get(`${p.node.id}_main`);
+        let pixelPosMain = nodeProjections.get(p.node.id);
         if (!pixelPosMain) {
           const centerLng = map.getCenter().lng;
           let mainLng = longitude;
+          // NORMALIZACIÓN ANTIMERIDIANO: Asegurar que se proyecte en el mundo visual actual
           mainLng = mainLng - 360 * Math.round((mainLng - centerLng) / 360);
           pixelPosMain = map.project([mainLng, latitude]);
-          nodeProjections.set(`${p.node.id}_main`, pixelPosMain);
+          nodeProjections.set(p.node.id, pixelPosMain);
         }
 
         const x = pixelPosMain.x + p.offsetX;
@@ -377,18 +391,15 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         }
       };
 
-      offsets.forEach(dx => {
-        ctx.save();
-        ctx.translate(dx, 0);
-
-        // Primera pasada: Dibuja viento, lluvia, nieve, niebla
-        particles.forEach(p => drawParticle(p, false));
-        
-        // Segunda pasada: Dibuja rayos POR ENCIMA de todo lo demás
-        particles.forEach(p => drawParticle(p, true));
-
-        ctx.restore();
-      });
+      // Primera pasada: Dibuja viento, lluvia, nieve, niebla
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        if (particlePool[i].active) drawParticle(particlePool[i], false);
+      }
+      
+      // Segunda pasada: Dibuja rayos POR ENCIMA de todo lo demás
+      for (let i = 0; i < MAX_PARTICLES; i++) {
+        if (particlePool[i].active) drawParticle(particlePool[i], true);
+      }
       
       animationId = requestAnimationFrame(render);
     };

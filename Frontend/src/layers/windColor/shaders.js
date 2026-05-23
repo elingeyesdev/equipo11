@@ -72,7 +72,9 @@ export const fragmentSource = `
 
   void main() {
     // --- Mercator -> Geográfico ---
-    float lon = v_mercator.x * 360.0 - 180.0;
+    // Envolver la coordenada Mercator X para resolver el Antimeridiano / Mapbox Wrapping
+    float wrappedMercatorX = fract(v_mercator.x);
+    float lon = wrappedMercatorX * 360.0 - 180.0;
     float merc_y = PI * (1.0 - 2.0 * v_mercator.y);
     float ex = exp(merc_y);
     float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
