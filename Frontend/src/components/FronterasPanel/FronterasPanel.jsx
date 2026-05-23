@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
 import { useToast } from '../Toast/Toast'
 import { calcCenter } from '../../utils/geo'
@@ -65,7 +65,9 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
   const [paises, setPaises] = useState([])
   const [loadingList, setLoadingList] = useState(false)
 
-
+  const emitBoundaries = useCallback((z1, z2, changed) => {
+    onBoundarySelect({ z1: z1?.result, z2: isComparing ? z2?.result : null, changed })
+  }, [onBoundarySelect, isComparing])
 
   useEffect(() => {
     setLoadingList(true)
@@ -302,9 +304,6 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
     else emitBoundaries({ ...zState, result }, zona2, 'z1')
   }
 
-  const emitBoundaries = (z1, z2, changed) => {
-    onBoundarySelect({ z1: z1?.result, z2: isComparing ? z2?.result : null, changed })
-  }
 
   const handleStart = () => {
     if (!zona1.result) return addToast("Selecciona al menos una zona válida (País/Departamento/Provincia).", 'warning')

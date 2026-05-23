@@ -70,11 +70,14 @@ const Notificaciones = () => {
   const fetchSettings = async () => {
     try {
       const { data } = await httpClient.get('/notificaciones');
-      setSettings(data);
-      setOriginalSettings(data);
+      const validData = Array.isArray(data) ? data : (data?.settings || []);
+      setSettings(validData);
+      setOriginalSettings(validData);
     } catch (err) {
       console.error('Error fetching settings:', err);
       setMessage({ text: 'Error al cargar la configuración', type: 'error' });
+      setSettings([]);
+      setOriginalSettings([]);
     } finally {
       setLoading(false);
     }
@@ -195,7 +198,7 @@ const Notificaciones = () => {
       )}
 
       <div className="notif-grid">
-        {settings.map((s) => (
+        {(Array.isArray(settings) ? settings : []).map((s) => (
           <div key={s.tipo} className={`notif-card ${s.habilitado ? 'notif-card--active' : ''}`}>
             <div className="notif-card-header">
               <div className="notif-card-icon">{getIcon(s.tipo)}</div>

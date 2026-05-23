@@ -129,10 +129,18 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       const sw = bounds.getSouthWest();
       const ne = bounds.getNorthEast();
 
-      visibleNodes = activeNodes.filter(node => 
-        node.latitude >= sw.lat - buffer && node.latitude <= ne.lat + buffer &&
-        node.longitude >= sw.lng - buffer && node.longitude <= ne.lng + buffer
-      );
+      const centerLng = map.getCenter().lng;
+
+      visibleNodes = activeNodes.filter(node => {
+        if (node.latitude < sw.lat - buffer || node.latitude > ne.lat + buffer) return false;
+        
+        // Envoltura horizontal matemática para el antimeridiano:
+        // Proyectamos la longitud del nodo al "mundo continuo" que el usuario está viendo
+        let mainLng = node.longitude;
+        mainLng = mainLng - 360 * Math.round((mainLng - centerLng) / 360);
+        
+        return mainLng >= sw.lng - buffer && mainLng <= ne.lng + buffer;
+      });
 
       initParticles();
     };
@@ -216,7 +224,11 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         } else if (type === 'wind') {
           const angleRad = (direction - 90) * Math.PI / 180;
           
-          const windIntensity = Math.max(15, wind_speed) / 20;
+          // Bajar el piso de intensidad física para que las partículas lentas (<10 km/h) realmente se muevan despacio
+          let windIntensity = Math.max(5, wind_speed) / 20;
+          if (wind_speed > 65) {
+            windIntensity *= 1.5; // Mover un poquito más rápido las partículas extremas
+          }
           const velocity = (p.baseRadius * 2.5) * p.speed * windIntensity;
           
           p.offsetX += Math.cos(angleRad) * velocity * dt;
@@ -306,15 +318,21 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.lineTo(x, y);
           
           const fade = Math.sin(p.life * Math.PI); 
-          let strokeColor = `rgba(180, 230, 255, ${fade * 0.5})`; 
+          let strokeColor;
           
-          if (rafagas > 90 || presion < 990) {
-            strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; 
+          // Sincronizar lógicamente con el mapa de calor (usando wind_speed en lugar de rafagas)
+          // Así, si el mapa es Naranja (>60), la partícula será Naranja.
+          if (wind_speed >= 90) {
+            strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; // Magenta (Severo)
             ctx.lineWidth = 2.5; 
-          } else if (rafagas > 60 || presion < 1005) {
-            strokeColor = `rgba(255, 140, 0, ${fade * 0.6})`; 
+          } else if (wind_speed >= 60) {
+            strokeColor = `rgba(60, 50, 60, ${fade * 0.6})`;  // Naranja
             ctx.lineWidth = 2.0;
+          } else if (wind_speed < 10) {
+            strokeColor = `rgba(30, 30, 30, ${fade * 0.9})`;   // Gris oscuro bien oscuro
+            ctx.lineWidth = 1.5;
           } else {
+            strokeColor = `rgba(30, 30, 30, ${fade * 0.6})`; // Celeste normal (Verde/Azul claro en el mapa)
             ctx.lineWidth = 1.8;
           }
           
