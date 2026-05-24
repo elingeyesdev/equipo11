@@ -74,6 +74,13 @@ export const METRICAS_UNIDADES = {
     ],
     defecto: 'km/h',
   },
+  rain: {
+    label: 'Lluvia', icon: '🌧️',
+    unidades: [
+      { key: 'mm/h', label: 'mm/h', convertir: v => v, invertir: v => v, precision: 1, sufijo: ' mm/h' },
+    ],
+    defecto: 'mm/h',
+  },
 }
 
 function resolverUnidad(metricKey, unitKey) {

@@ -14,6 +14,7 @@ const QUERY_PARAMS = [
   'var_CAPE=on',
   'var_HLCY=on',
   'var_REFC=on',
+  'var_PRATE=on',
 ].join('&');
 
 /**

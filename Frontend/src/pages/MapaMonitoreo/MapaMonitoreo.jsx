@@ -36,7 +36,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear } from '../../utils/windMath';
+import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -147,6 +147,11 @@ function MapaMonitoreo() {
   const windGridIndex = useMemo(() => {
     if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
     return buildGridIndex(scannedGrid.data);
+  }, [scannedGrid]);
+
+  const rainGridIndex = useMemo(() => {
+    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
+    return buildRainGridIndex(scannedGrid.data);
   }, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
@@ -314,10 +319,9 @@ function MapaMonitoreo() {
       // Usar datos del sensor IoT / simulador más cercano
       const sourceLabel = isRunning ? 'simulación' : '📡 Sensor IoT';
 
-      // Interpolar viento vectorialmente desde el grid de la NOAA (instantáneo, sin API)
-      const localWind = windGridIndex
-        ? sampleWindBilinear(windGridIndex, lng, lat)
-        : null;
+      // Interpolar viento y lluvia vectorialmente/escalar desde el grid (instantáneo)
+      const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
+      const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
 
       setSelectedCity({
         ...nearest.city,
@@ -325,6 +329,7 @@ function MapaMonitoreo() {
         data: {
           ...nearest.city.data,
           windSpeed: localWind ? localWind.speed : nearest.city.data?.windSpeed,
+          rain: localRain !== null ? localRain : nearest.city.data?.rain,
         },
       });
       try {
@@ -332,16 +337,15 @@ function MapaMonitoreo() {
         if (weather?.current) {
           setWeatherCode(weather.current.weather_code);
           setSelectedCity(prev => {
-            console.log('[handleMapClick - nearest] State BEFORE API merge:', prev?.data?.windSpeed);
             const updated = prev ? {
               ...prev,
               data: {
                 ...prev.data,
-                // Preservar la velocidad del viento calculada localmente si existe
-                windSpeed: prev.data.windSpeed ?? weather.current.wind_speed_10m
+                // Preservar viento y lluvia calculados localmente
+                windSpeed: prev.data.windSpeed ?? weather.current.wind_speed_10m,
+                rain: prev.data.rain ?? weather.current.rain,
               }
             } : null;
-            console.log('[handleMapClick - nearest] State AFTER API merge:', updated?.data?.windSpeed);
             return updated;
           });
         }
@@ -352,10 +356,9 @@ function MapaMonitoreo() {
     }
 
     // Fuera del radio de sensores → consultar backend (datos reales completos)
-    // Interpolar viento vectorialmente de forma instantánea (sin esperar API)
-    const localWind = windGridIndex
-      ? sampleWindBilinear(windGridIndex, lng, lat)
-      : null;
+    // Interpolar de forma instantánea (sin esperar API)
+    const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
+    const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
 
     const clickCity = {
       id: `click_${Date.now()}`,
@@ -366,6 +369,7 @@ function MapaMonitoreo() {
       data: {
         temperatura: null, aqi: null, ica: null, ruido: null, humedad: null,
         windSpeed: localWind ? localWind.speed : null,
+        rain: localRain !== null ? localRain : null,
       },
       isLoading: true
     };
@@ -385,15 +389,13 @@ function MapaMonitoreo() {
         aqi: fullData?.aqi ?? null,
         ica: fullData?.ica ?? null,
         ruido: fullData?.ruido ?? null,
-        // No sobrescribimos windSpeed aquí para luego hacer el merge con prev state
       };
 
       setWeatherCode(fullData?.weatherCode ?? null);
       
       setSelectedCity(prev => {
-        console.log('[handleMapClick] State BEFORE API merge:', prev?.data?.windSpeed);
-        
         const mergedWindSpeed = prev?.data?.windSpeed ?? fullData?.windSpeed ?? null;
+        const mergedRain = prev?.data?.rain ?? fullData?.rain ?? null;
         
         const updated = {
           ...prev,
@@ -403,11 +405,11 @@ function MapaMonitoreo() {
             ...prev?.data,
             ...newCityData,
             windSpeed: mergedWindSpeed,
+            rain: mergedRain,
           },
           isLoading: false
         };
         
-        console.log('[handleMapClick] State AFTER API merge:', updated.data.windSpeed);
         return updated;
       });
       

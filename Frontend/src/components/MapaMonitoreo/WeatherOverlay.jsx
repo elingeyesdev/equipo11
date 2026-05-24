@@ -6,6 +6,8 @@ import {
   addWindLayers, removeWindLayers,
   addCityWindLabels, updateCityWindLabels, removeCityWindLabels
 } from '../../layers/windColor/layerManager.js';
+import RainColorLayer from '../../layers/rainColor/RainColorLayer.js';
+import { addRainLayers, removeRainLayers } from '../../layers/rainColor/layerManager_rain.js';
 import { GLOBAL_CITIES } from '../../utils/globalCities.js';
 import { buildGridIndex, buildCitiesWindGeoJSON } from '../../utils/windMath.js';
 
@@ -33,6 +35,7 @@ function WeatherOverlay({
 }) {
   const { current: map } = useMap();
   const windLayerRef = useRef(null);
+  const rainLayerRef = useRef(null);
   const dataRef = useRef(null);
 
   // Guardar referencia a los datos más recientes
@@ -101,7 +104,48 @@ function WeatherOverlay({
     if (windLayerRef.current && scannedGrid && scannedGrid.length > 0) {
       windLayerRef.current.updateData(scannedGrid);
     }
+    if (rainLayerRef.current && scannedGrid && scannedGrid.length > 0) {
+      rainLayerRef.current.updateData(scannedGrid);
+    }
   }, [scannedGrid]);
+
+  // --- Ciclo de vida del RainColorLayer (WebGL) ---
+  useEffect(() => {
+    if (!map) return;
+
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+
+    // Asumimos que la llave del filtro es 'rain'
+    const shouldShowRain = isParticlesActive && particleFilters.rain;
+
+    const addRainIfMissing = () => {
+      if (!shouldShowRain) return;
+
+      if (!rawMap.getLayer('rain-color-layer')) {
+        const layer = new RainColorLayer({
+          id: 'rain-color-layer',
+          opacity: 0.85,
+        });
+        rainLayerRef.current = layer;
+        addRainLayers(rawMap, layer, dataRef.current);
+      }
+    };
+
+    if (shouldShowRain) {
+      addRainIfMissing();
+      rawMap.on('styledata', addRainIfMissing);
+    } else {
+      removeRainLayers(rawMap);
+      rainLayerRef.current = null;
+    }
+
+    return () => {
+      rawMap.off('styledata', addRainIfMissing);
+      removeRainLayers(rawMap);
+      rainLayerRef.current = null;
+    };
+  }, [map, isParticlesActive, particleFilters.rain]);
 
   // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
   useEffect(() => {

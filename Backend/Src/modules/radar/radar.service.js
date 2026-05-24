@@ -188,7 +188,7 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
             if (!isBackground) scrapeProgress = 40;
             const gridKeys = generateGridKeys();
             
-            const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc] = await Promise.all([
+            const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc, mapPrate] = await Promise.all([
                 extractGribData(gribPath, '10u', gridKeys),
                 extractGribData(gribPath, '10v', gridKeys),
                 extractGribData(gribPath, 'gust', gridKeys),
@@ -198,7 +198,8 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                 extractGribData(gribPath, 'vis', gridKeys),
                 extractGribData(gribPath, 'cape', gridKeys),
                 extractGribData(gribPath, 'hlcy', gridKeys),
-                extractGribData(gribPath, 'refc', gridKeys)
+                extractGribData(gribPath, 'refc', gridKeys),
+                extractGribData(gribPath, 'prate', gridKeys)
             ]);
 
             logger.info(`[Radar Scraper] Calculando vectores para ${forecastTimeStr}...`);
@@ -219,6 +220,8 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                     const cape = mapCape.get(key) || 0;
                     const hlcy = mapHlcy.get(key) || 0;
                     const refc = mapRefc.get(key) || 0;
+                    const prate = mapPrate.get(key) || 0;
+                    const rainMmH = prate * 3600;
 
                     const speedKmH = Math.sqrt(u*u + v*v) * 3.6;
                     let dirDeg = 270 - (Math.atan2(v, u) * (180 / Math.PI));
@@ -238,7 +241,8 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                         press: Number((pressPa / 100).toFixed(2)),
                         cape: Number(cape.toFixed(2)),
                         hlcy: Number(hlcy.toFixed(2)),
-                        refc: Number(refc.toFixed(2))
+                        refc: Number(refc.toFixed(2)),
+                        rain: Number(rainMmH.toFixed(2))
                     });
                 }
             }
@@ -260,13 +264,13 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
             const chunk = gridData.slice(i, i + chunkSize);
             const values = [];
             const placeholders = chunk.map((p, idx) => {
-                const offset = idx * 12;
-                values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc);
-                return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12})`;
+                const offset = idx * 13;
+                values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain);
+                return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13})`;
             }).join(',');
 
             await pool.query(
-                `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc)
+                `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain)
                  VALUES ${placeholders}
                  ON CONFLICT (latitud, longitud, forecast_time) DO NOTHING`,
                 values
@@ -351,6 +355,7 @@ const runScraper = async () => {
     await ensureColumn('radar_grid_cache', 'cape DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'hlcy DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'refc DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'rain DECIMAL(8,2)');
     // Asegurar columnas de sensores_cache
     await ensureColumn('sensores_cache', 'wind_speed DECIMAL(5,2)');
     await ensureColumn('sensores_cache', 'wind_direction INT');
@@ -444,7 +449,7 @@ const getRadarData = async (targetTime = null) => {
     return { status: 'loading', progress: scrapeProgress };
   }
   
-  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc FROM radar_grid_cache';
+  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain FROM radar_grid_cache';
   let params = [];
   
   if (targetTime) {

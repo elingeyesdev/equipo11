@@ -178,3 +178,76 @@ export function buildCitiesWindGeoJSON(cities, gridIndex) {
 
   return { type: 'FeatureCollection', features };
 }
+
+/**
+ * Crea un índice optimizado para buscar valores de lluvia (escalar).
+ * @param {Array} gridData 
+ * @returns {Map} index structure
+ */
+export function buildRainGridIndex(gridData) {
+  const index = new Map();
+  if (!gridData || gridData.length === 0) return index;
+
+  for (const cell of gridData) {
+    const lat = parseFloat(cell.latitud);
+    const lon = parseFloat(cell.longitud);
+    const rain = parseFloat(cell.rain);
+
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+
+    const col = Math.round(lon + 179.5);
+    const row = Math.round(lat + 89.5);
+
+    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
+
+    index.set(`${row}_${col}`, isFinite(rain) ? rain : 0);
+  }
+
+  return index;
+}
+
+/**
+ * Lee un punto del índice de lluvia. Retorna 0 si no existe.
+ */
+function readRainCell(gridIndex, col, row) {
+  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
+  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
+  return gridIndex.get(`${row}_${col}`) || 0;
+}
+
+/**
+ * Interpolación bilineal de lluvia (escalar) en una coordenada continua.
+ *
+ * @param {Map} gridIndex
+ * @param {number} lng
+ * @param {number} lat
+ * @returns {number} Intensidad de lluvia (mm/h)
+ */
+export function sampleRainBilinear(gridIndex, lng, lat) {
+  if (!gridIndex || gridIndex.size === 0) return 0;
+
+  if (!isFinite(lng) || !isFinite(lat)) return 0;
+
+  lng = ((lng % 360) + 540) % 360 - 180;
+  lat = Math.max(-90, Math.min(90, lat));
+
+  const texX = lng + 179.5;
+  const texY = lat + 89.5;
+
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+
+  const r00 = readRainCell(gridIndex, x0, y0);
+  const r10 = readRainCell(gridIndex, x0 + 1, y0);
+  const r01 = readRainCell(gridIndex, x0, y0 + 1);
+  const r11 = readRainCell(gridIndex, x0 + 1, y0 + 1);
+
+  // Interpolar escalar directamente
+  const bottom = r00 * (1 - fx) + r10 * fx;
+  const top    = r01 * (1 - fx) + r11 * fx;
+  const rain   = bottom * (1 - fy) + top * fy;
+
+  return Math.max(0, Math.round(rain * 100) / 100);
+}
