@@ -53,7 +53,7 @@ export const fragmentSource = `
 
   // Rampa de color directa en el shader: Transparente -> Celeste -> Azul Rey -> Púrpura
   vec4 getRainColor(float intensity) {
-    if (intensity < 0.01) {
+    if (intensity < 0.005) {
       return vec4(0.0); // Completamente transparente para 0 o casi 0
     }
 
@@ -63,16 +63,16 @@ export const fragmentSource = `
 
     // Mix entre colores según rangos de intensidad normalizada [0.0, 1.0]
     vec4 color;
-    if (intensity < 0.4) {
-      float t = smoothstep(0.01, 0.4, intensity);
+    if (intensity < 0.2) {
+      float t = smoothstep(0.005, 0.2, intensity);
       color = mix(colorLightBlue, colorRoyalBlue, t);
     } else {
-      float t = smoothstep(0.4, 1.0, intensity);
+      float t = smoothstep(0.2, 1.0, intensity);
       color = mix(colorRoyalBlue, colorPurple, t);
     }
 
     // Curva de opacidad: lluvia ligera es más transparente que tormenta intensa
-    float alpha = mix(0.5, 1.0, intensity);
+    float alpha = mix(0.4, 1.0, smoothstep(0.005, 0.5, intensity));
     return vec4(color.rgb, color.a * alpha);
   }
 

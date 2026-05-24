@@ -62,7 +62,8 @@ const getNOAAUrlForDate = async (dateObj, hour) => {
     const dd = String(dateObj.getUTCDate()).padStart(2, '0');
     const dateStr = `${yyyy}${mm}${dd}`;
 
-    const url = buildNOAAUrl(dateStr, hour, 'f000');
+    // Solicitamos f001 en lugar de f000. La precipitación (PRATE) no existe en f000 porque es acumulada.
+    const url = buildNOAAUrl(dateStr, hour, 'f001');
     
     try {
         const response = await fetch(url, { method: 'HEAD' });
@@ -94,7 +95,17 @@ const getLatestNOAAUrl = async () => {
 const extractGribData = async (gribPath, shortName, gridKeys) => {
     try {
         // Ejecutar herramienta C con maxBuffer ampliado a 50MB (el output de texto puede ser grande)
-        const { stdout } = await execPromise(`grib_get_data -F "%.2f" -w shortName=${shortName} ${gribPath}`, { maxBuffer: 50 * 1024 * 1024 });
+        let stdout;
+        try {
+            // Intentar con la clave tal cual o en minúscula
+            const result = await execPromise(`grib_get_data -F "%.2f" -w shortName=${shortName.toLowerCase()} ${gribPath}`, { maxBuffer: 50 * 1024 * 1024 });
+            stdout = result.stdout;
+        } catch (e1) {
+            // Fallback: Intentar con la clave en mayúscula (ej. 'PRATE' en vez de 'prate')
+            const result = await execPromise(`grib_get_data -F "%.2f" -w shortName=${shortName.toUpperCase()} ${gribPath}`, { maxBuffer: 50 * 1024 * 1024 });
+            stdout = result.stdout;
+        }
+
         const lines = stdout.split('\n');
         const data = new Map();
         
@@ -220,7 +231,8 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                     const cape = mapCape.get(key) || 0;
                     const hlcy = mapHlcy.get(key) || 0;
                     const refc = mapRefc.get(key) || 0;
-                    const prate = mapPrate.get(key) || 0;
+                    let prate = mapPrate.get(key) || 0;
+                    if (prate >= 999 || prate < 0) prate = 0;
                     const rainMmH = prate * 3600;
 
                     const speedKmH = Math.sqrt(u*u + v*v) * 3.6;
