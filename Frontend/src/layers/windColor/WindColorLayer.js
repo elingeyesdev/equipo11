@@ -60,12 +60,15 @@ export default class WindColorLayer {
     this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
 
-    // 3. Crear quad geográfico (cubre el mundo en coordenadas Mercator de Mapbox)
-    //    Latitudes limitadas a ±85° (límite de Mercator)
-    const nw = mapboxgl.MercatorCoordinate.fromLngLat([-180,  85.051]);
-    const ne = mapboxgl.MercatorCoordinate.fromLngLat([ 180,  85.051]);
-    const sw = mapboxgl.MercatorCoordinate.fromLngLat([-180, -85.051]);
-    const se = mapboxgl.MercatorCoordinate.fromLngLat([ 180, -85.051]);
+    // 3. Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
+    //    Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
+    const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
+    const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
+
+    const nw = { x: -5.0, y: yTop };
+    const ne = { x:  6.0, y: yTop };
+    const sw = { x: -5.0, y: yBottom };
+    const se = { x:  6.0, y: yBottom };
 
     // Dos triángulos: NW-NE-SW, NE-SE-SW
     const vertices = new Float32Array([

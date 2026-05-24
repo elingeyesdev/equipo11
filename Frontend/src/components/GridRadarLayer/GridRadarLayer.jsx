@@ -136,8 +136,6 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       lightningForks: null
     }));
     let visibleNodes = [];
-    const nodeProjections = new Map(); // Instanciado una sola vez, sin recrear por fotograma
-
     // Función para filtrar qué nodos están en el viewport
     const updateVisibleNodes = () => {
       if (!map) return;
@@ -213,8 +211,15 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      nodeProjections.clear(); // Limpiamos caché de proyecciones por fotograma
-
+      // ACTUALIZACIÓN DE PROYECCIONES (0 Asignaciones de memoria)
+      const centerLng = map.getCenter().lng;
+      for (let i = 0; i < visibleNodes.length; i++) {
+        const node = visibleNodes[i];
+        let mainLng = node.longitude - 360 * Math.round((node.longitude - centerLng) / 360);
+        const proj = map.project([mainLng, node.latitude]);
+        node.pixelX = proj.x;
+        node.pixelY = proj.y;
+      }
       // ACTUALIZACIÓN DE FÍSICA
       for (let i = 0; i < MAX_PARTICLES; i++) {
         const p = particlePool[i];
@@ -287,18 +292,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         // Separamos las capas: las tormentas se dibujan en una segunda pasada para que estén por encima
         if ((type === 'thunderstorm') !== isThunderstormPass) return;
         
-        let pixelPosMain = nodeProjections.get(p.node.id);
-        if (!pixelPosMain) {
-          const centerLng = map.getCenter().lng;
-          let mainLng = longitude;
-          // NORMALIZACIÓN ANTIMERIDIANO: Asegurar que se proyecte en el mundo visual actual
-          mainLng = mainLng - 360 * Math.round((mainLng - centerLng) / 360);
-          pixelPosMain = map.project([mainLng, latitude]);
-          nodeProjections.set(p.node.id, pixelPosMain);
-        }
-
-        const x = pixelPosMain.x + p.offsetX;
-        const y = pixelPosMain.y + p.offsetY;
+        const x = p.node.pixelX + p.offsetX;
+        const y = p.node.pixelY + p.offsetY;
         const zoomFactor = Math.max(0.2, currentMapZoom / 6);
         
         ctx.beginPath();
@@ -374,8 +369,8 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           }
         } else if (type === 'tornado_warning') {
           const radius = (p.baseRadius * 0.3) * (1 - p.life); 
-          const vortexX = pixelPosMain.x + Math.cos(p.phase) * radius;
-          const vortexY = pixelPosMain.y + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
+          const vortexX = p.node.pixelX + Math.cos(p.phase) * radius;
+          const vortexY = p.node.pixelY + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
           
           ctx.moveTo(vortexX, vortexY);
           ctx.lineTo(vortexX + Math.cos(p.phase + 0.5)*radius*0.8, vortexY + Math.sin(p.phase + 0.5)*radius*0.8);
