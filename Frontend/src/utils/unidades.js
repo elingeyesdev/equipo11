@@ -65,6 +65,15 @@ export const METRICAS_UNIDADES = {
     ],
     defecto: '%',
   },
+  windSpeed: {
+    label: 'Viento', icon: '💨',
+    unidades: [
+      { key: 'km/h', label: 'km/h', convertir: v => v, invertir: v => v, precision: 1, sufijo: ' km/h' },
+      { key: 'm/s', label: 'm/s', convertir: v => v / 3.6, invertir: v => v * 3.6, precision: 1, sufijo: ' m/s' },
+      { key: 'mph', label: 'mph', convertir: v => v / 1.60934, invertir: v => v * 1.60934, precision: 1, sufijo: ' mph' },
+    ],
+    defecto: 'km/h',
+  },
 }
 
 function resolverUnidad(metricKey, unitKey) {

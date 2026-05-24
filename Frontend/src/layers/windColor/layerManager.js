@@ -99,7 +99,97 @@ export function removeWindLayers(map) {
   try {
     if (map.getLayer('wind-color-layer')) map.removeLayer('wind-color-layer');
     if (map.getLayer('custom-coastline')) map.removeLayer('custom-coastline');
+    removeCityWindLabels(map);
   } catch (e) {
     console.warn('[layerManager] Error removiendo capas:', e.message);
   }
+}
+
+// ─── Capa de Etiquetas de Viento en Ciudades Globales ─────────────────────
+
+const CITY_SOURCE_ID = 'global-wind-cities-source';
+const CITY_LAYER_ID = 'global-wind-cities-label';
+
+/**
+ * Inyecta la capa de símbolos de texto para ciudades globales.
+ * Usa text-allow-overlap: false para que Mapbox resuelva colisiones nativamente.
+ *
+ * @param {mapboxgl.Map} map
+ * @param {Object} geojson — FeatureCollection con properties { name, wind_speed }
+ */
+export function addCityWindLabels(map, geojson) {
+  try {
+    if (map.getSource(CITY_SOURCE_ID)) return; // Ya existe
+
+    map.addSource(CITY_SOURCE_ID, {
+      type: 'geojson',
+      data: geojson,
+    });
+
+    // Esta capa se inserta SIN beforeId para que flote por encima de todo (incluido el heatmap)
+    map.addLayer({
+      id: CITY_LAYER_ID,
+      type: 'symbol',
+      source: CITY_SOURCE_ID,
+      layout: {
+        'text-field': [
+          'concat',
+          ['get', 'name'], '\n',
+          ['to-string', ['round', ['to-number', ['get', 'wind_speed']]]],
+          ' km/h'
+        ],
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': [
+          'interpolate', ['linear'], ['zoom'],
+          2, 10,
+          5, 12,
+          8, 14,
+        ],
+        'text-offset': [0, 0],
+        'text-anchor': 'center',
+        // KISS: Mapbox gestiona colisiones automáticamente con estos dos flags
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+        'text-padding': 8,
+        'text-optional': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.85)',
+        'text-halo-width': 1.8,
+        'text-halo-blur': 0.5,
+      },
+    });
+  } catch (e) {
+    console.warn('[layerManager] Error añadiendo etiquetas de ciudades:', e.message);
+  }
+}
+
+/**
+ * Actualiza los datos GeoJSON de la capa de ciudades sin destruirla/recrearla.
+ *
+ * @param {mapboxgl.Map} map
+ * @param {Object} geojson — FeatureCollection actualizado
+ */
+export function updateCityWindLabels(map, geojson) {
+  try {
+    const source = map.getSource(CITY_SOURCE_ID);
+    if (source) {
+      source.setData(geojson);
+    }
+  } catch (e) {
+    console.warn('[layerManager] Error actualizando etiquetas:', e.message);
+  }
+}
+
+/**
+ * Remueve la capa y fuente de etiquetas de ciudades.
+ *
+ * @param {mapboxgl.Map} map
+ */
+export function removeCityWindLabels(map) {
+  try {
+    if (map.getLayer(CITY_LAYER_ID)) map.removeLayer(CITY_LAYER_ID);
+    if (map.getSource(CITY_SOURCE_ID)) map.removeSource(CITY_SOURCE_ID);
+  } catch (_) { /* ignore */ }
 }

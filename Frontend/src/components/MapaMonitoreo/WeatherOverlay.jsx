@@ -1,16 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { Source, Layer, useMap } from 'react-map-gl/mapbox';
 import GridRadarLayer from '../GridRadarLayer/GridRadarLayer';
 import WindColorLayer from '../../layers/windColor/WindColorLayer.js';
-import { addWindLayers, removeWindLayers } from '../../layers/windColor/layerManager.js';
+import {
+  addWindLayers, removeWindLayers,
+  addCityWindLabels, updateCityWindLabels, removeCityWindLabels
+} from '../../layers/windColor/layerManager.js';
+import { GLOBAL_CITIES } from '../../utils/globalCities.js';
+import { buildGridIndex, buildCitiesWindGeoJSON } from '../../utils/windMath.js';
 
 /**
  * WeatherOverlay — Orquesta las capas visuales de clima dinámico.
  *
  * Capas gestionadas:
- *  1. WindColorLayer  (WebGL) — mapa de color por velocidad del viento
- *  2. GridRadarLayer  (Canvas) — partículas animadas de lluvia/nieve/viento/etc.
- *  3. Wind labels     (Mapbox symbol) — etiquetas de velocidad del viento
+ *  1. WindColorLayer       (WebGL)  — mapa de color por velocidad del viento
+ *  2. GridRadarLayer       (Canvas) — partículas animadas de lluvia/nieve/viento/etc.
+ *  3. City wind labels     (Symbol) — etiquetas globales de velocidad por ciudad
+ *  4. Dynamic wind labels  (Symbol) — etiquetas dinámicas de sensores IoT
  *
  * Ambas capas (1 y 2) se activan/desactivan con el mismo toggle:
  *   isParticlesActive && particleFilters.wind
@@ -32,11 +38,23 @@ function WeatherOverlay({
   // Guardar referencia a los datos más recientes
   dataRef.current = scannedGrid;
 
+  // --- Precalcular el índice vectorial del grid (U,V) para interpolación ---
+  // Solo se recalcula cuando cambian los datos de la NOAA
+  const gridIndex = useMemo(() => {
+    if (!scannedGrid || scannedGrid.length === 0) return null;
+    return buildGridIndex(scannedGrid);
+  }, [scannedGrid]);
+
+  // --- Generar GeoJSON de ciudades con viento interpolado vectorialmente ---
+  const citiesWindGeoJSON = useMemo(() => {
+    if (!gridIndex || gridIndex.size === 0) return null;
+    return buildCitiesWindGeoJSON(GLOBAL_CITIES, gridIndex);
+  }, [gridIndex]);
+
   // --- Ciclo de vida del WindColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
 
-    // Obtener la instancia nativa de Mapbox GL JS (react-map-gl la envuelve)
     const rawMap = map.getMap();
     if (!rawMap) return;
 
@@ -46,22 +64,25 @@ function WeatherOverlay({
       if (!shouldShow) return;
 
       // Mapbox elimina todas las custom layers cuando el estilo cambia (ej. dark a light)
-      // Si la capa ya no existe en el mapa, debemos recrearla.
       if (!rawMap.getLayer('wind-color-layer')) {
         const layer = new WindColorLayer({
           id: 'wind-color-layer',
           opacity: 0.90,
         });
         windLayerRef.current = layer;
-
-        // Delegamos la inserción inteligente a layerManager.js (SRP)
         addWindLayers(rawMap, layer, dataRef.current);
+      }
+
+      // Inyectar etiquetas de ciudades globales si hay datos
+      if (citiesWindGeoJSON) {
+        if (!rawMap.getSource('global-wind-cities-source')) {
+          addCityWindLabels(rawMap, citiesWindGeoJSON);
+        }
       }
     };
 
     if (shouldShow) {
       addLayersIfMissing();
-      // Si el usuario cambia a Modo Oscuro/Claro, el mapa recarga su estilo y borra nuestra capa
       rawMap.on('styledata', addLayersIfMissing);
     } else {
       removeWindLayers(rawMap);
@@ -70,11 +91,10 @@ function WeatherOverlay({
 
     return () => {
       rawMap.off('styledata', addLayersIfMissing);
-      // Solo removemos si el componente se desmonta o el estado pasa a oculto
       removeWindLayers(rawMap);
       windLayerRef.current = null;
     };
-  }, [map, isParticlesActive, particleFilters.wind]);
+  }, [map, isParticlesActive, particleFilters.wind, citiesWindGeoJSON]);
 
   // --- Actualizar datos cuando cambia scannedGrid ---
   useEffect(() => {
@@ -82,6 +102,15 @@ function WeatherOverlay({
       windLayerRef.current.updateData(scannedGrid);
     }
   }, [scannedGrid]);
+
+  // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
+  useEffect(() => {
+    if (!map || !citiesWindGeoJSON) return;
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+
+    updateCityWindLabels(rawMap, citiesWindGeoJSON);
+  }, [map, citiesWindGeoJSON]);
 
   if (!isParticlesActive) return null;
 

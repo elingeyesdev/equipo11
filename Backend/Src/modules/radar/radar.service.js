@@ -141,12 +141,47 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
             if (fs.existsSync(gribPath)) {
                 logger.info(`[Radar Scraper] El archivo GRIB ${gribFileName} ya existe localmente.`);
             } else {
-                logger.info(`[Radar Scraper] Descargando GRIB desde NOAA para ${forecastTimeStr}...`);
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`Fallo en descarga GRIB: ${response.statusText}`);
-                const buffer = await response.arrayBuffer();
-                fs.writeFileSync(gribPath, Buffer.from(buffer));
-                logger.info(`[Radar Scraper] GRIB guardado en ${gribPath}.`);
+                // Descarga atómica con reintentos — protege contra conexiones cortadas
+                const tempGribPath = gribPath + '.tmp';
+                const MAX_RETRIES = 3;
+                let downloaded = false;
+
+                for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                  try {
+                    logger.info(`[Radar Scraper] Descargando GRIB desde NOAA (intento ${attempt}/${MAX_RETRIES})...`);
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const buffer = await response.arrayBuffer();
+
+                    // Validar que el archivo no esté vacío o truncado
+                    if (buffer.byteLength < 1000) {
+                      throw new Error(`Archivo GRIB sospechosamente pequeño: ${buffer.byteLength} bytes`);
+                    }
+
+                    // Escribir a archivo temporal primero
+                    fs.writeFileSync(tempGribPath, Buffer.from(buffer));
+
+                    // Renombrado atómico: si esto falla, el archivo anterior se mantiene intacto
+                    fs.renameSync(tempGribPath, gribPath);
+                    logger.info(`[Radar Scraper] GRIB guardado atómicamente en ${gribPath} (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB).`);
+                    downloaded = true;
+                    break;
+                  } catch (dlErr) {
+                    logger.warn(`[Radar Scraper] Intento ${attempt}/${MAX_RETRIES} falló: ${dlErr.message}`);
+                    // Limpiar archivo temporal si quedó a medias
+                    try { if (fs.existsSync(tempGribPath)) fs.unlinkSync(tempGribPath); } catch (_) {}
+                    
+                    if (attempt < MAX_RETRIES) {
+                      const delay = attempt * 2000; // Backoff exponencial: 2s, 4s
+                      logger.info(`[Radar Scraper] Reintentando en ${delay/1000}s...`);
+                      await new Promise(r => setTimeout(r, delay));
+                    }
+                  }
+                }
+
+                if (!downloaded) {
+                  throw new Error(`Fallo definitivo: No se pudo descargar el GRIB tras ${MAX_RETRIES} intentos.`);
+                }
             }
 
             logger.info(`[Radar Scraper] Extrayendo datos del GRIB...`);
@@ -208,9 +243,11 @@ const processGribForUrl = async (url, dateStr, hour, forecastTimeStr, isBackgrou
                 }
             }
 
-            // Guardar JSON para la próxima vez
-            fs.writeFileSync(jsonPath, JSON.stringify(gridData));
-            logger.info(`[Radar Scraper] Caché JSON creada: ${jsonFileName}`);
+            // Guardar JSON con escritura atómica (protege contra cortes)
+            const tempJsonPath = jsonPath + '.tmp';
+            fs.writeFileSync(tempJsonPath, JSON.stringify(gridData));
+            fs.renameSync(tempJsonPath, jsonPath);
+            logger.info(`[Radar Scraper] Caché JSON creada atómicamente: ${jsonFileName}`);
         }
 
         // 3. Insertar en Base de Datos (Bulk Insert para velocidad)
