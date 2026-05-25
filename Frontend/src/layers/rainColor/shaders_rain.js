@@ -17,6 +17,7 @@ export const fragmentSource = `
   precision highp float;
 
   uniform sampler2D u_rain_data;
+  uniform sampler2D u_color_ramp;
   uniform float u_opacity;
   uniform vec2 u_tex_size;
 
@@ -24,9 +25,10 @@ export const fragmentSource = `
 
   const float PI = 3.14159265359;
 
-  // Interpolación bilineal manual con wrap horizontal perfecto (antimeridiano).
-  float sampleBilinear(vec2 uv) {
-    vec2 texelCoord = uv * u_tex_size - 0.5;
+  // Interpolación bilineal perfecta que corrige el desfase de medio píxel
+  float sampleBilinear(float lon, float lat) {
+    // Mapeo directo y exacto de coordenadas WGS84 a la rejilla de píxeles
+    vec2 texelCoord = vec2(lon + 180.0, lat + 90.0);
     vec2 base = floor(texelCoord);
     vec2 f = fract(texelCoord);
 
@@ -51,47 +53,27 @@ export const fragmentSource = `
     return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
   }
 
-  // Rampa de color directa en el shader: Transparente -> Celeste -> Azul Rey -> Púrpura
-  vec4 getRainColor(float intensity) {
-    if (intensity < 0.005) {
-      return vec4(0.0); // Completamente transparente para 0 o casi 0
-    }
-
-    vec4 colorLightBlue = vec4(0.4, 0.8, 1.0, 1.0);   // Celeste brillante
-    vec4 colorRoyalBlue = vec4(0.0, 0.3, 0.8, 1.0);   // Azul profundo
-    vec4 colorPurple    = vec4(0.6, 0.0, 0.8, 1.0);   // Púrpura saturado
-
-    // Mix entre colores según rangos de intensidad normalizada [0.0, 1.0]
-    vec4 color;
-    if (intensity < 0.2) {
-      float t = smoothstep(0.005, 0.2, intensity);
-      color = mix(colorLightBlue, colorRoyalBlue, t);
-    } else {
-      float t = smoothstep(0.2, 1.0, intensity);
-      color = mix(colorRoyalBlue, colorPurple, t);
-    }
-
-    // Curva de opacidad: lluvia ligera es más transparente que tormenta intensa
-    float alpha = mix(0.4, 1.0, smoothstep(0.005, 0.5, intensity));
-    return vec4(color.rgb, color.a * alpha);
-  }
-
   void main() {
-    // Resolver Antimeridiano
+    // Resolver Antimeridiano y extraer WGS84
     float wrappedMercatorX = fract(v_mercator.x);
     float lon = wrappedMercatorX * 360.0 - 180.0;
     float merc_y = PI * (1.0 - 2.0 * v_mercator.y);
     float ex = exp(merc_y);
     float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
 
-    vec2 uv = vec2(
-      (lon + 180.0) / 360.0,
-      (lat + 90.0) / 180.0
-    );
+    // Extraer valor de lluvia (normalizado de 0 a 1) usando la alineación perfecta
+    float rainNorm = sampleBilinear(lon, lat); 
 
-    float rainNorm = sampleBilinear(uv); // Valor normalizado [0, 1] desde la textura
+    // Optimización extrema: si no alcanza el umbral mínimo de lluvia visible (0.2mm), descartar.
+    // Como MAX_RAIN es 50.0, 0.19mm normalizado es 0.19 / 50.0 = 0.0038
+    if (rainNorm < 0.0038) {
+      discard;
+    }
     
-    vec4 baseColor = getRainColor(rainNorm);
+    // Lookup de color (Paleta Meteored Discreta)
+    vec4 baseColor = texture2D(u_color_ramp, vec2(rainNorm, 0.5));
+    
+    // Aplicar la opacidad global conservando el diseño de la paleta
     gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
   }
 `;

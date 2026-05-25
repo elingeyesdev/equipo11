@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, memo } from 'react';
 import { Source, Layer, useMap } from 'react-map-gl/mapbox';
 import GridRadarLayer from '../GridRadarLayer/GridRadarLayer';
 import WindColorLayer from '../../layers/windColor/WindColorLayer.js';
@@ -38,15 +38,20 @@ function WeatherOverlay({
   const rainLayerRef = useRef(null);
   const dataRef = useRef(null);
 
+  // --- 1. Proteger el Payload Masivo (Ahogo del Virtual DOM) ---
+  // Memoizamos el arreglo de 64,800 nodos para evitar que React y DevTools
+  // lo clonen o lo re-evalúen constantemente en renders no relacionados (ej. al cambiar zoom).
+  const protectedGrid = useMemo(() => scannedGrid, [scannedGrid]);
+
   // Guardar referencia a los datos más recientes
-  dataRef.current = scannedGrid;
+  dataRef.current = protectedGrid;
 
   // --- Precalcular el índice vectorial del grid (U,V) para interpolación ---
   // Solo se recalcula cuando cambian los datos de la NOAA
   const gridIndex = useMemo(() => {
-    if (!scannedGrid || scannedGrid.length === 0) return null;
-    return buildGridIndex(scannedGrid);
-  }, [scannedGrid]);
+    if (!protectedGrid || protectedGrid.length === 0) return null;
+    return buildGridIndex(protectedGrid);
+  }, [protectedGrid]);
 
   // --- Generar GeoJSON de ciudades con viento interpolado vectorialmente ---
   const citiesWindGeoJSON = useMemo(() => {
@@ -95,19 +100,22 @@ function WeatherOverlay({
     return () => {
       rawMap.off('styledata', addLayersIfMissing);
       removeWindLayers(rawMap);
+      if (windLayerRef.current && typeof windLayerRef.current.destroy === 'function') {
+        windLayerRef.current.destroy(); // Limpieza forzada de GPU
+      }
       windLayerRef.current = null;
     };
   }, [map, isParticlesActive, particleFilters.wind, citiesWindGeoJSON]);
 
-  // --- Actualizar datos cuando cambia scannedGrid ---
+  // --- Actualizar datos cuando cambia protectedGrid ---
   useEffect(() => {
-    if (windLayerRef.current && scannedGrid && scannedGrid.length > 0) {
-      windLayerRef.current.updateData(scannedGrid);
+    if (windLayerRef.current && protectedGrid && protectedGrid.length > 0) {
+      windLayerRef.current.updateData(protectedGrid);
     }
-    if (rainLayerRef.current && scannedGrid && scannedGrid.length > 0) {
-      rainLayerRef.current.updateData(scannedGrid);
+    if (rainLayerRef.current && protectedGrid && protectedGrid.length > 0) {
+      rainLayerRef.current.updateData(protectedGrid);
     }
-  }, [scannedGrid]);
+  }, [protectedGrid]);
 
   // --- Ciclo de vida del RainColorLayer (WebGL) ---
   useEffect(() => {
@@ -143,6 +151,9 @@ function WeatherOverlay({
     return () => {
       rawMap.off('styledata', addRainIfMissing);
       removeRainLayers(rawMap);
+      if (rainLayerRef.current && typeof rainLayerRef.current.destroy === 'function') {
+        rainLayerRef.current.destroy(); // Limpieza estricta de texturas WebGL
+      }
       rainLayerRef.current = null;
     };
   }, [map, isParticlesActive, particleFilters.rain]);
@@ -161,7 +172,7 @@ function WeatherOverlay({
   return (
     <>
       <GridRadarLayer
-        scannedGrid={scannedGrid}
+        scannedGrid={protectedGrid}
         currentZoom={currentZoom}
         particleFilters={particleFilters}
       />
@@ -193,4 +204,4 @@ function WeatherOverlay({
   );
 }
 
-export default WeatherOverlay;
+export default memo(WeatherOverlay);

@@ -38,6 +38,7 @@ export default class WindColorLayer {
 
   onAdd(map, gl) {
     this._map = map;
+    this._gl = gl; // Guardamos contexto para limpieza forzada
 
     // 1. Compilar shaders
     const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
@@ -128,13 +129,21 @@ export default class WindColorLayer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  onRemove(_map, gl) {
+  destroy() {
+    const gl = this._gl;
+    if (!gl) return;
     if (this._program) gl.deleteProgram(this._program);
     if (this._buffer) gl.deleteBuffer(this._buffer);
     if (this._texManager) this._texManager.destroy();
+    
     this._program = null;
     this._buffer = null;
     this._texManager = null;
+    this._gl = null;
+  }
+
+  onRemove(_map, gl) {
+    this.destroy();
   }
 
   // ─── API Pública ───────────────────────────────────────────────

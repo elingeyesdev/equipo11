@@ -32,6 +32,7 @@ export default class RainColorLayer {
 
   onAdd(map, gl) {
     this._map = map;
+    this._gl = gl; // Guardamos contexto para limpieza forzada
 
     // 1. Compilar shaders
     const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
@@ -50,6 +51,7 @@ export default class RainColorLayer {
     this._aPos            = gl.getAttribLocation(this._program, 'a_pos');
     this._uMatrix         = gl.getUniformLocation(this._program, 'u_matrix');
     this._uRainData       = gl.getUniformLocation(this._program, 'u_rain_data');
+    this._uColorRamp      = gl.getUniformLocation(this._program, 'u_color_ramp');
     this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
 
@@ -97,6 +99,10 @@ export default class RainColorLayer {
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.rainTexture);
     gl.uniform1i(this._uRainData, 0);
 
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
+    gl.uniform1i(this._uColorRamp, 1);
+
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);
     gl.vertexAttribPointer(this._aPos, 2, gl.FLOAT, false, 0, 0);
@@ -107,13 +113,21 @@ export default class RainColorLayer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  onRemove(_map, gl) {
+  destroy() {
+    const gl = this._gl;
+    if (!gl) return;
     if (this._program) gl.deleteProgram(this._program);
     if (this._buffer) gl.deleteBuffer(this._buffer);
     if (this._texManager) this._texManager.destroy();
+    
     this._program = null;
     this._buffer = null;
     this._texManager = null;
+    this._gl = null;
+  }
+
+  onRemove(_map, gl) {
+    this.destroy();
   }
 
   // ─── API Pública ───────────────────────────────────────────────
