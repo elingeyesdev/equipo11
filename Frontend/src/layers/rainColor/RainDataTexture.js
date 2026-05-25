@@ -108,16 +108,6 @@ export default class RainDataTexture {
   update(gridData) {
     if (!gridData || gridData.length === 0) return;
 
-    // Log crítico inyectado en la línea 1 del método
-    console.log("🔍 DEBUG PAYLOAD - Primer nodo:", gridData[0]);
-
-    // Validación segura ignorando NaNs y con extracción dinámica
-    const maxRainVal = Math.max(...gridData.map(p => {
-      const val = Number(p.rain !== undefined ? p.rain : (p.value !== undefined ? p.value : p.val));
-      return isNaN(val) ? 0 : val;
-    }));
-    console.log("🔍 MAX LLUVIA EN GRID (REAL):", maxRainVal);
-
     const gl = this.gl;
     // Buffer RGBA seguro (Width * Height * 4 bytes) para evitar Texture Stride mismatch
     const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
