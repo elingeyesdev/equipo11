@@ -188,7 +188,7 @@ async function simulateRange(startTime, endTime, intervalMinutes = 60) {
   )
   if (parseInt(existing[0].count) > 0) throw new Error('Dato ya simulado en este rango.')
 
-  await loadDbMapping()
+  const map = await getDbMapping()
 
   // 3. Obtener estado inicial (última lectura conocida o inicial aleatoria)
   let state = await getLastKnownState(start)
@@ -203,10 +203,10 @@ async function simulateRange(startTime, endTime, intervalMinutes = 60) {
     const timestamp = current.toISOString()
 
     state.forEach(city => {
-      const locId = dbMapping.localidades[city.name.toLowerCase()]
+      const locId = map.localidades[city.name.toLowerCase()]
       if (!locId) return
       Object.entries(city.data).forEach(([metricKey, val]) => {
-        const metId = dbMapping.metricas[metricKey]
+        const metId = map.metricas[metricKey]
         if (metId) {
           allLecturas.push({
             tiempo: timestamp,
@@ -284,31 +284,22 @@ let tickCount = 0
 const db = require('../../config/db')
 const logger = require('../../utils/logger')
 const { getDbMapping } = require('../../utils/dbMapping')
-let dbMapping = { localidades: {}, metricas: {} }
 
 // Throttle: solo persistir 1 vez por hora para no llenar la BD
 let lastPersistTime = 0
 const PERSIST_INTERVAL_MS = 60 * 60 * 1000  // 1 hora
 
-async function loadDbMapping() {
-  try {
-    dbMapping = await getDbMapping();
-  } catch (err) {
-    logger.error('[Simulación] Error cargando DB mapping:', err.message)
-  }
-}
-
 /**
  * Persiste el estado actual en la tabla lecturas (con throttle para simulación continua).
  */
 async function persistReadings(state) {
-  if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
+  const map = await getDbMapping()
 
   const now = Date.now()
   if (now - lastPersistTime < PERSIST_INTERVAL_MS) return
   lastPersistTime = now
 
-  await persistToDB(state, 1)
+  await persistToDB(state, 1, map)
 }
 
 /**
@@ -316,16 +307,16 @@ async function persistReadings(state) {
  * @param {Array}  state    — ciudades con { name, data: { metrica: valor } }
  * @param {number} fuenteId — 1 = simulación continua, 2 = inyección manual
  */
-async function persistToDB(state, fuenteId) {
+async function persistToDB(state, fuenteId, map) {
   const localidadIds = []
   const metricaIds = []
   const valores = []
 
   state.forEach(city => {
-    const locId = dbMapping.localidades[city.name.toLowerCase()]
+    const locId = map.localidades[city.name.toLowerCase()]
     if (!locId) return
     Object.entries(city.data).forEach(([metricKey, val]) => {
-      const metId = dbMapping.metricas[metricKey]
+      const metId = map.metricas[metricKey]
       if (metId && val !== null) {
         localidadIds.push(locId)
         metricaIds.push(metId)
@@ -352,7 +343,7 @@ async function persistToDB(state, fuenteId) {
  */
 function start(intervalMs, onTick) {
   if (intervalId) return false
-  loadDbMapping()
+  getDbMapping()
   tickCount = 0
   currentState = createInitialState()
   lastPersistTime = 0
@@ -407,8 +398,8 @@ function injectData(cityId, partialData) {
 }
 
 async function persistInjection(state) {
-  if (!Object.keys(dbMapping.localidades).length) await loadDbMapping()
-  await persistToDB(state, 2)
+  const map = await getDbMapping()
+  await persistToDB(state, 2, map)
 }
 
 module.exports = { start, stop, isRunning, getCurrentState, injectData, simulateRange }
