@@ -4,6 +4,17 @@ const crypto = require('crypto')
 const { findByEmail, createUser, updatePassword } = require('./auth.model')
 const { sendEmail } = require('../../utils/mailer')
 
+/**
+ * Elimina entradas expiradas del Map resetCodes (lazy cleanup).
+ * Se ejecuta cada vez que se genera un nuevo código.
+ */
+function purgeExpiredCodes () {
+  const now = Date.now()
+  for (const [key, record] of resetCodes) {
+    if (record.expiresAt < now) resetCodes.delete(key)
+  }
+}
+
 const resetCodes = new Map()// Registrar usuario
 const register = async ({ nombre, apellido, email, password }) => {
   // Verificar si el email ya existe
@@ -52,6 +63,7 @@ const login = async ({ email, password }) => {
 
 // Solicitar código de recuperación
 const forgotPassword = async ({ email }) => {
+  purgeExpiredCodes()
   const usuario = await findByEmail(email)
   if (!usuario) {
     throw new Error('No se encontró un usuario con ese correo')

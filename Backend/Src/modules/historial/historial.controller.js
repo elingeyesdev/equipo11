@@ -99,24 +99,35 @@ const historialController = {
 
       const fuenteId = fuentes[0].id
       const now = Date.now()
-      const inserts = []
+
+      // Usar unnest() para SQL parametrizado (defense-in-depth)
+      const tiempos = []
+      const locIds = []
+      const metIds = []
+      const valores = []
 
       for (let i = 24; i >= 0; i--) {
         const tiempo = new Date(now - i * 60 * 60 * 1000).toISOString()
         for (const loc of localidades) {
           for (const met of metricas) {
-            inserts.push(`('${tiempo}', ${loc.id}, ${met.id}, ${(Math.random() * 100).toFixed(2)}, ${fuenteId})`)
+            tiempos.push(tiempo)
+            locIds.push(loc.id)
+            metIds.push(met.id)
+            valores.push(parseFloat((Math.random() * 100).toFixed(2)))
           }
         }
       }
 
-      await db.query(`
-        INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
-        VALUES ${inserts.join(',')}
-        ON CONFLICT DO NOTHING
-      `)
+      await db.query(
+        `INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
+         SELECT * FROM unnest(
+           $1::timestamptz[], $2::int[], $3::int[], $4::numeric[], $5::int[]
+         )
+         ON CONFLICT DO NOTHING`,
+        [tiempos, locIds, metIds, valores, Array(tiempos.length).fill(fuenteId)]
+      )
 
-      success(res, { mensaje: 'Datos de prueba inyectados (24 horas)', count: inserts.length })
+      success(res, { mensaje: 'Datos de prueba inyectados (24 horas)', count: tiempos.length })
     } catch (err) {
       logger.error('[historial] seed error:', err)
       error(res, 'Error en seeding: ' + err.message, 500)
