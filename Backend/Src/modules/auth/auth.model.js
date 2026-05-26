@@ -11,12 +11,49 @@ const findByEmail = async (email) => {
   return rows[0] || null
 }
 
-const createUser = async ({ nombre, apellido, email, password_hash }) => {
+const createUser = async ({
+  nombre,
+  apellido,
+  email,
+  password_hash,
+  latitud = null,
+  longitud = null,
+  notif_email = false,
+  notif_whatsapp = false,
+  whatsapp_destino = null,
+  notif_telegram = false,
+  telegram_destino = null
+}) => {
   const { rows } = await db.query(
-    `INSERT INTO usuarios (rol_id, nombre, apellido, email, password_hash)
-     VALUES ((SELECT id FROM roles WHERE clave = 'visualizador'), $1, $2, $3, $4)
-     RETURNING id, nombre, apellido, email, rol_id`,
-    [nombre, apellido, email, password_hash]
+    `INSERT INTO usuarios (
+      rol_id, nombre, apellido, email, password_hash,
+      latitud, longitud,
+      notif_email, notif_whatsapp, whatsapp_destino,
+      notif_telegram, telegram_destino
+     )
+     VALUES (
+      (SELECT id FROM roles WHERE clave = 'visualizador'), $1, $2, $3, $4,
+      $5, $6,
+      $7, $8, $9,
+      $10, $11
+     )
+     RETURNING id, nombre, apellido, email, rol_id,
+               latitud, longitud,
+               notif_email, notif_whatsapp, whatsapp_destino,
+               notif_telegram, telegram_destino`,
+    [
+      nombre,
+      apellido,
+      email,
+      password_hash,
+      latitud,
+      longitud,
+      notif_email,
+      notif_whatsapp,
+      whatsapp_destino,
+      notif_telegram,
+      telegram_destino
+    ]
   )
   return rows[0]
 }

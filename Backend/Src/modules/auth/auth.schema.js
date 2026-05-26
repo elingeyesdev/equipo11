@@ -20,6 +20,13 @@ const registerSchema = z.object({
     .max(150, 'El correo no puede exceder 150 caracteres'),
   password: z.string({ required_error: 'La contraseña es requerida' })
     .min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  latitud: z.number().optional().nullable(),
+  longitud: z.number().optional().nullable(),
+  notif_email: z.boolean().optional().default(false),
+  notif_whatsapp: z.boolean().optional().default(false),
+  whatsapp_destino: z.string().optional().nullable(),
+  notif_telegram: z.boolean().optional().default(false),
+  telegram_destino: z.string().optional().nullable(),
 })
 
 const loginSchema = z.object({

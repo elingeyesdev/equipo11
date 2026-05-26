@@ -331,3 +331,50 @@
   .auth-form-col { padding: 28px 18px; }
   .auth-heading { font-size: 30px; }
 }
+
+/* Custom additions for Location & Notification Preferences */
+.auth-divider {
+  font: 600 10.5px/1 var(--font-mono);
+  color: var(--ink-faint);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+.auth-info-banner {
+  background: var(--paper-2);
+  border: 1px dashed var(--line);
+  color: var(--ink-mute);
+  padding: 10px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.auth-notif-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.auth-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink);
+  user-select: none;
+}
+
+.auth-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--moss-ink);
+}

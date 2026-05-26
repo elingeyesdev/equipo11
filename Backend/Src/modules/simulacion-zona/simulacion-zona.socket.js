@@ -65,6 +65,22 @@ function registerZonaSocketEvents(io) {
           { metricaClave, escenario, dias, intervalMinutos, intervalSimSeg, zonas: finalZonas },
           (tickPayload) => {
             io.emit('zona:tick', tickPayload);
+            if (tickPayload.zonas && tickPayload.zonas.length > 0) {
+              const notificacionesService = require('../notificaciones/notificaciones.service');
+              tickPayload.zonas.forEach(z => {
+                if (z.severidad === 'critica' || z.severidad === 'emergencia') {
+                  notificacionesService.notifyAlertByCoordinates({
+                    lat: z.centroide.lat,
+                    lng: z.centroide.lng,
+                    metrica: tickPayload.metricaClave,
+                    valor: z.valor,
+                    label: z.umbralLabel,
+                    severidad: z.severidad,
+                    source: `Simulación de Zona: ${z.nombre}`
+                  }).catch(err => logger.error('[zona:tick] Error enviando alerta geográfica:', err.message));
+                }
+              });
+            }
           }
         );
 

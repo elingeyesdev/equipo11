@@ -726,3 +726,215 @@ input:checked+.notif-slider:before {
 .notif-status-saved {
   color: #059669; /* emerald-600 */
 }
+
+/* Location Card styles */
+.notif-location-card {
+  grid-column: 1 / -1;
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+}
+
+.notif-location-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .notif-location-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Estilos para el QR de Telegram */
+.notif-telegram-help {
+  margin-top: 1rem;
+  background: var(--paper-2);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px dashed var(--line-soft);
+  transition: all 0.3s ease;
+}
+
+.notif-telegram-help:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.05);
+}
+
+.notif-qr-container {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.notif-qr-wrapper {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  cursor: pointer;
+  background: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.notif-qr-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.notif-qr-wrapper:hover .notif-qr-image {
+  transform: scale(1.05);
+}
+
+.notif-qr-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.4);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.notif-qr-wrapper:hover .notif-qr-overlay {
+  opacity: 1;
+}
+
+.notif-qr-text {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notif-qr-text p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.notif-qr-text a {
+  font-size: 0.85rem;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.notif-qr-text a:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.notif-hint-alert {
+  font-size: 0.75rem;
+  color: var(--ink-mute);
+  margin-top: 8px;
+  line-height: 1.3;
+}
+
+/* Modal Zoom QR */
+.notif-zoom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.notif-zoom-content {
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 440px;
+  width: 90%;
+  position: relative;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.notif-zoom-content img {
+  width: 260px;
+  height: 260px;
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line-soft);
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.notif-zoom-content h3 {
+  font-size: 1.25rem;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+
+.notif-zoom-content p {
+  font-size: 0.9rem;
+  color: var(--ink-mute);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.notif-zoom-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--paper-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ink);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.notif-zoom-close:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

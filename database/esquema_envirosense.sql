@@ -131,6 +131,13 @@ CREATE TABLE usuarios (
   password_hash   VARCHAR(255) NOT NULL,
   email_verificado BOOLEAN     NOT NULL DEFAULT FALSE,
   activo          BOOLEAN      NOT NULL DEFAULT TRUE,
+  latitud         DOUBLE PRECISION,
+  longitud        DOUBLE PRECISION,
+  notif_email     BOOLEAN      NOT NULL DEFAULT FALSE,
+  notif_whatsapp  BOOLEAN      NOT NULL DEFAULT FALSE,
+  whatsapp_destino VARCHAR(100),
+  notif_telegram  BOOLEAN      NOT NULL DEFAULT FALSE,
+  telegram_destino VARCHAR(100),
   creado_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   ultimo_login    TIMESTAMPTZ,
   CONSTRAINT email_formato CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')

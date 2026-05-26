@@ -9,7 +9,7 @@ const generarReporteSchema = z.object({
       key: z.string()
     })
   ),
-  datos: z.array(z.record(z.any()))
+  datos: z.array(z.any())
 });
 
 module.exports = { generarReporteSchema };

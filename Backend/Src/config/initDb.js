@@ -6,6 +6,26 @@ const logger = require('../utils/logger');
  * Esto asegura que en producción (Portainer) la app siempre sea funcional.
  */
 async function initDatabase() {
+  const ensureColumn = async (table, colDef) => {
+    try {
+      await db.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${colDef}`);
+      logger.info(`[DB Init] Columna asegurada: ${table}.${colDef.trim().split(/\s+/)[0]}`);
+    } catch (err) {
+      logger.warn(`[DB Init] No se pudo asegurar columna ${table}: ${err.message}`);
+    }
+  };
+
+  // Asegurar columnas para localización y notificaciones de usuario
+  await ensureColumn('usuarios', 'pais VARCHAR(100)');
+  await ensureColumn('usuarios', 'ciudad VARCHAR(100)');
+  await ensureColumn('usuarios', 'latitud DOUBLE PRECISION');
+  await ensureColumn('usuarios', 'longitud DOUBLE PRECISION');
+  await ensureColumn('usuarios', 'notif_email BOOLEAN DEFAULT FALSE');
+  await ensureColumn('usuarios', 'notif_whatsapp BOOLEAN DEFAULT FALSE');
+  await ensureColumn('usuarios', 'whatsapp_destino VARCHAR(100)');
+  await ensureColumn('usuarios', 'notif_telegram BOOLEAN DEFAULT FALSE');
+  await ensureColumn('usuarios', 'telegram_destino VARCHAR(100)');
+
   // 0. Crear tablas de caché (Esenciales para el funcionamiento de los servicios)
   try {
     await db.query(`
