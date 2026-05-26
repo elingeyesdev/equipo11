@@ -34,6 +34,18 @@ function GuestRoute({ children }) {
   return children
 }
 
+function DesktopRoute({ children }) {
+  const isPWA = useIsPWA()
+  if (isPWA) return <Navigate to="/mobile" replace />
+  return children
+}
+
+function MobileRoute({ children }) {
+  const isPWA = useIsPWA()
+  if (!isPWA) return <Navigate to="/mapa" replace />
+  return children
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -43,7 +55,7 @@ function App() {
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute><DesktopRoute><Layout /></DesktopRoute></ProtectedRoute>}>
           <Route path="mapa" element={<MapaMonitoreo />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="usuarios" element={<Usuarios />} />
@@ -52,7 +64,7 @@ function App() {
         </Route>
 
         {/* Rutas PWA Mobile */}
-        <Route element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute><MobileRoute><MobileLayout /></MobileRoute></ProtectedRoute>}>
           <Route path="mobile" element={<LocationDashboard />} />
           <Route path="mobile/map" element={<MobileMapView />} />
           <Route path="mobile/alerts" element={<AlertHistoryView />} />

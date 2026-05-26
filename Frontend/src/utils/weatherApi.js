@@ -198,7 +198,11 @@ export const getLatestRadarTimestamp = async () => {
 export const getSensoresIoT = async () => {
   try {
     const res = await httpClient.get('/sensores');
-    return res.data?.data || [];
+    const body = res.data;
+    if (body?.data?.data && Array.isArray(body.data.data)) {
+      return body.data.data;
+    }
+    return body?.data || [];
   } catch (err) {
     console.error('[Sensores IoT] Error al obtener sensores:', err);
     return [];

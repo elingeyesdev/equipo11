@@ -10,7 +10,14 @@ export default function LocationDashboard() {
     const fetchData = async () => {
       try {
         const { data } = await httpClient.get('/sensores');
-        const items = Array.isArray(data) ? data : (data?.data || []);
+        let items = [];
+        if (Array.isArray(data)) {
+          items = data;
+        } else if (data?.data && Array.isArray(data.data)) {
+          items = data.data;
+        } else if (data?.data?.data && Array.isArray(data.data.data)) {
+          items = data.data.data;
+        }
         setSensores(items);
       } catch (err) {
         console.error('[Mobile] Error fetching sensores:', err);
@@ -34,8 +41,10 @@ export default function LocationDashboard() {
   // Agrupar promedios por métrica
   const metricas = ['temperatura', 'aqi', 'humedad', 'ruido'];
   const promedios = {};
+  const sensoresArray = Array.isArray(sensores) ? sensores : [];
+
   for (const m of metricas) {
-    const valores = sensores.map(s => Number(s[m])).filter(v => !isNaN(v) && v > 0);
+    const valores = sensoresArray.map(s => Number(s[m])).filter(v => !isNaN(v) && v > 0);
     promedios[m] = valores.length
       ? (valores.reduce((a, b) => a + b, 0) / valores.length).toFixed(1)
       : '--';
@@ -54,7 +63,7 @@ export default function LocationDashboard() {
         <span className="mobile-eyebrow">Monitoreo en vivo</span>
         <h1 className="mobile-page-title">EnviroSense</h1>
         <p className="mobile-page-subtitle">
-          {sensores.length} estaciones activas
+          {sensoresArray.length} estaciones activas
         </p>
       </header>
 
@@ -75,7 +84,7 @@ export default function LocationDashboard() {
       <section className="mobile-stations-section">
         <h2 className="mobile-section-title">Estaciones Recientes</h2>
         <div className="mobile-stations-list">
-          {sensores.slice(0, 6).map(s => (
+          {sensoresArray.slice(0, 6).map(s => (
             <div key={s.sensor_id || s.nombre} className="mobile-station-row">
               <div className="mobile-station-name">{s.nombre}</div>
               <div className="mobile-station-temp">
