@@ -125,6 +125,45 @@ export default function Reportes() {
   const datosPagina  = datosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const descargarReporte = async formato => {
+    const getReportFilename = (c1, c2) => {
+      const cleanName = (name) => {
+        if (!name) return '';
+        // Quitar "Zona Sim. "
+        let clean = name.replace(/Zona Sim\.\s*/i, '');
+        // Quitar números
+        clean = clean.replace(/\d+/g, '').trim();
+        
+        // Normalizar a minúsculas y caracteres ascii simples
+        clean = clean.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z\s]/g, '')
+          .trim();
+          
+        const hasDept = clean.includes('department') || clean.includes('departamento');
+        if (hasDept) {
+          clean = clean.replace(/department|departamento/g, '').trim();
+          clean = clean.replace(/\s+/g, '_');
+          return `department_${clean}`;
+        }
+        
+        return clean.replace(/\s+/g, '_');
+      };
+
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const dateStr = `${dd}${mm}${yyyy}`;
+
+      if (c1 && c2) {
+        return `${cleanName(c1)}_${cleanName(c2)}_${dateStr}`;
+      } else if (c1) {
+        return `${cleanName(c1)}_${dateStr}`;
+      } else {
+        return `reporte_ambiental_${dateStr}`;
+      }
+    };
+
     try {
       const payload = {
         formato,
@@ -152,9 +191,11 @@ export default function Reportes() {
       const res = await httpClient.post('/reportes/generar', payload, { responseType: 'blob' })
       const blob = res.data
       const url  = URL.createObjectURL(blob)
+      const filename = `${getReportFilename(ciudadFiltro, ciudadFiltro2)}.${formato === 'excel' ? 'xlsx' : 'pdf'}`
+      
       const a    = Object.assign(document.createElement('a'), {
         href:     url,
-        download: `reporte_ambiental.${formato === 'excel' ? 'xlsx' : 'pdf'}`,
+        download: filename,
       })
       document.body.appendChild(a)
       a.click()

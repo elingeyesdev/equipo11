@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useBlocker } from 'react-router-dom';
 import httpClient from '../../config/httpClient';
 import './Notificaciones.css';
 
@@ -31,37 +30,29 @@ const Notificaciones = () => {
     return JSON.stringify(settings) !== JSON.stringify(originalSettings);
   }, [settings, originalSettings]);
 
-  // Bloqueador de navegación de React Router
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasChanges && currentLocation.pathname !== nextLocation.pathname
-  );
-
-  // Manejar el bloqueo de navegación
+  // Auto-guardado al cambiar la configuración
   useEffect(() => {
-    if (blocker.state === "blocked") {
-      const proceed = window.confirm(
-        "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?"
-      );
-      if (proceed) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
-    }
-  }, [blocker]);
+    if (loading) return;
+    if (!hasChanges) return;
 
-  // Bloqueador de cierre/recarga de pestaña del navegador
-  useEffect(() => {
-    const handleBeforeUnload = (e) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasChanges]);
+    const timer = setTimeout(() => {
+      const performSave = async () => {
+        setSaving(true);
+        try {
+          await httpClient.put('/notificaciones', { settings });
+          setOriginalSettings(settings);
+        } catch (err) {
+          console.error('Error saving settings:', err);
+          setMessage({ text: 'Error al guardar automáticamente', type: 'error' });
+        } finally {
+          setSaving(false);
+        }
+      };
+      performSave();
+    }, 1000); // Guardado automático después de 1 segundo de inactividad
+
+    return () => clearTimeout(timer);
+  }, [settings, loading, hasChanges]);
 
   useEffect(() => {
     fetchSettings();
@@ -173,21 +164,17 @@ const Notificaciones = () => {
         </div>
 
         <div className="notif-header-actions">
-          <button
-            className={`notif-btn-save-header ${hasChanges ? 'notif-btn-save--pending' : ''}`}
-            onClick={saveSettings}
-            disabled={saving || !hasChanges}
-          >
+          <div className="notif-status-indicator">
             {saving ? (
-              <span className="notif-btn-content">
+              <span className="notif-status-saving">
                 <span className="notif-spinner"></span> Guardando...
               </span>
+            ) : hasChanges ? (
+              <span className="notif-status-pending">⏳ Cambios pendientes...</span>
             ) : (
-              <span className="notif-btn-content">
-                {hasChanges ? '💾 Guardar Cambios' : '✅ Guardado'}
-              </span>
+              <span className="notif-status-saved">✅ Guardado automáticamente</span>
             )}
-          </button>
+          </div>
         </div>
       </div>
 

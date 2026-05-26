@@ -697,3 +697,32 @@ input:checked+.notif-slider:before {
     padding: 1.5rem;
   }
 }
+
+.notif-status-indicator {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  background: var(--paper-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-mute);
+  transition: all 0.3s ease;
+}
+
+.notif-status-saving {
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-status-pending {
+  color: #d97706; /* amber-600 */
+}
+
+.notif-status-saved {
+  color: #059669; /* emerald-600 */
+}

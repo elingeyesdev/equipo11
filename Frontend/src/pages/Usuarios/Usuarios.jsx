@@ -49,8 +49,8 @@ function Usuarios() {
       const dataUsers = resUsers.data
       const dataRoles = resRoles.data
 
-      if (dataUsers.ok) setUsuarios(dataUsers.usuarios)
-      if (dataRoles.ok) setRoles(dataRoles.roles)
+      if (dataUsers.ok) setUsuarios(dataUsers.data?.usuarios || [])
+      if (dataRoles.ok) setRoles(dataRoles.data?.roles || [])
     } catch (err) {
       setError('Error al cargar datos del servidor')
     } finally {

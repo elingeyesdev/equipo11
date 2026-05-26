@@ -20,7 +20,7 @@ router.get('/available-dates', async (req, res) => {
     const dates = result.rows.map(r => r.forecast_time);
     success(res, dates);
   } catch (err) {
-    logger.error('Error detallado en available-dates:', error);
+    logger.error('Error detallado en available-dates:', err);
     error(res, 'Error al obtener fechas disponibles: ' + err.message, 500);
   }
 });
@@ -31,7 +31,7 @@ router.get('/bolivia', async (req, res) => {
     const data = await getRadarData(time);
     success(res, data);
   } catch (err) {
-    logger.error('Error fetching radar data:', error);
+    logger.error('Error fetching radar data:', err);
     error(res, 'Error interno del servidor al obtener datos del radar', 500);
   }
 });
@@ -43,7 +43,7 @@ router.get('/prediction', async (req, res) => {
     const data = await getAiRefinedRadar(time);
     success(res, data);
   } catch (err) {
-    logger.error('Error fetching AI prediction:', error);
+    logger.error('Error fetching AI prediction:', err);
     error(res, 'Error interno en la predicción IA', 500);
   }
 });
