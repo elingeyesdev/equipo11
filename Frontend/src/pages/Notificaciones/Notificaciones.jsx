@@ -70,7 +70,7 @@ const Notificaciones = () => {
   const fetchSettings = async () => {
     try {
       const { data } = await httpClient.get('/notificaciones');
-      const validData = Array.isArray(data) ? data : (data?.settings || []);
+      const validData = Array.isArray(data) ? data : (data?.data || data?.settings || []);
       setSettings(validData);
       setOriginalSettings(validData);
     } catch (err) {
