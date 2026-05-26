@@ -253,36 +253,25 @@ const estimateRuido = () => {
  */
 export const getFullDataForPoint = async (lat, lng) => {
   try {
-    const [wRes, aRes] = await Promise.all([
-      axios.get('https://api.open-meteo.com/v1/forecast', {
-        params: {
-          latitude: lat, longitude: lng,
-          current: 'temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m',
-          timezone: 'auto'
-        }
-      }),
-      axios.get('https://air-quality-api.open-meteo.com/v1/air-quality', {
-        params: {
-          latitude: lat, longitude: lng,
-          current: 'european_aqi',
-          timezone: 'auto'
-        }
-      })
-    ]);
-
-    const temperatura  = wRes.data?.current?.temperature_2m         ?? null;
-    const humedad      = wRes.data?.current?.relative_humidity_2m   ?? null;
-    const weatherCode  = wRes.data?.current?.weather_code           ?? null;
-    const windSpeed    = wRes.data?.current?.wind_speed_10m         ?? null;
-    const aqi          = aRes.data?.current?.european_aqi           ?? null;
-
-    // Estimar ICA y Ruido con datos reales — nunca quedan en blanco
-    const ica   = (humedad !== null) ? estimateICA(humedad, aqi ?? 50, weatherCode ?? 0) : null;
-    const ruido = estimateRuido();
-
-    return { temperatura, humedad, aqi, ica, ruido, weatherCode, windSpeed };
+    const response = await httpClient.get('/sensores/punto', {
+      params: { lat, lng }
+    });
+    
+    if (response.data && response.data.ok && response.data.data) {
+      const d = response.data.data;
+      return {
+        temperatura: d.temperatura !== null ? Number(d.temperatura) : null,
+        humedad: d.humedad !== null ? Number(d.humedad) : null,
+        aqi: d.aqi !== null ? Number(d.aqi) : null,
+        ica: d.ica !== null ? Number(d.ica) : null,
+        ruido: d.ruido !== null ? Number(d.ruido) : null,
+        weatherCode: d.weatherCode !== null ? Number(d.weatherCode) : null,
+        windSpeed: d.windSpeed !== null ? Number(d.windSpeed) : null
+      };
+    }
+    return null;
   } catch (err) {
-    console.error('[getFullDataForPoint] Error al obtener datos:', err.message);
+    console.warn('[getFullDataForPoint] Fallback to backend failed:', err.message);
     return null;
   }
 };

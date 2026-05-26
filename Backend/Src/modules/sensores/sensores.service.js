@@ -174,36 +174,104 @@ async function getSensoresCache() {
   }
 }
 
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
  * Estima datos para una coordenada arbitraria (clic en el mapa fuera de sensores).
  * Usa Open-Meteo para clima real + estima ICA y Ruido.
+ * Si las llamadas externas fallan, calcula la localidad más cercana y genera
+ * lecturas simuladas realistas basadas en sus rangos.
  */
 async function estimarDatosPuntoArbitrario(lat, lng) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto`;
-  const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=european_aqi&timezone=auto`;
+  let temperatura = null;
+  let humedad     = null;
+  let weatherCode = null;
+  let aqi         = null;
 
-  const [wRes, aRes] = await Promise.all([fetch(url), fetch(aqiUrl)]);
-  const wData = await wRes.json();
-  const aData = await aRes.json();
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto`;
+    const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=european_aqi&timezone=auto`;
 
-  const temperatura = wData.current?.temperature_2m ?? null;
-  const humedad     = wData.current?.relative_humidity_2m ?? null;
-  const weatherCode = wData.current?.weather_code ?? null;
-  const aqi         = aData.current?.european_aqi ?? null;
+    const [wRes, aRes] = await Promise.all([fetch(url), fetch(aqiUrl)]);
+    if (wRes.ok && aRes.ok) {
+      const wData = await wRes.json();
+      const aData = await aRes.json();
 
-  // Rangos genéricos para estimación en zonas sin sensor definido
-  const genericRanges = {
-    ica:   [30, 90],
-    ruido: [35, 85]
+      temperatura = wData.current?.temperature_2m ?? null;
+      humedad     = wData.current?.relative_humidity_2m ?? null;
+      weatherCode = wData.current?.weather_code ?? null;
+      aqi         = aData.current?.european_aqi ?? null;
+    } else {
+      logger.warn(`[Sensores Service] Open-Meteo returned status ${wRes.status} / ${aRes.status}`);
+    }
+  } catch (err) {
+    logger.warn(`[Sensores Service] Error fetching Open-Meteo: ${err.message}`);
+  }
+
+  // Buscar la localidad de LOCALIDADES más cercana
+  let targetRanges = {
+    temperatura: [15, 28],
+    humedad: [40, 80],
+    aqi: [30, 100],
+    ica: [40, 90],
+    ruido: [35, 80]
   };
+  let nearestCityName = 'Desconocida';
+  let minDist = Infinity;
 
-  const ica   = (humedad !== null && aqi !== null)
-                ? estimateICA(humedad, aqi, weatherCode || 0, genericRanges)
-                : null;
-  const ruido = estimateRuido(genericRanges);
+  for (const loc of LOCALIDADES) {
+    const dist = haversineKm(lat, lng, loc.latitude, loc.longitude);
+    if (dist < minDist) {
+      minDist = dist;
+      targetRanges = loc.ranges;
+      nearestCityName = loc.name;
+    }
+  }
 
-  return { temperatura, humedad, aqi, ica, ruido, weatherCode };
+  // Si los datos climáticos no se pudieron obtener, los generamos de forma realista
+  if (temperatura === null) {
+    const [tMin, tMax] = targetRanges.temperatura || [15, 28];
+    temperatura = Number((tMin + Math.random() * (tMax - tMin)).toFixed(1));
+  }
+  if (humedad === null) {
+    const [hMin, hMax] = targetRanges.humedad || [40, 80];
+    humedad = Math.round(hMin + Math.random() * (hMax - hMin));
+  }
+  if (weatherCode === null) {
+    if (humedad > 80) weatherCode = Math.random() > 0.5 ? 61 : 3;
+    else if (humedad < 30) weatherCode = 0;
+    else weatherCode = Math.random() > 0.5 ? 1 : 2;
+  }
+  if (aqi === null) {
+    const [aMin, aMax] = targetRanges.aqi || [30, 100];
+    aqi = Math.round(aMin + Math.random() * (aMax - aMin));
+  }
+
+  // Estimar ICA y Ruido con los rangos correspondientes
+  const ica = estimateICA(humedad, aqi, weatherCode, targetRanges);
+  const ruido = estimateRuido(targetRanges);
+
+  return {
+    temperatura,
+    humedad,
+    aqi,
+    ica,
+    ruido,
+    weatherCode,
+    source: `Estimación (${nearestCityName})`
+  };
 }
+
 
 /**
  * Inicia el cron job de actualización cada 15 minutos.

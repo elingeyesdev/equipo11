@@ -33,6 +33,12 @@ export function useUmbrales(metrica) {
         setLoading(false)
       })
       .catch(err => {
+        if (err.response?.status === 404) {
+          _cache.set(metrica, [])
+          setUmbrales([])
+          setLoading(false)
+          return
+        }
         setError(err.message)
         setUmbrales([])
         setLoading(false)

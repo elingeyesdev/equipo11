@@ -12,7 +12,11 @@ export const addSnowLayers = (map, layerInstance, data) => {
 };
 
 export const removeSnowLayers = (map) => {
-  if (map.getLayer('snow-color-layer')) {
-    map.removeLayer('snow-color-layer');
+  try {
+    if (map && map.getStyle() && map.getLayer('snow-color-layer')) {
+      map.removeLayer('snow-color-layer');
+    }
+  } catch (err) {
+    console.warn('[layerManager_snow] Error removiendo capas de nieve:', err.message);
   }
 };
