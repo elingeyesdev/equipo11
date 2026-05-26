@@ -19,6 +19,7 @@ const QUERY_PARAMS_RAIN = [
   'var_CRAIN=on',                   // Lluvia Categórica
   'var_CSNOW=on',                   // Nieve Categórica
   'var_PRATE=on',                   // Tasa de Precipitación Continua
+  'var_WEASD=on',                   // Nieve Acumulada (Water Equivalent)
 ].join('&');
 
 /**
@@ -35,7 +36,7 @@ function buildNOAAUrl(dateStr, hour, offset, type = 'base') {
   if (offset === 'f000' || offset === '000' || offset == 0) {
     offset = 'f001';
   }
-  
+
   const queryParams = type === 'rain' ? QUERY_PARAMS_RAIN : QUERY_PARAMS_BASE;
   return `https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl?file=gfs.t${hour}z.pgrb2.0p25.${offset}&${queryParams}&dir=%2Fgfs.${dateStr}%2F${hour}%2Fatmos`;
 }
