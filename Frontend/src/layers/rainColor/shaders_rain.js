@@ -65,12 +65,20 @@ export const fragmentSource = `
     float rainNorm = sampleBilinear(lon, lat); 
 
     // Optimización extrema: si no alcanza el umbral mínimo de lluvia visible (0.2mm), descartar.
-    // Como MAX_RAIN es 50.0, 0.19mm normalizado es 0.19 / 50.0 = 0.0038
-    if (rainNorm < 0.0038) {
+    if (rainNorm < 0.001) {
       discard;
     }
-    
-    // Lookup de color (Paleta Meteored Discreta)
+
+    // HACK DE DIAGNÓSTICO: Si rainNorm es > 0, pintar el fragmento de PÚRPURA NEÓN PURO.
+    // Si esto funciona y las manchas se ven suaves/interpoladas, sabemos que la textura 
+    // de datos llega y que el filtro LINEAR corre.
+    if (rainNorm > 0.05) {
+        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Púrpura Neón / Magenta puro
+        return;
+    }
+
+    // Si el hack de arriba no corre, el problema está en la textura de rampa.
+    // Buscar el color en la textura de la paleta (código existente)
     vec4 baseColor = texture2D(u_color_ramp, vec2(rainNorm, 0.5));
     
     // Aplicar la opacidad global conservando el diseño de la paleta

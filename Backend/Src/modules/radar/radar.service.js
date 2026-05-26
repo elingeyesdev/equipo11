@@ -311,6 +311,9 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
           let lon = parseFloat(lonStr);
           if (lon > 180) lon -= 360;
 
+          let visValue = mapVis.get(key);
+          if (visValue === undefined || visValue < 0) visValue = null; // null explícito para pg
+
           gridData.push({
             lat, lon,
             wCode,
@@ -323,7 +326,8 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
             refc: Number(refc.toFixed(2)),
             rain: Number(rainMmH.toFixed(2)),
             snow: Number(snowCm.toFixed(2)),
-            snow_fresh: Number(snowFreshCm.toFixed(2))
+            snow_fresh: Number(snowFreshCm.toFixed(2)),
+            vis: visValue !== null ? Number(visValue.toFixed(2)) : null
           });
         }
       }
@@ -345,22 +349,27 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
       const chunk = gridData.slice(i, i + chunkSize);
       const values = [];
       const placeholders = chunk.map((p, idx) => {
-        const offset = idx * 15;
-        values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain, p.snow, p.snow_fresh);
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15})`;
+        const offset = idx * 16;
+        values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain, p.snow, p.snow_fresh, p.vis);
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${offset + 16})`;
       }).join(',');
 
-      await pool.query(
-        `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh)
-                 VALUES ${placeholders}
-                 ON CONFLICT (latitud, longitud, forecast_time) DO NOTHING`,
-        values
-      );
+      try {
+        await pool.query(
+          `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh, vis)
+                   VALUES ${placeholders}
+                   ON CONFLICT (latitud, longitud, forecast_time) DO NOTHING`,
+          values
+        );
+      } catch (error) {
+        logger.error("[CRÍTICO DB] Fallo en la inserción de PostgreSQL: " + error.message);
+        throw error; // Para detener el proceso de esta fecha
+      }
     }
 
     logger.info(`[Radar Scraper] ✅ Completado ${forecastTimeStr}.`);
   } catch (err) {
-    logger.error(`[Radar Scraper] ❌ Error procesando ${forecastTimeStr}:`, err);
+    logger.error(`[Radar Scraper] ❌ Error procesando ${forecastTimeStr}: \n${err.stack}`);
   }
 };
 
@@ -439,6 +448,7 @@ const runScraper = async () => {
     await ensureColumn('radar_grid_cache', 'rain DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'snow DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'snow_fresh DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'vis DECIMAL(8,2)');
     // Asegurar columnas de sensores_cache
     await ensureColumn('sensores_cache', 'wind_speed DECIMAL(5,2)');
     await ensureColumn('sensores_cache', 'wind_direction INT');
@@ -532,7 +542,7 @@ const getRadarData = async (targetTime = null) => {
     return { status: 'loading', progress: scrapeProgress };
   }
 
-  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh FROM radar_grid_cache';
+  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh, vis FROM radar_grid_cache';
   let params = [];
 
   if (targetTime) {

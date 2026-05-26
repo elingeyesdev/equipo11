@@ -4,7 +4,7 @@ import { Source, Layer, useMap } from 'react-map-gl/mapbox';
 const getWeatherType = (cell) => {
   if (!cell) return null;
   const code = cell.weather_code;
-  
+
   // Si tenemos CAPE y REFC altos, es tormenta eléctrica
   if (cell.cape > 1000 && cell.refc > 35) return 'thunderstorm';
   // Si tenemos CAPE alto y HLCY (Helicidad) alto, es advertencia de tornado
@@ -37,11 +37,11 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
   const { geojson, activeNodes } = useMemo(() => {
     const features = [];
     const nodes = [];
-    
+
     if (scannedGrid && scannedGrid.length > 0) {
       scannedGrid.forEach((cell, index) => {
         let type = getWeatherType(cell);
-        
+
         let isTypeEnabled = particleFilters[type];
         if (type === 'thunderstorm') isTypeEnabled = particleFilters.rain;
         if (type === 'tornado_warning') isTypeEnabled = particleFilters.wind;
@@ -60,7 +60,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         if (type && cell.latitud && cell.longitud && isTypeEnabled !== false) {
           features.push({
             type: 'Feature',
-            properties: { 
+            properties: {
               color: getWeatherColor(type),
               wind_speed: cell.wind_speed || 0
             },
@@ -69,7 +69,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
               coordinates: [cell.longitud, cell.latitud]
             }
           });
-          
+
           nodes.push({
             id: index,
             longitude: cell.longitud,
@@ -83,7 +83,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         }
       });
     }
-    
+
     return {
       geojson: { type: 'FeatureCollection', features },
       activeNodes: nodes
@@ -105,20 +105,20 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         12, 600
       ],
       'circle-blur': 2.0,
-      'circle-opacity': 0.0 
+      'circle-opacity': 0.0
     }
   };
 
   // Motor de renderizado Canvas
   useEffect(() => {
     if (!map || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
-    
+
     let animationId;
     let lastTime = performance.now();
-    
+
     // ----------------------------------------------------
     // OBJECT POOLING PARA PREVENIR MEMORY LEAKS
     // ----------------------------------------------------
@@ -148,12 +148,12 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
 
       visibleNodes = activeNodes.filter(node => {
         if (node.latitude < sw.lat - buffer || node.latitude > ne.lat + buffer) return false;
-        
+
         // Envoltura horizontal matemática para el antimeridiano:
         // Proyectamos la longitud del nodo al "mundo continuo" que el usuario está viendo
         let mainLng = node.longitude;
         mainLng = mainLng - 360 * Math.round((mainLng - centerLng) / 360);
-        
+
         return mainLng >= sw.lng - buffer && mainLng <= ne.lng + buffer;
       });
 
@@ -165,22 +165,22 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       for (let i = 0; i < MAX_PARTICLES; i++) {
         particlePool[i].active = false;
       }
-      
+
       const currentMapZoom = map.getZoom();
       const baseRadius = Math.max(5, 40 * Math.pow(2, currentMapZoom - 6));
-      
+
       let poolIndex = 0;
 
       for (const node of visibleNodes) {
         let pCount = currentMapZoom > 5 ? (node.type === 'wind' ? 4 : 10) : (currentMapZoom > 3 ? 2 : 1);
         if (node.type === 'thunderstorm' || node.type === 'tornado_warning') pCount = currentMapZoom > 5 ? 3 : 1;
-        
+
         // Reducir masivamente la densidad de partículas al hacer zoom out para mantener un rendimiento alto
-        if (currentMapZoom < 4 && Math.random() > 0.4) pCount = 0; 
+        if (currentMapZoom < 4 && Math.random() > 0.4) pCount = 0;
 
         for (let i = 0; i < pCount; i++) {
           if (poolIndex >= MAX_PARTICLES) return; // Límite estricto de partículas
-          
+
           const p = particlePool[poolIndex++];
           p.active = true;
           p.node = node;
@@ -194,7 +194,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         }
       }
     };
-    
+
     const updateSize = () => {
       const container = map.getContainer();
       // Multiplicar por pixelRatio para pantallas retina
@@ -203,14 +203,14 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       canvas.height = container.clientHeight * pixelRatio;
       ctx.scale(pixelRatio, pixelRatio);
     };
-    
+
     const render = (time) => {
-      const dt = Math.min((time - lastTime) / 1000, 0.1); 
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
       const currentMapZoom = map.getZoom();
-      
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // ACTUALIZACIÓN DE PROYECCIONES (0 Asignaciones de memoria)
       const centerLng = map.getCenter().lng;
       for (let i = 0; i < visibleNodes.length; i++) {
@@ -226,35 +226,35 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         if (!p.active) continue;
 
         const { type, direction, wind_speed } = p.node;
-        
+
         if (type === 'rain') {
           p.offsetY += (p.baseRadius * 4) * p.speed * dt;
-          if (p.offsetY > p.baseRadius) { 
-            p.offsetY = -p.baseRadius; 
-            p.offsetX = (Math.random() - 0.5) * p.baseRadius * 2; 
+          if (p.offsetY > p.baseRadius) {
+            p.offsetY = -p.baseRadius;
+            p.offsetX = (Math.random() - 0.5) * p.baseRadius * 2;
           }
         } else if (type === 'snow') {
           p.offsetY += (p.baseRadius * 0.8) * p.speed * dt;
           p.offsetX += Math.sin(time / 800 + p.phase) * (p.baseRadius * 0.02);
-          if (p.offsetY > p.baseRadius) { 
-            p.offsetY = -p.baseRadius; 
+          if (p.offsetY > p.baseRadius) {
+            p.offsetY = -p.baseRadius;
           }
         } else if (type === 'wind') {
           const angleRad = (direction - 90) * Math.PI / 180;
-          
+
           // Bajar el piso de intensidad física para que las partículas lentas (<10 km/h) realmente se muevan despacio
           let windIntensity = Math.max(5, wind_speed) / 20;
           if (wind_speed > 65) {
             windIntensity *= 1.5; // Mover un poquito más rápido las partículas extremas
           }
           const velocity = (p.baseRadius * 2.5) * p.speed * windIntensity;
-          
+
           p.offsetX += Math.cos(angleRad) * velocity * dt;
           p.offsetY += Math.sin(angleRad) * velocity * dt;
-          
+
           const zoomFactor = Math.max(0.2, currentMapZoom / 6);
           p.life -= dt * (0.5 + p.speed * 0.3) / zoomFactor;
-          
+
           if (p.life <= 0) {
             p.life = 1;
             p.offsetX = (Math.random() - 0.5) * p.baseRadius * 1.2;
@@ -263,22 +263,22 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
         } else if (type === 'thunderstorm') {
           p.flashTimer += dt;
           if (!p.lightningForks || p.flashTimer > 3.0) {
-             p.flashTimer = 0;
-             p.lightningForks = [];
-             for(let k=0; k<2; k++) {
-               let lx = (Math.random() - 0.5) * p.baseRadius;
-               let ly = -p.baseRadius * 0.5;
-               let path = [[lx, ly]];
-               for(let j=0; j<4; j++) {
-                  lx += (Math.random() - 0.5) * 15;
-                  ly += Math.random() * 15;
-                  path.push([lx, ly]);
-               }
-               p.lightningForks.push(path);
-             }
+            p.flashTimer = 0;
+            p.lightningForks = [];
+            for (let k = 0; k < 2; k++) {
+              let lx = (Math.random() - 0.5) * p.baseRadius;
+              let ly = -p.baseRadius * 0.5;
+              let path = [[lx, ly]];
+              for (let j = 0; j < 4; j++) {
+                lx += (Math.random() - 0.5) * 15;
+                ly += Math.random() * 15;
+                path.push([lx, ly]);
+              }
+              p.lightningForks.push(path);
+            }
           }
         } else if (type === 'tornado_warning') {
-          p.phase += dt * 5 * p.speed; 
+          p.phase += dt * 5 * p.speed;
           p.life -= dt * 0.5;
           if (p.life <= 0) p.life = 1;
         } else if (type === 'fog') {
@@ -288,20 +288,20 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
 
       const drawParticle = (p, isThunderstormPass) => {
         const { longitude, latitude, type, direction, wind_speed, presion, rafagas } = p.node;
-        
+
         // Separamos las capas: las tormentas se dibujan en una segunda pasada para que estén por encima
         if ((type === 'thunderstorm') !== isThunderstormPass) return;
-        
+
         const x = p.node.pixelX + p.offsetX;
         const y = p.node.pixelY + p.offsetY;
         const zoomFactor = Math.max(0.2, currentMapZoom / 6);
-        
+
         ctx.beginPath();
-        
+
         if (type === 'rain') {
           const dropLength = 20 * zoomFactor;
           const dropWidth = 5 * zoomFactor;
-          
+
           ctx.moveTo(x, y);
           ctx.lineTo(x - dropWidth, y + dropLength);
           const opacity = Math.max(0, 0.7 - Math.abs(p.offsetY) / p.baseRadius);
@@ -309,31 +309,31 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           ctx.lineWidth = Math.max(0.5, 1.5 * zoomFactor);
           ctx.lineCap = 'round';
           ctx.stroke();
-          
+
         } else if (type === 'snow') {
           const snowRadius = Math.max(0.5, (2 * p.speed + 1) * zoomFactor);
           ctx.arc(x, y, snowRadius, 0, Math.PI * 2);
           const opacity = Math.max(0, 0.8 - Math.abs(p.offsetY) / p.baseRadius);
           ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
           ctx.fill();
-          
+
         } else if (type === 'wind') {
           const angleRad = (direction - 90) * Math.PI / 180;
           const length = (8 + (p.speed * 4)) * zoomFactor;
           const tailX = x - Math.cos(angleRad) * length;
           const tailY = y - Math.sin(angleRad) * length;
-          
+
           ctx.moveTo(tailX, tailY);
           ctx.lineTo(x, y);
-          
-          const fade = Math.sin(p.life * Math.PI); 
+
+          const fade = Math.sin(p.life * Math.PI);
           let strokeColor;
-          
+
           // Sincronizar lógicamente con el mapa de calor (usando wind_speed en lugar de rafagas)
           // Así, si el mapa es Naranja (>60), la partícula será Naranja.
           if (wind_speed >= 90) {
             strokeColor = `rgba(220, 20, 150, ${fade * 0.8})`; // Magenta (Severo)
-            ctx.lineWidth = 2.5; 
+            ctx.lineWidth = 2.5;
           } else if (wind_speed >= 60) {
             strokeColor = `rgba(60, 50, 60, ${fade * 0.6})`;  // Naranja
             ctx.lineWidth = 2.0;
@@ -344,21 +344,21 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             strokeColor = `rgba(30, 30, 30, ${fade * 0.6})`; // Celeste normal (Verde/Azul claro en el mapa)
             ctx.lineWidth = 1.8;
           }
-          
+
           ctx.strokeStyle = strokeColor;
           ctx.lineCap = 'round';
           ctx.stroke();
-          
+
         } else if (type === 'thunderstorm') {
           let opacity = 0;
-          if (p.flashTimer < 0.25) opacity = p.flashTimer / 0.25; 
-          else if (p.flashTimer < 0.75) opacity = 1.0; 
-          else if (p.flashTimer < 1.75) opacity = 1.0 - ((p.flashTimer - 0.75) / 1.0); 
-          
+          if (p.flashTimer < 0.25) opacity = p.flashTimer / 0.25;
+          else if (p.flashTimer < 0.75) opacity = 1.0;
+          else if (p.flashTimer < 1.75) opacity = 1.0 - ((p.flashTimer - 0.75) / 1.0);
+
           if (opacity > 0) {
             p.lightningForks.forEach(path => {
               ctx.moveTo(x + path[0][0], y + path[0][1]);
-              for(let i=1; i<path.length; i++) {
+              for (let i = 1; i < path.length; i++) {
                 ctx.lineTo(x + path[i][0], y + path[i][1]);
               }
             });
@@ -368,13 +368,13 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
             ctx.stroke();
           }
         } else if (type === 'tornado_warning') {
-          const radius = (p.baseRadius * 0.3) * (1 - p.life); 
+          const radius = (p.baseRadius * 0.3) * (1 - p.life);
           const vortexX = p.node.pixelX + Math.cos(p.phase) * radius;
-          const vortexY = p.node.pixelY + Math.sin(p.phase) * radius - (1-p.life)*p.baseRadius;
-          
+          const vortexY = p.node.pixelY + Math.sin(p.phase) * radius - (1 - p.life) * p.baseRadius;
+
           ctx.moveTo(vortexX, vortexY);
-          ctx.lineTo(vortexX + Math.cos(p.phase + 0.5)*radius*0.8, vortexY + Math.sin(p.phase + 0.5)*radius*0.8);
-          
+          ctx.lineTo(vortexX + Math.cos(p.phase + 0.5) * radius * 0.8, vortexY + Math.sin(p.phase + 0.5) * radius * 0.8);
+
           ctx.strokeStyle = `rgba(150, 50, 200, ${p.life})`;
           ctx.lineWidth = 3;
           ctx.lineCap = 'round';
@@ -390,15 +390,15 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       for (let i = 0; i < MAX_PARTICLES; i++) {
         if (particlePool[i].active) drawParticle(particlePool[i], false);
       }
-      
+
       // Segunda pasada: Dibuja rayos POR ENCIMA de todo lo demás
       for (let i = 0; i < MAX_PARTICLES; i++) {
         if (particlePool[i].active) drawParticle(particlePool[i], true);
       }
-      
+
       animationId = requestAnimationFrame(render);
     };
-    
+
     map.on('resize', updateSize);
     map.on('moveend', updateVisibleNodes);
     map.on('zoomend', updateVisibleNodes);
@@ -406,7 +406,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     updateSize();
     updateVisibleNodes();
     animationId = requestAnimationFrame(render);
-    
+
     return () => {
       cancelAnimationFrame(animationId);
       map.off('resize', updateSize);
@@ -420,9 +420,9 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       <Source id="radar-organic-source" type="geojson" data={geojson}>
         <Layer {...organicLayer} />
       </Source>
-      
-      <canvas 
-        ref={canvasRef} 
+
+      <canvas
+        ref={canvasRef}
         style={{
           position: 'absolute',
           top: 0,
@@ -431,7 +431,7 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
           height: '100%',
           pointerEvents: 'none',
           zIndex: 5
-        }} 
+        }}
       />
     </>
   );

@@ -141,6 +141,10 @@ export default class RainDataTexture {
 
     gl.bindTexture(gl.TEXTURE_2D, this.rainTexture);
     
+    // Fuerza Interpolación Lineal estrictamente
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
     // Subida estricta usando gl.RGBA
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
