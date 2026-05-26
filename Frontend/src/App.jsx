@@ -10,8 +10,17 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import { isAuthenticated } from './utils/auth'
 
+import useIsPWA from './hooks/useIsPWA'
+import MobileLayout from './components/MobileLayout/MobileLayout'
+import LocationDashboard from './pages/mobile/LocationDashboard'
+import MobileMapView from './pages/mobile/MobileMapView'
+import AlertHistoryView from './pages/mobile/AlertHistoryView'
+import MobileProfile from './pages/mobile/MobileProfile'
+
 function RootRedirect() {
-  return <Navigate to={isAuthenticated() ? '/mapa' : '/login'} replace />
+  const isPWA = useIsPWA()
+  if (!isAuthenticated()) return <Navigate to="/login" replace />
+  return <Navigate to={isPWA ? '/mobile' : '/mapa'} replace />
 }
 
 function ProtectedRoute({ children }) {
@@ -20,7 +29,8 @@ function ProtectedRoute({ children }) {
 }
 
 function GuestRoute({ children }) {
-  if (isAuthenticated()) return <Navigate to="/mapa" replace />
+  const isPWA = useIsPWA()
+  if (isAuthenticated()) return <Navigate to={isPWA ? '/mobile' : '/mapa'} replace />
   return children
 }
 
@@ -39,6 +49,14 @@ function App() {
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="alertas" element={<Alertas />} />
           <Route path="notificaciones" element={<Notificaciones />} />
+        </Route>
+
+        {/* Rutas PWA Mobile */}
+        <Route element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
+          <Route path="mobile" element={<LocationDashboard />} />
+          <Route path="mobile/map" element={<MobileMapView />} />
+          <Route path="mobile/alerts" element={<AlertHistoryView />} />
+          <Route path="mobile/profile" element={<MobileProfile />} />
         </Route>
 
         <Route path="*" element={<RootRedirect />} />
