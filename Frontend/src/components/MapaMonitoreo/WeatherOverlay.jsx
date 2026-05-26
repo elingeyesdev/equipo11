@@ -10,6 +10,8 @@ import RainColorLayer from '../../layers/rainColor/RainColorLayer.js';
 import { addRainLayers, removeRainLayers } from '../../layers/rainColor/layerManager_rain.js';
 import SnowColorLayer from '../../layers/snowColor/SnowColorLayer.js';
 import { addSnowLayers, removeSnowLayers } from '../../layers/snowColor/layerManager_snow.js';
+import VisibilityColorLayer from '../../layers/visibilityColor/VisibilityColorLayer.js';
+import { addVisibilityLayers, removeVisibilityLayers } from '../../layers/visibilityColor/layerManager_visibility.js';
 import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 import { GLOBAL_CITIES } from '../../utils/globalCities.js';
 import { buildGridIndex, buildCitiesWindGeoJSON } from '../../utils/windMath.js';
@@ -41,6 +43,7 @@ function WeatherOverlay({
   const windLayerRef = useRef(null);
   const rainLayerRef = useRef(null);
   const snowLayerRef = useRef(null);
+  const visLayerRef = useRef(null);
   const dataRef = useRef(null);
 
   // --- 1. Proteger el Payload Masivo (Ahogo del Virtual DOM) ---
@@ -122,6 +125,9 @@ function WeatherOverlay({
     }
     if (snowLayerRef.current && protectedGrid && protectedGrid.length > 0) {
       snowLayerRef.current.updateData(protectedGrid);
+    }
+    if (visLayerRef.current && protectedGrid && protectedGrid.length > 0) {
+      visLayerRef.current.updateData(protectedGrid);
     }
   }, [protectedGrid]);
 
@@ -209,6 +215,46 @@ function WeatherOverlay({
       snowLayerRef.current = null;
     };
   }, [map, isParticlesActive, particleFilters.snow, snowMapType]);
+
+  // --- Ciclo de vida del VisibilityColorLayer (WebGL) ---
+  useEffect(() => {
+    if (!map) return;
+
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+
+    const shouldShowVis = isParticlesActive && particleFilters.fog;
+
+    const addVisIfMissing = () => {
+      if (!shouldShowVis) return;
+
+      if (!rawMap.getLayer('visibility-color-layer')) {
+        const layer = new VisibilityColorLayer({
+          id: 'visibility-color-layer',
+          opacity: 0.85,
+        });
+        visLayerRef.current = layer;
+        addVisibilityLayers(rawMap, layer, dataRef.current);
+      }
+    };
+
+    if (shouldShowVis) {
+      addVisIfMissing();
+      rawMap.on('styledata', addVisIfMissing);
+    } else {
+      removeVisibilityLayers(rawMap);
+      visLayerRef.current = null;
+    }
+
+    return () => {
+      rawMap.off('styledata', addVisIfMissing);
+      removeVisibilityLayers(rawMap);
+      if (visLayerRef.current && typeof visLayerRef.current.destroy === 'function') {
+        visLayerRef.current.destroy();
+      }
+      visLayerRef.current = null;
+    };
+  }, [map, isParticlesActive, particleFilters.fog]);
 
   // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
   useEffect(() => {

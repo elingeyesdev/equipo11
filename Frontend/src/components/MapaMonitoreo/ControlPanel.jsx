@@ -199,7 +199,7 @@ export default function ControlPanel({
                 {[
                   { key: 'rain', label: 'Lluvia / Tormentas' },
                   { key: 'snow', label: 'Nieve' },
-                  { key: 'fog', label: 'Niebla' },
+                  { key: 'fog', label: 'Visibilidad' },
                   { key: 'wind', label: 'Viento / Tornados' },
                 ].map(f => (
                   <div key={f.key}>
@@ -211,6 +211,7 @@ export default function ControlPanel({
                       <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
                         <input type="checkbox" checked={particleFilters[f.key]} onChange={(e) => {
                           const isChecked = e.target.checked;
+                          if (f.key === 'fog') console.log(`[DEBUG VISIBILITY] Toggle activado: ${isChecked}`);
                           setParticleFilters(prev => {
                             if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, wind: true };
                             else if (f.key !== 'wind' && isChecked) return { ...prev, wind: false, [f.key]: true };
@@ -290,7 +291,7 @@ export default function ControlPanel({
               <div className="legend-dynamic-clima">
                 <div className="legend-item"><span className="legend-icon">🌧️</span><div className="legend-text"><strong>Lluvia</strong><p>Gotas azules cayendo con inclinación según viento.</p></div></div>
                 <div className="legend-item"><span className="legend-icon">❄️</span><div className="legend-text"><strong>Nieve</strong><p>Puntos blancos con movimiento suave y oscilante.</p></div></div>
-                <div className="legend-item"><span className="legend-icon">🌫️</span><div className="legend-text"><strong>Niebla</strong><p>Zonas brumosas grises de visibilidad reducida.</p></div></div>
+                <div className="legend-item"><span className="legend-icon">🌫️</span><div className="legend-text"><strong>Visibilidad</strong><p>Mapa de grises mapeando la claridad atmosférica.</p></div></div>
                 <div className="legend-item"><span className="legend-icon" style={{ color: '#fbbf24', textShadow: '0 0 5px #fbbf24' }}>⚡</span><div className="legend-text"><strong>Tormenta Eléctrica</strong><p>Relámpagos brillantes y destellos de luz amarilla rápida.</p></div></div>
                 <div className="legend-item"><span className="legend-icon" style={{ color: '#9333ea', textShadow: '0 0 5px #9333ea' }}>🌪️</span><div className="legend-text"><strong>Alerta de Tornado</strong><p>Vórtices púrpuras girando agresivamente en espiral.</p></div></div>
 

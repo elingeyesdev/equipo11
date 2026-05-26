@@ -294,7 +294,7 @@ function MapaMonitoreo() {
         setWeatherCode(weather.current.weather_code);
       }
     } catch (err) {
-      console.error("Error fetching central weather", err);
+      console.warn("Error silenciado en Open-Meteo:", err);
     }
   };
 
