@@ -96,7 +96,9 @@ const extractGribData = async (gribPath, shortName, gridKeys) => {
   const tryExtract = async (nameToTry) => {
     let whereClause = `shortName=${nameToTry}`;
     if (['prate', 'crain', 'csnow', 'PRATE', 'CRAIN', 'CSNOW'].includes(nameToTry)) {
-        whereClause += `,stepType=avg`;
+      whereClause += `,stepType=avg`;
+    } else if (['sdwe', 'SDWE'].includes(nameToTry)) {
+      whereClause += `,stepType=instant`;
     }
 
     // Usamos %.6f en lugar de %.2f para evitar que ecCodes redondee a 0 los valores diminutos de PRATE (ej. 0.0083 mm/s)
@@ -124,7 +126,7 @@ const extractGribData = async (gribPath, shortName, gridKeys) => {
         data.set(key, val);
       }
     }
-    
+
     // Inyección de log crítico de auditoría
     console.log(`[DEBUG GRIB] Extracción exitosa. Llaves en el Map: ${data.size}. Ejemplo de llave: ${Array.from(data.keys())[0]}`);
     return data;
@@ -134,12 +136,12 @@ const extractGribData = async (gribPath, shortName, gridKeys) => {
     // BUG REAL: grib_get_data no lanza error si el shortName no existe, solo devuelve headers.
     // Por lo tanto, el viejo try/catch nunca ejecutaba el fallback a mayúsculas si fallaba silenciosamente.
     let data = await tryExtract(shortName.toLowerCase());
-    
+
     // Si devolvió un Map vacío, forzamos el intento en mayúsculas (crucial para PRATE o 10U)
     if (data.size === 0) {
       data = await tryExtract(shortName.toUpperCase());
     }
-    
+
     logger.info(`[Radar Scraper] Extracción ${shortName} -> Keys coincidentes: ${data.size}`);
     return data;
   } catch (err) {
@@ -161,7 +163,7 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
   // Extraer explícitamente el offset de la URL para evitar colisiones de caché
   const offsetMatch = url.match(/pgrb2\.0p25\.(f\d{3})/);
   const offset = offsetMatch ? offsetMatch[1] : 'f001';
-  
+
   // Limpiar la hora si venía sucia de scrapeFutureForecasts (ej. '12_f003')
   const hour = hourStr.includes('_') ? hourStr.split('_')[0] : hourStr;
 
@@ -243,10 +245,18 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
 
       // Enrutador de variables a sus respectivos archivos
       const getPathForVar = (varName) => {
-        return ['prate', 'crain', 'csnow'].includes(varName) ? gribPathRain : gribPathBase;
+        return ['prate', 'crain', 'csnow', 'sdwe'].includes(varName) ? gribPathRain : gribPathBase;
       };
 
-      const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc, mapPrate] = await Promise.all([
+      // Autopsia del GRIB
+      try {
+        const { stdout: lsOut } = await execPromise(`grib_ls -p shortName,name,stepType ${gribPathRain}`);
+        logger.info(`[DEBUG GRIB LS] Contenido de rain.grib2:\n${lsOut}`);
+      } catch (e) {
+        logger.error(`[DEBUG GRIB LS] Error: ${e.message}`);
+      }
+
+      const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc, mapPrate, mapSdwe] = await Promise.all([
         extractGribData(getPathForVar('10u'), '10u', gridKeys),
         extractGribData(getPathForVar('10v'), '10v', gridKeys),
         extractGribData(getPathForVar('gust'), 'gust', gridKeys),
@@ -257,7 +267,8 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
         extractGribData(getPathForVar('cape'), 'cape', gridKeys),
         extractGribData(getPathForVar('hlcy'), 'hlcy', gridKeys),
         extractGribData(getPathForVar('refc'), 'refc', gridKeys),
-        extractGribData(getPathForVar('prate'), 'prate', gridKeys)
+        extractGribData(getPathForVar('prate'), 'prate', gridKeys),
+        extractGribData(getPathForVar('sdwe'), 'sdwe', gridKeys)
       ]);
 
       logger.info(`[Radar Scraper] Calculando vectores para ${forecastTimeStr}...`);
@@ -282,6 +293,15 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
           if (prate >= 999 || prate < 0) prate = 0;
           const rainMmH = prate * 3600;
 
+          let sdwe = mapSdwe.get(key) || 0;
+          if (sdwe >= 999 || sdwe < 0) sdwe = 0;
+          // SDWE en kg/m2 (mm) * 10 = cm de nieve
+          const snowCm = sdwe * 10;
+
+          // Nieve fresca (snow_fresh): (prate * 3600) mm/h * csnow * 10 = cm/h
+          const csnow = mapSnow.get(key) || 0;
+          const snowFreshCm = rainMmH * csnow * 10;
+
           const speedKmH = Math.sqrt(u * u + v * v) * 3.6;
           let dirDeg = 270 - (Math.atan2(v, u) * (180 / Math.PI));
           dirDeg = Math.round((dirDeg + 360) % 360);
@@ -289,7 +309,7 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
           let [latStr, lonStr] = key.split('_');
           let lat = parseFloat(latStr);
           let lon = parseFloat(lonStr);
-          if (lon > 180) lon -= 360; 
+          if (lon > 180) lon -= 360;
 
           gridData.push({
             lat, lon,
@@ -301,7 +321,9 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
             cape: Number(cape.toFixed(2)),
             hlcy: Number(hlcy.toFixed(2)),
             refc: Number(refc.toFixed(2)),
-            rain: Number(rainMmH.toFixed(2))
+            rain: Number(rainMmH.toFixed(2)),
+            snow: Number(snowCm.toFixed(2)),
+            snow_fresh: Number(snowFreshCm.toFixed(2))
           });
         }
       }
@@ -318,18 +340,18 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
     await pool.query('DELETE FROM radar_grid_cache WHERE forecast_time = $1', [forecastTimeStr]);
 
     // Dividir en chunks para no saturar la conexión
-    const chunkSize = 5000;
+    const chunkSize = 3000;
     for (let i = 0; i < gridData.length; i += chunkSize) {
       const chunk = gridData.slice(i, i + chunkSize);
       const values = [];
       const placeholders = chunk.map((p, idx) => {
-        const offset = idx * 13;
-        values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain);
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13})`;
+        const offset = idx * 15;
+        values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain, p.snow, p.snow_fresh);
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15})`;
       }).join(',');
 
       await pool.query(
-        `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain)
+        `INSERT INTO radar_grid_cache (latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh)
                  VALUES ${placeholders}
                  ON CONFLICT (latitud, longitud, forecast_time) DO NOTHING`,
         values
@@ -415,6 +437,8 @@ const runScraper = async () => {
     await ensureColumn('radar_grid_cache', 'hlcy DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'refc DECIMAL(8,2)');
     await ensureColumn('radar_grid_cache', 'rain DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'snow DECIMAL(8,2)');
+    await ensureColumn('radar_grid_cache', 'snow_fresh DECIMAL(8,2)');
     // Asegurar columnas de sensores_cache
     await ensureColumn('sensores_cache', 'wind_speed DECIMAL(5,2)');
     await ensureColumn('sensores_cache', 'wind_direction INT');
@@ -508,7 +532,7 @@ const getRadarData = async (targetTime = null) => {
     return { status: 'loading', progress: scrapeProgress };
   }
 
-  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain FROM radar_grid_cache';
+  let query = 'SELECT latitud, longitud, weather_code, temperatura, wind_speed, wind_direction, rafagas, presion, forecast_time, cape, hlcy, refc, rain, snow, snow_fresh FROM radar_grid_cache';
   let params = [];
 
   if (targetTime) {

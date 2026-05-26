@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 
 export default function ControlPanel({
   activeControlsCount,
@@ -17,6 +18,7 @@ export default function ControlPanel({
   globalTimelineIndex, globalHistoryArray,
   particleFilters, setParticleFilters,
 }) {
+  const { snowMapType, setSnowMapType } = useMapVisuals();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('capas');
 
@@ -200,22 +202,34 @@ export default function ControlPanel({
                   { key: 'fog', label: 'Niebla' },
                   { key: 'wind', label: 'Viento / Tornados' },
                 ].map(f => (
-                  <div className="control-row" key={f.key} style={{ minHeight: '30px' }}>
-                    <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
-                      <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
-                      <span className="control-text">{f.label}</span>
+                  <div key={f.key}>
+                    <div className="control-row" style={{ minHeight: '30px' }}>
+                      <div className="control-row-label" style={{ fontSize: '0.85rem' }}>
+                        <span className="control-icon" style={{ fontSize: '1rem', width: '20px' }}>{f.icon}</span>
+                        <span className="control-text">{f.label}</span>
+                      </div>
+                      <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
+                        <input type="checkbox" checked={particleFilters[f.key]} onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setParticleFilters(prev => {
+                            if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, wind: true };
+                            else if (f.key !== 'wind' && isChecked) return { ...prev, wind: false, [f.key]: true };
+                            return { ...prev, [f.key]: isChecked };
+                          });
+                        }} />
+                        <span className="slider round"></span>
+                      </label>
                     </div>
-                    <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
-                      <input type="checkbox" checked={particleFilters[f.key]} onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        setParticleFilters(prev => {
-                          if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, wind: true };
-                          else if (f.key !== 'wind' && isChecked) return { ...prev, wind: false, [f.key]: true };
-                          return { ...prev, [f.key]: isChecked };
-                        });
-                      }} />
-                      <span className="slider round"></span>
-                    </label>
+                    {f.key === 'snow' && particleFilters.snow && (
+                      <div style={{ paddingLeft: '35px', display: 'flex', gap: '15px', fontSize: '0.8rem', marginTop: '2px', marginBottom: '8px', color: 'var(--text-color)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input type="radio" name="snowType" value="depth" checked={snowMapType === 'depth'} onChange={(e) => setSnowMapType(e.target.value)} /> Acumulada
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                          <input type="radio" name="snowType" value="fresh" checked={snowMapType === 'fresh'} onChange={(e) => setSnowMapType(e.target.value)} /> Fresca (Tasa)
+                        </label>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

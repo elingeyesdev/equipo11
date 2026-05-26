@@ -9,6 +9,7 @@ export function MapVisualsProvider({ children }) {
   const [showSensors, setShowSensors]               = useState(true);
   const [isParticlesActive, setIsParticlesActive]   = useState(false);
   const [particleFilters, setParticleFilters]       = useState({ rain: false, snow: false, wind: false, fog: false });
+  const [snowMapType, setSnowMapType]               = useState('depth'); // 'depth' o 'fresh'
   const [isHistoricalMode, setIsHistoricalMode]     = useState(false);
   const [isDynamicHistoricalMode, setIsDynamicHistoricalMode] = useState(false);
 
@@ -19,9 +20,10 @@ export function MapVisualsProvider({ children }) {
     showSensors, setShowSensors,
     isParticlesActive, setIsParticlesActive,
     particleFilters, setParticleFilters,
+    snowMapType, setSnowMapType,
     isHistoricalMode, setIsHistoricalMode,
     isDynamicHistoricalMode, setIsDynamicHistoricalMode,
-  }), [isHeatmapActive, isChoroplethActive, heatmapMetric, showSensors, isParticlesActive, particleFilters, isHistoricalMode, isDynamicHistoricalMode]);
+  }), [isHeatmapActive, isChoroplethActive, heatmapMetric, showSensors, isParticlesActive, particleFilters, snowMapType, isHistoricalMode, isDynamicHistoricalMode]);
 
   return (
     <MapVisualsContext.Provider value={value}>

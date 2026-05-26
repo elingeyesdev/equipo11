@@ -1,0 +1,515 @@
+
+> backend@1.0.0 dev /app
+> nodemon index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node index.js`[39m
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+[02:36:29] [32mINFO[39m (35): [36m🚀 Servidor corriendo en http://localhost:3000[39m
+[02:36:29] [32mINFO[39m (35): [36m🔌 WebSocket activo en el mismo puerto[39m
+[02:36:29] [32mINFO[39m (35): [36m✅ Conectado a PostgreSQL (pg.Pool)[39m
+[02:36:29] [32mINFO[39m (35): [36m✅ Tablas de caché verificadas/creadas.[39m
+[02:36:29] [32mINFO[39m (35): [36m✅ Base de datos inicializada correctamente[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...[39m
+[02:36:29] [32mINFO[39m (35): [36m[Sensores IoT] Iniciando actualización de datos reales...[39m
+[02:36:29] [32mINFO[39m (35): [36m[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_speed[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_direction[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rafagas[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.presion[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.cape[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.hlcy[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.refc[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rain[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.snow[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_speed[39m
+[02:36:29] [32mINFO[39m (35): [36m[Alertas] Caché cargada: 5 métricas con umbrales definidos[39m
+[02:36:29] [32mINFO[39m (35): [36m✈️ [Telegram Listener] Escuchando mensajes para dar IDs...[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_direction[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Buscando último modelo GFS mundial...[39m
+[02:36:29] [32mINFO[39m (35): [36m[Radar Scraper] Directorios de datos inicializados.[39m
+[02:36:29] [31mERROR[39m (35): [36m[Sensores IoT] ❌ Error en actualización:[39m
+[02:36:31] [33mWARN[39m (35): [36m[Radar Scraper] Error conectando a NOMADS para 20260525 18z: fetch failed[39m
+[02:36:31] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_12_f001.json. Cargando...[39m
+[02:36:32] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █▀█▀▄ █▀▀█ ▄ ▀▀█▄  █▀ ▄▄▄▀▄▀▀▀▄▀▄▄▄ ██▄▄ ██ ▄▄▄▄▄ █
+█ █   █ █▀▄▄ █▀███▀▀███▄  ▀██▄█  █▀▀  █ ▄█▀▀▀▄ ▄ ██ █   █ █
+█ █▄▄▄█ █▀▄▄██▀▀▄█▄▀▄  ▄▀ █ ▄▄▄ ▄▀█▀█▀▄█▀ ▄▄▀▀▀▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█ ▀▄▀ ▀▄▀▄▀ ▀ █ █ █▄█ ▀▄█ ▀▄█ ▀ ▀ ▀ ▀ ▀▄█▄▄▄▄▄▄▄█
+█  ▄  ▀▄▄▄▀▀   █▄▄▄▄ ███ ▀ ▄▄▄▄ ▀█▀█▀▄ █▀▀█ █▀▀▄ ▀ █▄█▄▀▄▀█
+█▀ ▀▄█▀▄▄██▄ ▄▄ ▀█▀ ▀▀▀ ▄▄ ▄▄▄ █▀▀  ▀▄▄ ▄  ▀▄▄▄ ▄▀█▀▄▀▀▀▄▀█
+█▀▀██▄ ▄▄▀▄▀ ▀▄▄█▄▀ ▀█▀▄▀▀▄▄▀▀▀█▄█▄█▀▄ █▀█▀ ▄██▄▀ █▄ ▀▀ █▀█
+█ ▄███▀▄ ▀  █▄▄█▀█▀▄▄▀█▀▄▄▀█▀██ ██▄▄▀▄▄▀▄▄ ▀▀   ▄▀▄ █▀ ▀ ▀█
+█▀▄█▄▄ ▄▀▀▀█▄ ▄██▄ ▄▀▄██▀  ▄▀ ▄▀ ▀ █▀ ▀█▀█▀▀█▀▄█▀ ▀█▄█▀█  █
+█▄▄▄▀█▄▄▄▀▀█▀█▀█▄█▄▄ ▄▄██  █▀  ▀▀█▀▄▀▀▀█ ▀▀▄▄▀█ ▀▀▀▄ ▄▀▀▄▀█
+█ ▄  ▄▄▄▀  ▀▄ ▀█▄▀▀▄▄█▀▀▀▄▀ ▄▀   █▄▄▄▄▀▄▄█▀  ▀ █▄▀ ▄▀▀▄█▀ █
+███ ██▄▄█▀▀██▄▀▀▄  ▄▄█▄█▀█▀   ▀▀██▄▀ ▄█▀█▀  ██   ▀▀█▀██▀▀▀█
+█▄ ▀█▄▀▄▀▄▀▄█▀▀█▄▄▀▄█▄▀▀▄▀███▀▀ ▄  █▄  ███▄ ▄▀█▄▀▀ ███▄▀  █
+██▄▄▄ ▄▄▄ ▄▀▀ █▀█▀▄█ ▀▄█ ██ ▄▄▄  ▄▀▄█▀▄█▄▀██   █  ▄▄▄ ▀ █▀█
+██▄▄  █▄█  ▄ █▀▀██▄▀▄▄▄█  █ █▄█ ▄▀██  ▀▄ ▀▀▀ ▀█▄  █▄█ ▄█▄▄█
+█  ▀▀▄▄▄▄▄▄▀ █▄█▄ █▄▀▄██▀█    ▄▄ ▀▄▀▄█▀ ▄ ▀▀ ▀█▄▄▄▄  ▄▀  ██
+█▄  ▀▄ ▄ ▄ ▄██▀ ██▄  █▀▀ ▀██▀▄▀ █▀▀█▄▄▀█▀▀▀▀█▀▄▄█▀██▄██▀▀ █
+█▄██▄█▀▄▄▄   ▀▀▀ █▄ █ █▀ ██▄▄▄▀ █▄▄▄ ▄▄▀▀ █▀ ▀ ▀ ▀ ▀▀▀   ▀█
+█▀▀ ▀  ▄▄▀█ ▄▀▀▀▀█▄ ▀▀██▄ ▄ ▀██▄▄▀▄▄▀▄ ▄██  █▀█▄██▄▀█▄ ▀█▀█
+██▀▀▄  ▄ ▀█ █▀  ▀█  ▀ █▄▄ ▄ ▀█▄ ▀▄▀█▀▀█▀█▀▀▄█   ▀█▀▀▄▄▀▀▄▄█
+██▀ ▄  ▄██▀▄ ▄██▄▄▀▄▄▄▀▀▀ █▀▄█▀ ▀█▀█ ▄▄█▄█ ▀ ██▄▀▀▀▄▄█▄ ███
+█▄▀▀▀▄ ▄ █▀▄   ▄  ▀  ▄▀ ▄▄█▀▄█▄ ██▄▀█  ▄ ▄▄▄▀▀ ▄ ▄▀▀ ▄▀ ▄▀█
+█▄ ▄█▀▀▄▄ █▄  ▄▄▄▄▀ ▀▄▀▄▀ ▄▄▄██▄▄▀▄▄▄▄▀▄██▀▀▀█▄██▀▄▄▄█▀   █
+█ ▀ ▀▀▄▄▀▄▄  ▀▀▀▄█████▀ █ ▀ ▄▀▄ ██▄▀ ▄▀▄ █ ▀ ▀ ▄▀▀ █ █▄▀▄██
+███████▄█▀  █▀█ ▀▄   ▄▀▀▀ ▄ ▄▄▄  █▄██ ▀█▀██ ▀▀█▄▀ ▄▄▄ ▄█▄▀█
+█ ▄▄▄▄▄ █▄  █▀▀▀ ▄▄▄█  ██▄█ █▄█ ▀  ▄▄▄█ ▄▀ █▄█▄▀  █▄█ ▀  ▀█
+█ █   █ █ ▄ █▄▄▀▄▀▄ ▄██▀▀▄▀ ▄  ▄ ▀██ ▄ ▄▀██  ▀ ▄▀▄▄▄▄ ▄█▄██
+█ █▄▄▄█ █ ▄▄▄▀ ▀▄ █▄▄█  ▀██▀▀█▀█▄▄█▀█ █    ▀▀██ █▄▀█▄▀▀ ███
+█▄▄▄▄▄▄▄█▄██▄█████▄▄█▄██▄█▄█▄▄█▄▄▄▄▄▄▄▄████▄▄██▄▄▄█▄▄▄██▄██
+
+[02:36:34] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:36:34] [32mINFO[39m (35): [36mSCAN THIS QR CODE WITH WHATSAPP TO CONNECT:[39m
+[02:36:34] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:36:34] [32mINFO[39m (35): [36m💡 El código QR se muestra solo una vez para evitar saturar la consola.[39m
+[02:36:35] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T12:00:00Z.[39m
+[02:36:37] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:36:37] [32mINFO[39m (35): [36m[Weather History] Iniciando recolección de 7 días para entrenamiento IA...[39m
+[02:36:37] [32mINFO[39m (35): [36m[Weather History] Recolección completada.[39m
+[02:36:37] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...[39m
+[02:36:39] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_00_f001.json. Cargando...[39m
+[02:36:39] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:40] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...[39m
+[02:36:41] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f003.json. Cargando...[39m
+[02:36:42] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:43] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T00:00:00Z.[39m
+[02:36:43] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_06_f001.json. Cargando...[39m
+[02:36:43] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:45] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:36:45] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T21:00:00.000Z.[39m
+[02:36:45] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f006.json. Cargando...[39m
+[02:36:45] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:47] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T06:00:00Z.[39m
+[02:36:48] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f001.json. Cargando...[39m
+[02:36:48] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:49] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T00:00:00.000Z.[39m
+[02:36:49] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f009.json. Cargando...[39m
+[02:36:49] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:52] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T18:00:00Z.[39m
+[02:36:53] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260524_00_f001.json. Cargando...[39m
+[02:36:53] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:53] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:36:53] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T03:00:00.000Z.[39m
+[02:36:54] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f012.json. Cargando...[39m
+[02:36:54] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:58] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-24T00:00:00Z.[39m
+[02:36:58] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260524_06_f001.json. Cargando...[39m
+[02:36:59] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:36:59] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T06:00:00.000Z.[39m
+[02:36:59] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f015.json. Cargando...[39m
+[02:36:59] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:01] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:02] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-24T06:00:00Z.[39m
+[02:37:02] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T09:00:00.000Z.[39m
+[02:37:02] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f018.json. Cargando...[39m
+[02:37:03] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:03] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260524_12_f001.json. Cargando...[39m
+[02:37:03] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:06] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T12:00:00.000Z.[39m
+[02:37:06] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f021.json. Cargando...[39m
+[02:37:06] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:07] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-24T12:00:00Z.[39m
+[02:37:07] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260524_18_f001.json. Cargando...[39m
+[02:37:07] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:08] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:10] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T15:00:00.000Z.[39m
+[02:37:10] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f024.json. Cargando...[39m
+[02:37:10] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:37:11] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-24T18:00:00Z.[39m
+[02:37:11] [32mINFO[39m (35): [36m[Radar Scraper] Histórico descargado exitosamente.[39m
+[02:37:14] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-26T18:00:00.000Z.[39m
+[02:37:14] [32mINFO[39m (35): [36m[Radar Scraper] Pronósticos futuros completados.[39m
+[02:37:17] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:25] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:32] [32mINFO[39m (35): [36m🔌 Cliente conectado: bDVnqBsJ6Ow-J5KTAAAC[39m
+[02:37:33] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:41] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:49] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:37:57] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:05] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:13] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:20] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:28] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:43] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:38:52] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:00] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:08] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:16] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:23] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:31] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:40] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:48] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:39:55] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:04] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:12] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:20] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:28] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:43] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:51] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:40:59] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:08] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:17] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:24] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:33] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:39] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:47] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:41:55] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:03] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:11] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:21] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:28] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:43] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:42:53] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:00] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:09] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:16] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:24] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:32] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:40] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:48] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:43:56] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:04] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:12] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:20] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:27] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:43] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:51] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:44:58] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:06] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:14] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:22] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:30] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:38] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:46] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:45:55] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:03] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:11] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:18] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:26] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:34] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:41] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:49] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:46:56] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:47:04] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[32m[nodemon] restarting due to changes...[39m
+[02:47:04] [32mINFO[39m (35): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[32m[nodemon] still waiting for 4 sub-processes to finish...[39m
+[32m[nodemon] starting `node index.js`[39m
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+[02:47:06] [32mINFO[39m (653): [36m🧹 [WhatsApp] Procesos huérfanos de Chrome/Chromium cerrados.[39m
+[02:47:06] [32mINFO[39m (653): [36m🧹 [WhatsApp] Bloqueo de sesión anterior limpiado en:[39m
+[02:47:06] [32mINFO[39m (653): [36m🚀 Servidor corriendo en http://localhost:3000[39m
+[02:47:06] [32mINFO[39m (653): [36m🔌 WebSocket activo en el mismo puerto[39m
+[02:47:06] [32mINFO[39m (653): [36m✅ Conectado a PostgreSQL (pg.Pool)[39m
+[02:47:06] [32mINFO[39m (653): [36m✅ Tablas de caché verificadas/creadas.[39m
+[02:47:06] [32mINFO[39m (653): [36m✅ Base de datos inicializada correctamente[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...[39m
+[02:47:06] [32mINFO[39m (653): [36m[Sensores IoT] Iniciando actualización de datos reales...[39m
+[02:47:06] [32mINFO[39m (653): [36m[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_speed[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_direction[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rafagas[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.presion[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.cape[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.hlcy[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.refc[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rain[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.snow[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_speed[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_direction[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Buscando último modelo GFS mundial...[39m
+[02:47:06] [32mINFO[39m (653): [36m[Radar Scraper] Directorios de datos inicializados.[39m
+[02:47:06] [32mINFO[39m (653): [36m[Alertas] Caché cargada: 5 métricas con umbrales definidos[39m
+[02:47:06] [32mINFO[39m (653): [36m✈️ [Telegram Listener] Escuchando mensajes para dar IDs...[39m
+[02:47:07] [31mERROR[39m (653): [36m[Sensores IoT] ❌ Error en actualización:[39m
+[02:47:07] [32mINFO[39m (653): [36m🔌 Cliente conectado: F1xuuaxw1ytaY8NjAAAB[39m
+[02:47:08] [32mINFO[39m (653): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f001.json. Cargando...[39m
+[02:47:08] [32mINFO[39m (653): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █▄▀▀▀▄▄███▀▄ ▀█ ▄▄ █ █▄ █  ▀ █▀█▀▀▄  ▄ ▄ ██ ▄▄▄▄▄ █
+█ █   █ █ █▀ █▀█▄▄  ██▀▄▀  █ █▀ ▀█▀█▄ ▀████ ▄▄▀▄ ██ █   █ █
+█ █▄▄▄█ █▄▀███ ▄▀▀ ▄ ▀▄▄ █▀ ▄▄▄ █▄▄█▀▄  █▀ ▀▀ ▄▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█ ▀▄▀ █▄█▄▀▄█▄▀▄█ █▄█ ▀ ▀ █ █ █ ▀ ▀ █▄█ █▄▄▄▄▄▄▄█
+█ ▄ ▄▀▀▄█  █▄ ██▄█ ▀ █▄▄  ▀▄     █ ▄▀█▀█▄ ▀▀▀▀██ ▀▄██ ▄ █ █
+█▄█▄▄▀▀▄▀  ▄ ▄ ▀▀  ██ ▄▄▀▀▀▄▀▄  ▀▄█ ▄ ▀██▀▀   ▀▀▄█ ███ ▄▄ █
+█▄▄█▄▀█▄ ▀▄  ▄▄ ▀▄█▄▀▀█▄ █▄ ▀▀█▀ █▄▄▄   ██▄█▄▀▀▄██ ▀▀█▀ █▀█
+█▀▄█▀▀ ▄▀ ▄█ █ █ ▄ ▄██▀▀ ▀██▀▄█▀ ▀▄█ ▀ █▀▄█ ▄ █▄ ▀▄ ▀▀▀ █▀█
+█ █▀█ █▄ ▄▀█ ▄   ▀ ▀██▄█▀█ █▄▄▀██ █▀█▀██ █▀█▀▄▀  ▄ ▄ ▀    █
+█▀█▄█▄▀▄▄▄▀▄██▀▀ ██▀██ ▄▀  ▀▀▄▀▄▀▀▀▄ █▄ ▀▀ ▄▀█  ▄▄  █▄█▄ ██
+█  ▄ █ ▄█▀ ▄▄█ ██ ▄▀███ ▀█▀▀▄▄ ▀████▄▀ ▄█▄  ▀▀█▄▄ ▄▄  █ ▀▀█
+█ █▀█▄▀▄██▄█ ▀██▀▄▀█ ▄▄▀  █▀█▀█▀ ▄▀▄█ █▀▄█▀██ ▀▀▄█ █ █▀▄█ █
+█▄▀▀ █▀▄▀▀▄   ██▀█▄▄█ ▀▀█▄█▀▀█▄▄▄▄▄█▄ ▀ ▀▀ ▄ █ ▄▄▄  ▀▀ █▄ █
+█▀▄▄█ ▄▄▄   █▄▄▄ █▄▄▀▀█▄▄ ▄ ▄▄▄ ▀  █ ▄ ▄█▀ ▄▀▄ ▀█ ▄▄▄ ▀▀█▀█
+█ ▀██ █▄█  ▄█▄▀▄▀ █▄█▄▀▀ ▄█ █▄█   ▀▀▄▀ ███ ▄ ▄▀ ▀ █▄█ ▀█  █
+█▄▀▄▀▄ ▄ ▄  ██ ▄▀▀██▀▀█▄▄██▄▄ ▄ ██▀▀▀▄▄ ▀▀▀█ █▄▀   ▄▄▄██ ██
+█ ██▄█ ▄▀█▀▀▄█▀▀ █▄▀▀█  ▄ █ ██▀▀▀▀ ▄ ▀▀▄ ▄  ▀█▄█▀█▀  ████▄█
+█▀  ▄▀▄▄▀██ █▄▄▀██ █  ▄▀█▀ ▀██ █▀▀▀ █▀██ ▄ █▀███    ▄  ▄ ▄█
+█▀▀▄█ █▄ ▄█▄    ██▄ ▀██▀ ▄▄▄██ ▀ ▀ ▄▄ ▀▀ ██▄▄████  ▀ █▄▄▄██
+██▄██▄ ▄▀▀▀▀ ▄▄  ▄▄▀  ▄ ▄▀▄▄ ▄ ▀ █ █▄█▄ ▀█▀▀█  █▀ █▀ ▄ ▀█▄█
+█▄ ▀▀▄▀▄▄█  ▀ ▀ ▀▀█▀ █▄█ █▀ ▀ ▄▄█▄▄▀▄██▄▄█▀██ ▀▀▄▄█ ▀▀█ █▄█
+█▀ ▀▄  ▄  ▀▄▄  █  █▄  █   ██▄█ ▄▀▀▄▀█▀█▀█▀▄█▀█▄▄▀ ▄▀█▄▄▄▄██
+██ ▄█ ▄▄ █ ▀ █▄▀█▄▀▀▀█ █▀▀▄█▄▄█ ▀█▄▄▀▀▀█ ▄▀  ▀▄█▀▀▀██▄█▄▄▀█
+█ ▀ ▀▀▄▄▀▀█▀▄▄ █▄▄  █▄  ▄█ ▀▀▄▀█   ▄██▀ ▄▄██▄ ▀▀▄ █ ██ █▀▄█
+███████▄█ █▄█▄▀▀▀▄ ▄  █▀█▄▀ ▄▄▄ ▀█ █  ▀ █▀▄███ ▄█ ▄▄▄ ▄▄ ██
+█ ▄▄▄▄▄ ██▀▀█▀  ▄██▄  █▀▀ ▄ █▄█ █▀▀▄▄█▄▀█ █▀▄▄▄▄▄ █▄█ ▀ ▀██
+█ █   █ █▀ ▀  ▄▀▀██▀ ▄▄▀ ▀▄▄▄   ▄▄▀▀█▀▄▄▄▀ ▄▄ ▀ ▄▄▄ ▄ █▀▀██
+█ █▄▄▄█ █ ███▀▀   ▄▄▄▀▀▄█▀█▄█▀█▀█▀▀▀▄ ██  ▀▀▄ ▄ ▄▄ ▀█▀▄▄█▀█
+█▄▄▄▄▄▄▄█▄███▄█▄█▄▄█▄▄▄▄▄▄▄██████▄████▄▄█▄████▄███▄█▄▄█████
+
+[02:47:10] [32mINFO[39m (653): [36m---------------------------------------------------------[39m
+[02:47:10] [32mINFO[39m (653): [36mSCAN THIS QR CODE WITH WHATSAPP TO CONNECT:[39m
+[02:47:10] [32mINFO[39m (653): [36m---------------------------------------------------------[39m
+[02:47:10] [32mINFO[39m (653): [36m💡 El código QR se muestra solo una vez para evitar saturar la consola.[39m
+[02:47:12] [32mINFO[39m (653): [36m[Radar Scraper] ✅ Completado 2026-05-25T18:00:00Z.[39m
+[02:47:14] [32mINFO[39m (653): [36m[Weather History] Iniciando recolección de 7 días para entrenamiento IA...[39m
+[02:47:14] [32mINFO[39m (653): [36m[Weather History] Recolección completada.[39m
+[02:47:14] [32mINFO[39m (653): [36m[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...[39m
+[02:47:14] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:17] [32mINFO[39m (653): [36m[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...[39m
+[02:47:19] [32mINFO[39m (653): [36m[Radar Scraper] Pronósticos futuros completados.[39m
+[02:47:19] [32mINFO[39m (653): [36m[Radar Scraper] Histórico descargado exitosamente.[39m
+[02:47:22] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:29] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:37] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:45] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:52] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[02:47:56] [32mINFO[39m (653): [36mRecibido SIGTERM, cerrando servidor ordenadamente...[39m
+[02:47:56] [32mINFO[39m (653): [36m[Sensores IoT] Cron detenido.[39m
+[02:47:56] [32mINFO[39m (653): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[02:47:56] [32mINFO[39m (653): [36mRecibido SIGINT, cerrando servidor ordenadamente...[39m
+[02:47:56] [32mINFO[39m (653): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[32m[nodemon] still waiting for 4 sub-processes to finish...[39m
+[02:47:57] [32mINFO[39m (653): [36mRecibido SIGINT, cerrando servidor ordenadamente...[39m
+[02:48:00] [31mERROR[39m (653): [36m[Telegram Listener] Error de polling:[39m
+[32m[nodemon] restarting due to changes...[39m
+[02:48:06] [32mINFO[39m (653): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[32m[nodemon] restarting due to changes...[39m
+ ELIFECYCLE  Command failed with exit code 143.
+
+> backend@1.0.0 dev /app
+> nodemon index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node index.js`[39m
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+[02:48:08] [32mINFO[39m (35): [36m🧹 [WhatsApp] Bloqueo de sesión anterior limpiado en:[39m
+[02:48:08] [32mINFO[39m (35): [36m🚀 Servidor corriendo en http://localhost:3000[39m
+[02:48:08] [32mINFO[39m (35): [36m🔌 WebSocket activo en el mismo puerto[39m
+[02:48:08] [32mINFO[39m (35): [36m✅ Conectado a PostgreSQL (pg.Pool)[39m
+[02:48:08] [32mINFO[39m (35): [36m✅ Tablas de caché verificadas/creadas.[39m
+[02:48:08] [32mINFO[39m (35): [36m✅ Base de datos inicializada correctamente[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...[39m
+[02:48:08] [32mINFO[39m (35): [36m[Sensores IoT] Iniciando actualización de datos reales...[39m
+[02:48:08] [32mINFO[39m (35): [36m[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_speed[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_direction[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rafagas[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.presion[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.cape[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.hlcy[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.refc[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rain[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_speed[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_direction[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Buscando último modelo GFS mundial...[39m
+[02:48:08] [32mINFO[39m (35): [36m[Radar Scraper] Directorios de datos inicializados.[39m
+[02:48:08] [32mINFO[39m (35): [36m[Alertas] Caché cargada: 5 métricas con umbrales definidos[39m
+[02:48:08] [32mINFO[39m (35): [36m✈️ [Telegram Listener] Escuchando mensajes para dar IDs...[39m
+[02:48:08] [31mERROR[39m (35): [36m[Sensores IoT] ❌ Error en actualización:[39m
+[02:48:10] [32mINFO[39m (35): [36m[Radar Scraper] Encontrada caché procesada (JSON): gfs_20260525_18_f001.json. Cargando...[39m
+[02:48:10] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █▀█▄▀ ▄▄▄██▀▄▀▄█▄ ▄▀▄█▄▄▄███ ▀▄▀  ▄ █ ▄▄ ██ ▄▄▄▄▄ █
+█ █   █ █▀▀▀▀▄▀▄▄█▀▀██▄▄▀ ▀██▄  ▄▄███▀█ ██▀▀▀▄ ▄ ██ █   █ █
+█ █▄▄▄█ █▀▄▀█▀▀█▄█▀ ▄ ▀▀▀ █ ▄▄▄   █▀ ▀▀▀▀█▄▄█ ▀▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█▄▀ █ ▀▄█▄▀ ▀ █ █ █▄█ ▀▄█ ▀▄█▄▀ ▀ ▀ ▀ ▀▄█▄▄▄▄▄▄▄█
+█ ▄▄ ▄█▄   ▀▄  █▀▄   ▄█▀▀▀▄  ▄  ▀█▀██  ▄██▀ ██ █▀▀ █▄▀▄▀▄██
+█▄ █▀ █▄█▀▄   ▄ █▄▀ ▀▀▀ ▀ ▀▄▀█▀▄▀▀  ▀█▀▄ █ ▄▀▀█▄▄█▀███▀▀ ██
+█ █ ▀ ▄▄ ▄ ▄█ ▄▄██▀  ▄▀▄  █▄▀▀▀█ ▀█▄▀▄ ▄▀▀   █▀█▀▀█▄███▄█▄█
+█ ███▄█▄█▀ ▄ █▀█ █ ███▄▀▀ ▀▄▀█▀ ▀▀███▀███ ▄▄▄▀█ █▄▄ ▄█▀ ▄██
+█▀▀▀▀  ▄▀▀▀   ▄██▄▄▄▀█▄▀ ▀▀█▀ ▀▀ ▀▀█   ▄█▀   █▀█▀ ▀████▄█▄█
+█ ██▀█▄▄▀██ █▀▀█▀▀ ▄▄ ▀█▄▀ █▀ █▀▄▀▀▄▀  ██ █▀ ▄█ ▄█▄ ▀  ▀▄██
+█▀▄▄▀▀█▄▄ ▄██ ▀█▄▀ ▄▄█▀▀▀▄▀▀▀▀ ▀▄█▀█  ▄███  ▄█▄█▄▀▀▄█▀▄▀ ▀█
+██ ▀█▀ ▄ █▀  █▄█▄ █▀▄█▄▀▀█▀ ▄▀▀ █▄█  ▄▄▄▄ ▄  █▀ ▄▄▄▀ █▄ ▀▀█
+██▄█ ██▄██▀█ ▄▄▀██▄▄█▄ ▀ ▀█▀ █ ▀▄  ██▄ █▄▀▄▀▄█▄██▀▀█▀▀▄▀  █
+█ ██▄ ▄▄▄  █▄▄█▀▀▄▄█ ▀▄██▄  ▄▄▄ ▄▄▀ █▀ ▀▀▄▄█   ██ ▄▄▄ ▀  ██
+█▄▀ ▀ █▄█ █▀█▄▀██▄▄▀ ▄▄█▀▀▀ █▄█ ▄█▄█   ███▀▀ █▄██ █▄█ ▄▄  █
+█▀▀▄▀  ▄▄▄▀▄▀ ▄▄ ▀▄█ █ █▀▀█▄▄ ▄  ▀█▀▄ ▀▄ ▀▀ ▄▀▀█▀▄ ▄    ▄██
+██ ▀   ▄▄█  █▄▄▀▀▄▄▄█▄█▀▀▀█▄█▄▀ ▄█▀█▄▄▀▄▀▀▀▀▄▀▀█▀  ▀▀▄█ ███
+█▀▄██ ▄▄██▀  █▄▀▀██▀█▄▄▄▄▄   ▀▀  █ ▄▀ ▀███▀  ▀▀▄▀▄ █▄ █ ▄██
+███▄▀▀▄▄▄▄▄██ ▀ ▀█▀▄▀▀▀█▄ ██▀█▄ ▄█▄▄   ▄▀▀  ▀███▀▄█▀▄▄▄▀█ █
+█▄▄▄  █▄▄▀██ ██▀▀█▄█▀ █ ▄ █ ▀█ ▄▀▄▀██▄▀▄▀████▀▀▄█▄▀▀█▄ ▀▄▄█
+█▄▄▀▀ █▄▄█▀▀ ▄▀▀▄▄▀▄▄▄██  █▀█▄  ▀█▀█▄▄ ▄██  ▄█▄▄█▄ █▀▄█ ███
+██  ▀ ▄▄ █ ▄█▄▀▀▄▄▀ ▄█▀ █▀█▀█▄▄▄██▄██ ▀▀▀█ ▀█ ▄▄██▄█ ▄ ▀▄▀█
+█▄█    ▄█▄▄█▀  ▀██▀  ▄▀▄  █▄▄▄▀█▄█▄█▄▄▄███▀ ▄█▄▄███▀██▀▄▀▄█
+█ ▀ ▀▀▄▄ █ █▀▄▀▄▄▄▄▄█▀██  █▄ ▄   ▀▄▀▄  ▄█▀▀█▀█ █▀▀▄▀▄▄   ▀█
+███████▄▄▀▀▄▄▄  ▄▄  ▄▄▄▀ ▀▄ ▄▄▄  ▀▄█▄▄ █▀▀▄ ▄▀▄▄█ ▄▄▄ ▀  ▀█
+█ ▄▄▄▄▄ █▄▄ ▀██ ▀▄█▀▀█▄█ ▄█ █▄█ ▀▀▀  ▀▀▄█▀▄▀█ ▀▀▄ █▄█  ▀ ▀█
+█ █   █ █ ▄▀▀█▄▀▄▀▄▄▄█▀▀▀▄▄  ▄ ▄ █▄▄ ▄█▄▀▀▀▀▄▀██▀▄ ▄ ▄ ▄▄██
+█ █▄▄▄█ █  █▀ ▀▀▄ ▀▄▄█ ▀▀█ ▀██▀██▄█▀▄ ▄     ▄▄█▀ ▄▀▄█▀ ▀███
+█▄▄▄▄▄▄▄█▄▄███▄███▄▄██████▄█▄██▄▄▄▄▄▄▄█████▄▄█▄█▄▄██▄█▄█▄██
+
+[02:48:12] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:48:12] [32mINFO[39m (35): [36mSCAN THIS QR CODE WITH WHATSAPP TO CONNECT:[39m
+[02:48:12] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:48:12] [32mINFO[39m (35): [36m💡 El código QR se muestra solo una vez para evitar saturar la consola.[39m
+[02:48:14] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T18:00:00Z.[39m
+[02:48:14] [32mINFO[39m (35): [36m🔌 Cliente conectado: inc0aVc7RsGndzaZAAAB[39m
+[02:48:16] [32mINFO[39m (35): [36m[Weather History] Iniciando recolección de 7 días para entrenamiento IA...[39m
+[02:48:16] [32mINFO[39m (35): [36m[Weather History] Recolección completada.[39m
+[02:48:16] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...[39m
+[02:48:16] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:48:19] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...[39m
+[02:48:20] [32mINFO[39m (35): [36m[Radar Scraper] Pronósticos futuros completados.[39m
+[02:48:22] [32mINFO[39m (35): [36m[Radar Scraper] Histórico descargado exitosamente.[39m
+[02:48:24] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:48:31] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:48:39] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:48:46] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:48:54] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:49:01] [32mINFO[39m (35): [36mRecibido SIGTERM, cerrando servidor ordenadamente...[39m
+[02:49:01] [32mINFO[39m (35): [36m[Sensores IoT] Cron detenido.[39m
+[02:49:01] [32mINFO[39m (35): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[02:49:01] [32mINFO[39m (35): [36mRecibido SIGINT, cerrando servidor ordenadamente...[39m
+[02:49:01] [32mINFO[39m (35): [36m[Telegram Listener] Deteniendo polling de Telegram...[39m
+[32m[nodemon] still waiting for 4 sub-processes to finish...[39m
+[02:49:02] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:49:02] [32mINFO[39m (35): [36mRecibido SIGINT, cerrando servidor ordenadamente...[39m
+[02:49:11] [31mERROR[39m (35): [36mCierre forzado tras timeout de 10s[39m
+
+> backend@1.0.0 dev /app
+> nodemon index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node index.js`[39m
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+[02:49:12] [32mINFO[39m (35): [36m🧹 [WhatsApp] Bloqueo de sesión anterior limpiado en:[39m
+[02:49:13] [32mINFO[39m (35): [36m🚀 Servidor corriendo en http://localhost:3000[39m
+[02:49:13] [32mINFO[39m (35): [36m🔌 WebSocket activo en el mismo puerto[39m
+[02:49:13] [32mINFO[39m (35): [36m✅ Conectado a PostgreSQL (pg.Pool)[39m
+[02:49:13] [32mINFO[39m (35): [36m✅ Tablas de caché verificadas/creadas.[39m
+[02:49:13] [32mINFO[39m (35): [36m✅ Base de datos inicializada correctamente[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando sistema Bulk Data GRIB2 de NOAA...[39m
+[02:49:13] [32mINFO[39m (35): [36m[Sensores IoT] Iniciando actualización de datos reales...[39m
+[02:49:13] [32mINFO[39m (35): [36m[Sensores IoT] 🔌 Cron iniciado — actualización cada 15 minutos.[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_speed[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.wind_direction[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rafagas[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.presion[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.cape[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.hlcy[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.refc[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: radar_grid_cache.rain[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_speed[39m
+[02:49:13] [32mINFO[39m (35): [36m[Alertas] Caché cargada: 5 métricas con umbrales definidos[39m
+[02:49:13] [32mINFO[39m (35): [36m✈️ [Telegram Listener] Escuchando mensajes para dar IDs...[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Columna asegurada: sensores_cache.wind_direction[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Buscando último modelo GFS mundial...[39m
+[02:49:13] [32mINFO[39m (35): [36m[Radar Scraper] Directorios de datos inicializados.[39m
+[02:49:13] [31mERROR[39m (35): [36m[Sensores IoT] ❌ Error en actualización:[39m
+[02:49:15] [32mINFO[39m (35): [36m[Radar Scraper] Descargando GRIB (gfs_20260525_18_f001_base.grib2) desde NOAA (intento 1/3)...[39m
+[02:49:16] [32mINFO[39m (35): [36m🔌 Cliente conectado: RZjOaIUeN4kngBW0AAAB[39m
+[02:49:17] [32mINFO[39m (35): [36m[Radar Scraper] GRIB guardado atómicamente en /app/data/raw/gfs_20260525_18_f001_base.grib2 (6.2 MB).[39m
+[02:49:17] [32mINFO[39m (35): [36m[Radar Scraper] Descargando GRIB (gfs_20260525_18_f001_rain.grib2) desde NOAA (intento 1/3)...[39m
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █▀▀ █▄▀██▀▄▄ ▀█▄▄  ███▀▄ █▀█▀█ ▀▀▀▄ █▀▄▄ ██ ▄▄▄▄▄ █
+█ █   █ █▀ █▄█▀▄██ ▀██▄▄▀▀▀██▄██▀▄▀▀▀  █▄██  ▄ ▄ ██ █   █ █
+█ █▄▄▄█ █▀█▀   █▄█▀ ▄ ▀▄▀ █ ▄▄▄ █▀█▀▀▄ █▀▄ ▄▄▄▀▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄█ ▀ ▀ ▀▄█ ▀ █ █ █ █▄█ ▀▄█ ▀▄█ ▀▄█ █▄█ ▀▄█▄▄▄▄▄▄▄█
+█▄    █▄▄▄▄█▄█ ▀█▄ ▄ ███ ▀ ▄    ▀█▀█▀  ▄█▀  ▄▀▄█   █ ▀▄▀ ██
+█▀▄▀▄▄ ▄▄ ▀█▀▀▄ ██▀ ▀▀▀  ▀█▄█▀ ███▄ ▄██ ██▀▀ ▀ █▀▀█▀ █▀▀▄▀█
+█▄██ ▀▄▄███▀▀▄▄▄▀▄▀ ▀█▀▄▀▀ ▄▀█▀█▄██▄  ▀▄█▀▀▀▄█▄▄▀▀ █▀▀█▄▄ █
+█▀█▀▄▄█▄█▄▄▀▄▄█▄▀█▄▄▄█▀██▄▀█ █▀▄▄█▀█▄███▀▀▀▀▀█▀▀▄▀ ██▀▀▀ ██
+█▄  █ ▀▄ ▄██ ▀▄█▄▄   ██▀ ▀█▀▀  ▀ █▀█▄▄▄▄▀▀▄ ▄█▄█▀▀▀█▀▀▄▀ ██
+█▄█ ▀ ▀▄▀█▄ ██▀██▄█▄▄▀██▄ ▀▄█ █ ▀▄▀▄▄▄█▄▀████▀▄ █▀▀▄ ▄▄ ▄▀█
+█   ▀██▄ ▄▄▀  ▀█▄▀█▄▄█▀▀▀▄  ▄▀▀  ▀█▄▄▄▀██▀▀▀ ▀▄█▄▀█▄▀▀▄█▀ █
+█▀▄▄█▀ ▄▄██▄█▀█ ▄ ▄▄▄██▀▀█▀  ▄█▀▄██ █ ▀ ▀▀▀▄█ ▄█ ▀  ▄ ▀ ▀▀█
+██▄█▄▀▄▄▀██▀███▄▄█▄ █▄▄▀▄▀█▀▀▀▀ ▄  █▄▄▀███▀▀▄▀▄▄▀  █▀▀█ ▄ █
+██▀█▄ ▄▄▄   ▄▀▀ ▄▀▄█ ▀▄█▄▄▀ ▄▄▄ ▄ █▄█▀▀ ▀▀  ▀▄▀ ▀ ▄▄▄ ▀ ▄██
+██▄ ▀ █▄█ ▄▀▀▄ ▀▄█▄▀▀█▄█  ▀ █▄█  ▀▄█▄▄ ▄▀█ ▀ ████ █▄█ ▄█▀ █
+██▀█▄▄▄▄▄  █ █▄██▄▀▄▄▀▀██▀▀▄▄ ▄ ▀ █   ▄▀▀▄▀█▀  █▄▄ ▄▄ ▀ ▀▀█
+█▀▄█ ▀ ▄█ █▄ ▀████ ▄ █▀▀▀ █▀▀▄▀ ▄█▀█ ▄ ▄▀█ ▀ █ ▄▀  ██▄▀▀▀▀█
+█ █ ▀██▄▄ ▀  █▀▀▄▄▀██▄  █ ▀ ██▀ ▀▄ ▄▀▀█▄▀▀█▄▄▀▀▄▀▄▀▀▄▄▄▀▄██
+████▄  ▄ ▄▀ ▀ █ ▀█▄ ▀▀▄▀▄ ██▀█ ▀▄▀▄▄   █▀▀█▀ ▀████▄██▄▄██▀█
+█  ▀ ▄▀▄▄  ▀▄█ █▀█  ▀ ██▄ █ ▀█ ▄ █ █▀▀█▀▄▀▄▀    ▀▄ ▀  ▀ ▄▄█
+███▀▄▄█▄▀▀▄█▀ ▀█▄▄▄ ▄▄██▄▀█▀▄█▀ ▀█▀█ ▄ █▄▀  ▄███▀█▄██▄▄▀▀▀█
+█▀  ██▀▄▄▀▄█ █▀▀█▄▀  ▄▀ ▀ █▀▄▀█▄██ ▀▀██▀ ▀▄▄ ██ ▀▄ ▀▄▄█▀ ██
+█ ▀▄▀ █▄ █▄▄▀▀ ▄▄▄▀  █▀▄▀▀█▄▄▄▄▄ ███▀ ▀▄▀▀  ▄▀▄█▀▀ ▀▄▄ ▀ ▀█
+█ ▀ ▀▀▄▄▄▀█ ▄▀█▀██▄ ▀ ▀█▀▀█ █ ▄  █▄ █▄ █▄ █▄██▄█▄▄▄█ ▀▄▀▀██
+███████▄▄  ▀▄▄  ██▀▄ █▄▀▄▀▀ ▄▄▄  █▄█▄▄▀███▀▀ ▀▄▄█ ▄▄▄ ▄▀▀▄█
+█ ▄▄▄▄▄ █▄ ▄█▀█ ▀▄▀█ ▄▄▀ ▀▄ █▄█ ██▄ ▀█▄ ▄▄█▄█▄▄   █▄█ ▀▀ ██
+█ █   █ █ ▄▄ ▄ ▄▄▀▀▄▄█▀█▀▄▄▄▄  ▄ ▀▄▄▀ ▀██▀▀ ▄▀▄█▀▄▄ ▄▄  ▄▄█
+█ █▄▄▄█ █ ▄ ▀▀▀ ▄ ▄▄▄█ ▀▀█▀▄▀▀▀█▄▄▄▀█ █  ▄█▄▄█  █▄ █▀▀  ███
+█▄▄▄▄▄▄▄█▄▄█▄████▄▄▄█▄████▄████▄▄▄▄▄▄▄▄███▄▄▄█▄▄██████▄▄▄██
+
+[02:49:17] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:49:17] [32mINFO[39m (35): [36mSCAN THIS QR CODE WITH WHATSAPP TO CONNECT:[39m
+[02:49:17] [32mINFO[39m (35): [36m---------------------------------------------------------[39m
+[02:49:17] [32mINFO[39m (35): [36m💡 El código QR se muestra solo una vez para evitar saturar la consola.[39m
+[02:49:18] [32mINFO[39m (35): [36m[Radar Scraper] GRIB guardado atómicamente en /app/data/raw/gfs_20260525_18_f001_rain.grib2 (1.5 MB).[39m
+[02:49:18] [32mINFO[39m (35): [36m[Radar Scraper] Extrayendo datos de los GRIBs...[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:21] [32mINFO[39m (35): [36m[Radar Scraper] Extracción hlcy -> Keys coincidentes: 64800[39m
+[02:49:21] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:22] [32mINFO[39m (35): [36m[Radar Scraper] Extracción prmsl -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:24] [32mINFO[39m (35): [36m[Radar Scraper] Extracción prate -> Keys coincidentes: 64800[39m
+[02:49:25] [32mINFO[39m (35): [36m[Radar Scraper] Extracción gust -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:26] [32mINFO[39m (35): [36m[Radar Scraper] Extracción crain -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:28] [32mINFO[39m (35): [36m[Radar Scraper] Extracción 10u -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:29] [32mINFO[39m (35): [36m[Radar Scraper] Extracción cape -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:30] [32mINFO[39m (35): [36m[Radar Scraper] Extracción csnow -> Keys coincidentes: 64800[39m
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[DEBUG GRIB] Extracción exitosa. Llaves en el Map: 64800. Ejemplo de llave: 89.50_0.50
+[02:49:32] [32mINFO[39m (35): [36m[Radar Scraper] Extracción refc -> Keys coincidentes: 64800[39m
+[02:49:33] [32mINFO[39m (35): [36m[Radar Scraper] Extracción vis -> Keys coincidentes: 64800[39m
+[02:49:34] [32mINFO[39m (35): [36m[Radar Scraper] Extracción 10v -> Keys coincidentes: 64800[39m
+[02:49:34] [32mINFO[39m (35): [36m[Radar Scraper] Calculando vectores para 2026-05-25T18:00:00Z...[39m
+[02:49:35] [32mINFO[39m (35): [36m[Radar Scraper] Caché JSON creada atómicamente: gfs_20260525_18_f001.json[39m
+[02:49:35] [32mINFO[39m (35): [36m[Radar Scraper] Insertando 64800 nodos en la base de datos...[39m
+[02:49:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:49:38] [32mINFO[39m (35): [36m[Radar Scraper] ✅ Completado 2026-05-25T18:00:00Z.[39m
+[02:49:40] [32mINFO[39m (35): [36m[Weather History] Iniciando recolección de 7 días para entrenamiento IA...[39m
+[02:49:40] [32mINFO[39m (35): [36m[Weather History] Recolección completada.[39m
+[02:49:40] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga en segundo plano del histórico (últimos 3 días)...[39m
+[02:49:42] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:49:43] [32mINFO[39m (35): [36m[Radar Scraper] Iniciando descarga de pronósticos futuros para IA...[39m
+[02:49:45] [32mINFO[39m (35): [36m[Radar Scraper] Pronósticos futuros completados.[39m
+[02:49:46] [32mINFO[39m (35): [36m[Radar Scraper] Histórico descargado exitosamente.[39m
+[02:49:49] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:49:57] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:04] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:12] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:19] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:27] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:35] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m
+[02:50:43] [31mERROR[39m (35): [36m[Telegram Listener] Error de polling:[39m

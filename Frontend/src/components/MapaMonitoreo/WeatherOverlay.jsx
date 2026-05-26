@@ -8,6 +8,9 @@ import {
 } from '../../layers/windColor/layerManager.js';
 import RainColorLayer from '../../layers/rainColor/RainColorLayer.js';
 import { addRainLayers, removeRainLayers } from '../../layers/rainColor/layerManager_rain.js';
+import SnowColorLayer from '../../layers/snowColor/SnowColorLayer.js';
+import { addSnowLayers, removeSnowLayers } from '../../layers/snowColor/layerManager_snow.js';
+import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 import { GLOBAL_CITIES } from '../../utils/globalCities.js';
 import { buildGridIndex, buildCitiesWindGeoJSON } from '../../utils/windMath.js';
 
@@ -33,9 +36,11 @@ function WeatherOverlay({
   isParticlesActive,
   dynamicWindLabels
 }) {
+  const { snowMapType } = useMapVisuals();
   const { current: map } = useMap();
   const windLayerRef = useRef(null);
   const rainLayerRef = useRef(null);
+  const snowLayerRef = useRef(null);
   const dataRef = useRef(null);
 
   // --- 1. Proteger el Payload Masivo (Ahogo del Virtual DOM) ---
@@ -115,6 +120,9 @@ function WeatherOverlay({
     if (rainLayerRef.current && protectedGrid && protectedGrid.length > 0) {
       rainLayerRef.current.updateData(protectedGrid);
     }
+    if (snowLayerRef.current && protectedGrid && protectedGrid.length > 0) {
+      snowLayerRef.current.updateData(protectedGrid);
+    }
   }, [protectedGrid]);
 
   // --- Ciclo de vida del RainColorLayer (WebGL) ---
@@ -157,6 +165,50 @@ function WeatherOverlay({
       rainLayerRef.current = null;
     };
   }, [map, isParticlesActive, particleFilters.rain]);
+
+  // --- Ciclo de vida del SnowColorLayer (WebGL) ---
+  useEffect(() => {
+    if (!map) return;
+
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+
+    // Asumimos que la llave del filtro es 'snow'
+    const shouldShowSnow = isParticlesActive && particleFilters.snow;
+
+    const addSnowIfMissing = () => {
+      if (!shouldShowSnow) return;
+
+      if (!rawMap.getLayer('snow-color-layer')) {
+        const layer = new SnowColorLayer({
+          id: 'snow-color-layer',
+          opacity: 0.85,
+          snowType: snowMapType === 'fresh' ? 1 : 0
+        });
+        snowLayerRef.current = layer;
+        addSnowLayers(rawMap, layer, dataRef.current);
+      } else if (snowLayerRef.current) {
+        snowLayerRef.current.setSnowType(snowMapType === 'fresh' ? 1 : 0);
+      }
+    };
+
+    if (shouldShowSnow) {
+      addSnowIfMissing();
+      rawMap.on('styledata', addSnowIfMissing);
+    } else {
+      removeSnowLayers(rawMap);
+      snowLayerRef.current = null;
+    }
+
+    return () => {
+      rawMap.off('styledata', addSnowIfMissing);
+      removeSnowLayers(rawMap);
+      if (snowLayerRef.current && typeof snowLayerRef.current.destroy === 'function') {
+        snowLayerRef.current.destroy(); // Limpieza estricta de texturas WebGL
+      }
+      snowLayerRef.current = null;
+    };
+  }, [map, isParticlesActive, particleFilters.snow, snowMapType]);
 
   // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
   useEffect(() => {
