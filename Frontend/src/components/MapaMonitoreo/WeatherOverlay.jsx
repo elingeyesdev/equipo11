@@ -276,7 +276,7 @@ function WeatherOverlay({
       if (!rawMap.getLayer('temp-color-layer')) {
         const layer = new TempColorLayer({
           id: 'temp-color-layer',
-          opacity: 0.85,
+          opacity: 0.6,
         });
         tempLayerRef.current = layer;
         addTempLayers(rawMap, layer, dataRef.current);

@@ -1,104 +1,114 @@
 /**
  * TempDataTexture.js — Gestor de texturas WebGL para datos de temperatura global.
+ *
+ * SRP: Solo se ocupa de codificar datos del grid en texturas GPU.
+ *  - Textura 2D de temperatura (360×180, equirectangular, LUMINANCE)
+ *  - Textura 1D de paleta de color (256×1, RGBA)
+ *
+ * Arquitectura clonada de WindDataTexture.js para garantizar
+ * alineación píxel-perfect y rendimiento idéntico.
  */
 
-const GRID_WIDTH = 360;
+// Constantes del grid global (1° resolución, centros en ±0.5)
+const GRID_WIDTH  = 360;
 const GRID_HEIGHT = 180;
+const MIN_TEMP    = -40;  // °C — límite inferior de normalización
+const MAX_TEMP    =  50;  // °C — límite superior de normalización
+const TEMP_RANGE  = MAX_TEMP - MIN_TEMP; // 90°C
 
-// Paleta de Colores de Temperatura
-export const TEMP_COLOR_STOPS = [
-  { val: -70.0, color: [255, 255, 255, 255] },   // Blanco / Frío extremo
-  { val: -50.0, color: [150, 0, 150, 255] },     // Violeta oscuro
-  { val: -30.0, color: [0, 0, 255, 255] },       // Azul oscuro
-  { val: -10.0, color: [0, 255, 255, 255] },     // Cian
-  { val: 0.0, color: [0, 255, 0, 255] },       // Verde (Congelación)
-  { val: 15.0, color: [255, 255, 0, 255] },     // Amarillo
-  { val: 30.0, color: [255, 128, 0, 255] },     // Naranja
-  { val: 40.0, color: [255, 0, 0, 255] },       // Rojo
-  { val: 50.0, color: [150, 0, 0, 255] }        // Granate / Calor extremo
-];
+// ─── Paleta de Colores: Leyenda Meteorológica de 48 tonos ─────────────
 
-function buildTempColorRampTexture(stops) {
-  const size = 1024;
+/**
+ * Genera un array RGBA de 256 colores interpolando linealmente
+ * entre los 11 stops de la leyenda meteorológica.
+ *
+ * @returns {Uint8Array} — 256 × 4 bytes (RGBA), listo para subir como textura
+ */
+function buildTempColorRampTexture() {
+  const size = 256;
   const pixels = new Uint8Array(size * 4);
-  const minTemp = -70.0;
-  const maxTemp = 50.0;
-  const rangeTotal = maxTemp - minTemp; // 120
 
-  const sortedStops = [...stops].sort((a, b) => a.val - b.val);
+  // Los 11 stops de la leyenda meteorológica.
+  // Cada stop: { t: posición normalizada [0,1], color: [R, G, B] en 0-255 }
+  const stops = [
+    { t: 0.00, color: [255,   0, 255] },  // -40°C  Magenta
+    { t: 0.11, color: [128,   0, 128] },  // -30°C  Púrpura
+    { t: 0.22, color: [  0,   0, 139] },  // -20°C  Azul oscuro
+    { t: 0.33, color: [  0,   0, 255] },  // -10°C  Azul claro
+    { t: 0.44, color: [  0, 255, 255] },  //   0°C  Cian
+    { t: 0.45, color: [  0, 128, 128] },  //  +1°C  Teal (salto brusco en congelación)
+    { t: 0.55, color: [  0, 255,   0] },  //  10°C  Verde claro
+    { t: 0.66, color: [255, 255,   0] },  //  20°C  Amarillo
+    { t: 0.77, color: [255, 165,   0] },  //  30°C  Naranja
+    { t: 0.88, color: [139,   0,   0] },  //  40°C  Rojo oscuro
+    { t: 1.00, color: [128, 128, 128] },  //  50°C  Gris
+  ];
 
   for (let i = 0; i < size; i++) {
-    const val = minTemp + (i / (size - 1)) * rangeTotal;
+    const norm = i / (size - 1); // posición normalizada [0, 1]
 
-    if (val <= sortedStops[0].val) {
-      const c = sortedStops[0].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
-    }
+    // Encontrar los dos stops que encierran este valor
+    let lo = stops[0];
+    let hi = stops[stops.length - 1];
 
-    if (val >= sortedStops[sortedStops.length - 1].val) {
-      const c = sortedStops[sortedStops.length - 1].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
-    }
-
-    for (let j = 0; j < sortedStops.length - 1; j++) {
-      const currentStop = sortedStops[j];
-      const nextStop = sortedStops[j + 1];
-
-      if (val >= currentStop.val && val <= nextStop.val) {
-        const range = nextStop.val - currentStop.val;
-        const t = range > 0 ? (val - currentStop.val) / range : 0;
-
-        const c1 = currentStop.color;
-        const c2 = nextStop.color;
-
-        pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * t;
-        pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * t;
-        pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * t;
-        pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * t;
+    for (let j = 0; j < stops.length - 1; j++) {
+      if (norm >= stops[j].t && norm <= stops[j + 1].t) {
+        lo = stops[j];
+        hi = stops[j + 1];
         break;
       }
     }
+
+    const range = hi.t - lo.t;
+    const t = range > 0 ? Math.min(1, Math.max(0, (norm - lo.t) / range)) : 0;
+
+    pixels[i * 4 + 0] = Math.round(lo.color[0] + t * (hi.color[0] - lo.color[0]));
+    pixels[i * 4 + 1] = Math.round(lo.color[1] + t * (hi.color[1] - lo.color[1]));
+    pixels[i * 4 + 2] = Math.round(lo.color[2] + t * (hi.color[2] - lo.color[2]));
+    pixels[i * 4 + 3] = 255; // Alfa opaco — la transparencia se controla via u_opacity
   }
 
   return pixels;
 }
 
 export default class TempDataTexture {
+  /**
+   * @param {WebGLRenderingContext} gl
+   */
   constructor(gl) {
     this.gl = gl;
-    this.gridWidth = GRID_WIDTH;
+    this.gridWidth  = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
 
+    // --- Textura de datos de temperatura (360×180, LUMINANCE, UNSIGNED_BYTE) ---
     this.tempTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.tempTexture);
 
+    // NEAREST + CLAMP_TO_EDGE — la interpolación bilineal se hace en el shader
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+    // Inicializar con ceros
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
+      gl.TEXTURE_2D, 0, gl.LUMINANCE,
       GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
+      gl.LUMINANCE, gl.UNSIGNED_BYTE, emptyData
     );
 
+    // --- Textura de paleta de color (256×1, RGBA) ---
     this.rampTexture = gl.createTexture();
-    this._uploadRamp(TEMP_COLOR_STOPS);
+    this._uploadRamp();
   }
 
-  _uploadRamp(ramp) {
+  /**
+   * Sube la paleta de color a la GPU.
+   */
+  _uploadRamp() {
     const gl = this.gl;
-    const pixels = buildTempColorRampTexture(ramp);
+    const pixels = buildTempColorRampTexture();
 
     gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -107,65 +117,60 @@ export default class TempDataTexture {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
-      1024, 1, 0,
+      256, 1, 0,
       gl.RGBA, gl.UNSIGNED_BYTE, pixels
     );
   }
 
+  /**
+   * Actualiza la textura de datos con el grid de temperatura actual.
+   * @param {Array} gridData — Array de { latitud, longitud, temp/temperatura/val }
+   */
   update(gridData) {
     if (!gridData || gridData.length === 0) return;
 
     const gl = this.gl;
-    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
 
     for (const point of gridData) {
+      // PostgreSQL devuelve DECIMAL como string — parsear explícitamente
       const lat = Number(point.latitud !== undefined ? point.latitud : point.lat);
       const lon = Number(point.longitud !== undefined ? point.longitud : point.lon);
 
       if (isNaN(lat) || isNaN(lon)) continue;
 
+      // Leer temperatura (soporta múltiples nombres de campo)
+      const tempKelvin = point.temp !== undefined
+        ? parseFloat(point.temp)
+        : (point.temperatura !== undefined
+          ? parseFloat(point.temperatura)
+          : parseFloat(point.val));
+
+      if (isNaN(tempKelvin) || tempKelvin === 0) continue;
+
+      // Mapear coordenadas geográficas a índices de textura
       const col = Math.round(lon + 179.5);
       const row = Math.round(lat + 89.5);
 
-      const tempKelvin = point.temp !== undefined ? parseFloat(point.temp) : (point.temperatura !== undefined ? parseFloat(point.temperatura) : parseFloat(point.val));
-
       if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
 
-      const pxIndex = (row * GRID_WIDTH + col) * 4;
-      if (tempKelvin === null || isNaN(tempKelvin) || tempKelvin === 0) {
-        // Transparencia total si no hay dato
-        pixels[pxIndex + 0] = 0;
-        pixels[pxIndex + 1] = 0;
-        pixels[pxIndex + 2] = 0;
-        pixels[pxIndex + 3] = 0;
-      } else {
-        // Conversión y mapeo
-        const tempC = tempKelvin - 273.15;
-        const pixelValue = Math.max(0, Math.min(255, Math.round(((tempC - (-70.0)) / 120.0) * 255)));
-        pixels[pxIndex + 0] = pixelValue;
-        pixels[pxIndex + 1] = 0;
-        pixels[pxIndex + 2] = 0;
-        pixels[pxIndex + 3] = 255;
-      }
+      // Convertir Kelvin -> Celsius y normalizar a [0, 255]
+      const tempC = tempKelvin - 273.15;
+      const norm = Math.max(0, Math.min(1, (tempC - MIN_TEMP) / TEMP_RANGE));
+      pixels[row * GRID_WIDTH + col] = Math.round(norm * 255);
     }
 
     gl.bindTexture(gl.TEXTURE_2D, this.tempTexture);
-
-    // Sonda Forense
-    const debugArray = new Uint8Array(pixels.buffer);
-    console.log("🔍 [Forensic Debug] Muestra de Píxeles (Primeros 20):", debugArray.slice(0, 20));
-    console.log("🔍 [Forensic Debug] Valor máx en canal R:", Math.max(...pixels.filter((_, i) => i % 4 === 0)));
-    console.log("🔍 [Forensic Debug] ¿Es la textura nula?", !this.tempTexture);
-
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-
-    // PARÁMETROS OBLIGATORIOS PARA RESOLUCIONES NPOT (ej. 360x180)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.LUMINANCE,
+      GRID_WIDTH, GRID_HEIGHT, 0,
+      gl.LUMINANCE, gl.UNSIGNED_BYTE, pixels
+    );
   }
 
+  /**
+   * Libera recursos GPU.
+   */
   destroy() {
     const gl = this.gl;
     if (this.tempTexture) gl.deleteTexture(this.tempTexture);
