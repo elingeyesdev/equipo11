@@ -370,3 +370,68 @@ export function sampleVisibilityBilinear(gridIndex, lng, lat) {
   
   return Math.max(0, Math.round(vis * 100) / 100);
 }
+
+/**
+ * Crea un índice optimizado para buscar valores de temperatura (escalar).
+ */
+export function buildTempGridIndex(gridData) {
+  const index = new Map();
+  if (!gridData || gridData.length === 0) return index;
+
+  for (const cell of gridData) {
+    const lat = parseFloat(cell.latitud);
+    const lon = parseFloat(cell.longitud);
+    const temp = parseFloat(cell.temp || cell.temperatura); // Soporta ambas convenciones
+
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+
+    const col = Math.round(lon + 179.5);
+    const row = Math.round(lat + 89.5);
+
+    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
+
+    index.set(`${row}_${col}`, isFinite(temp) ? temp : null);
+  }
+
+  return index;
+}
+
+function readTempCell(gridIndex, col, row) {
+  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
+  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
+  return gridIndex.get(`${row}_${col}`) || null;
+}
+
+/**
+ * Interpolación bilineal de temperatura (escalar) en una coordenada continua.
+ * Retorna en Kelvin crudo (o null si no hay datos).
+ */
+export function sampleTempBilinear(gridIndex, lng, lat) {
+  if (!gridIndex || gridIndex.size === 0) return null;
+  if (!isFinite(lng) || !isFinite(lat)) return null;
+  
+  lng = ((lng % 360) + 540) % 360 - 180;
+  lat = Math.max(-90, Math.min(90, lat));
+  
+  const texX = lng + 179.5;
+  const texY = lat + 89.5;
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+  
+  const t00 = readTempCell(gridIndex, x0, y0);
+  const t10 = readTempCell(gridIndex, x0 + 1, y0);
+  const t01 = readTempCell(gridIndex, x0, y0 + 1);
+  const t11 = readTempCell(gridIndex, x0 + 1, y0 + 1);
+  
+  // Si falta alguno de los 4, retornamos null para no promediar contra 0K (-273C)
+  if (t00 === null || t10 === null || t01 === null || t11 === null) return null;
+
+  const bottom = t00 * (1 - fx) + t10 * fx;
+  const top    = t01 * (1 - fx) + t11 * fx;
+  const temp   = bottom * (1 - fy) + top * fy;
+  
+  return temp;
+}
+

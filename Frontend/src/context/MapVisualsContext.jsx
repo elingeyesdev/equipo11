@@ -3,14 +3,14 @@ import { createContext, useContext, useState, useMemo } from 'react';
 const MapVisualsContext = createContext(null);
 
 export function MapVisualsProvider({ children }) {
-  const [isHeatmapActive, setIsHeatmapActive]       = useState(false);
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false);
   const [isChoroplethActive, setIsChoroplethActive] = useState(false);
-  const [heatmapMetric, setHeatmapMetric]           = useState('aqi');
-  const [showSensors, setShowSensors]               = useState(true);
-  const [isParticlesActive, setIsParticlesActive]   = useState(false);
-  const [particleFilters, setParticleFilters]       = useState({ rain: false, snow: false, wind: false, fog: false });
-  const [snowMapType, setSnowMapType]               = useState('depth'); // 'depth' o 'fresh'
-  const [isHistoricalMode, setIsHistoricalMode]     = useState(false);
+  const [heatmapMetric, setHeatmapMetric] = useState('aqi');
+  const [showSensors, setShowSensors] = useState(true);
+  const [isParticlesActive, setIsParticlesActive] = useState(false);
+  const [particleFilters, setParticleFilters] = useState({ rain: false, snow: false, wind: false, fog: false, temp: false });
+  const [snowMapType, setSnowMapType] = useState('depth'); // 'depth' o 'fresh'
+  const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [isDynamicHistoricalMode, setIsDynamicHistoricalMode] = useState(false);
 
   const value = useMemo(() => ({

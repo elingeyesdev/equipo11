@@ -105,8 +105,28 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
             }
             const { data: resp } = await httpClient.get(path, { params });
             const res = resp.data;
+            
+            // DEBUG SENSOR: Verificar llaves del JSON crudo
+            if (res && res.data && res.data.length > 0) {
+              res.data.forEach(cell => {
+                if (cell.temperatura !== undefined && cell.temperatura !== null) {
+                  const tempVal = parseFloat(cell.temperatura);
+                  cell.temperatura = isNaN(tempVal) ? null : tempVal;
+                }
+              });
+              console.log("🔍 Sonda GFS Backend (Primera Celda):", res.data[0]);
+            } else if (Array.isArray(res) && res.length > 0) {
+              res.forEach(cell => {
+                if (cell.temperatura !== undefined && cell.temperatura !== null) {
+                  const tempVal = parseFloat(cell.temperatura);
+                  cell.temperatura = isNaN(tempVal) ? null : tempVal;
+                }
+              });
+              console.log("🔍 Sonda GFS Backend (Primera Celda):", res[0]);
+            }
+
             setScannedGrid(res);
-            if (res.status === 'ready') {
+            if (res && res.status === 'ready') {
               clearInterval(intervalId);
               setIsFetchingRadar(false);
             } else {

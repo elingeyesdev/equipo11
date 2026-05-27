@@ -36,7 +36,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear } from '../../utils/windMath';
+import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear, buildTempGridIndex, sampleTempBilinear } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -163,6 +163,11 @@ function MapaMonitoreo() {
   const visGridIndex = useMemo(() => {
     if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
     return buildVisibilityGridIndex(scannedGrid.data);
+  }, [scannedGrid]);
+
+  const tempGridIndex = useMemo(() => {
+    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
+    return buildTempGridIndex(scannedGrid.data);
   }, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
@@ -326,6 +331,7 @@ function MapaMonitoreo() {
       if (metric.label === 'Precipitación' && particleFilters.rain) nextMetrics.push(metric);
       if (metric.label.includes('Nieve') && particleFilters.snow) nextMetrics.push(metric);
       if (metric.label === 'Visibilidad' && particleFilters.fog) nextMetrics.push(metric);
+      if (metric.label === 'Temperatura' && particleFilters.temp) nextMetrics.push(metric);
     }
 
     if (nextMetrics.length === 0) {
@@ -348,6 +354,15 @@ function MapaMonitoreo() {
     const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
     const localSnow = snowGridIndex ? sampleSnowBilinear(snowGridIndex, lng, lat) : null;
     const localVisRaw = visGridIndex ? sampleVisibilityBilinear(visGridIndex, lng, lat) : null;
+    
+    let localTempK = null;
+    try {
+      if (tempGridIndex) {
+        localTempK = sampleTempBilinear(tempGridIndex, lng, lat);
+      }
+    } catch (err) {
+      console.error("Error interpolando temperatura en CPU:", err);
+    }
 
     let displayVis = null;
     if (localVisRaw !== null) {
@@ -368,6 +383,13 @@ function MapaMonitoreo() {
     }
     if (isParticlesActive && particleFilters.fog && displayVis !== null) {
       activeMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
+    }
+    if (isParticlesActive && particleFilters.temp && localTempK !== null && !isNaN(localTempK) && isFinite(localTempK)) {
+      const baseTempC = localTempK - 273.15;
+      const unitDef = METRICAS_UNIDADES['temperatura'].unidades.find(u => u.key === unidades['temperatura']) || METRICAS_UNIDADES['temperatura'].unidades[0];
+      const formattedValue = unitDef.convertir(baseTempC).toFixed(unitDef.precision);
+      const suffix = unitDef.sufijo.trim();
+      activeMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
     }
 
     if (activeMetrics.length > 0) {
