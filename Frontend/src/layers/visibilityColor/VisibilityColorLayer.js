@@ -39,6 +39,8 @@ export default class VisibilityColorLayer {
     this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
 
+    // Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
+    // Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
 
@@ -47,6 +49,7 @@ export default class VisibilityColorLayer {
     const sw = { x: -5.0, y: yBottom };
     const se = { x:  6.0, y: yBottom };
 
+    // Dos triángulos: NW-NE-SW, NE-SE-SW
     const vertices = new Float32Array([
       nw.x, nw.y,
       ne.x, ne.y,

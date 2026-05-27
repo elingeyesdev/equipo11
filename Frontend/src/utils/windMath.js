@@ -251,3 +251,122 @@ export function sampleRainBilinear(gridIndex, lng, lat) {
 
   return Math.max(0, Math.round(rain * 100) / 100);
 }
+
+/**
+ * Crea un índice optimizado para buscar valores de nieve (escalar).
+ */
+export function buildSnowGridIndex(gridData) {
+  const index = new Map();
+  if (!gridData || gridData.length === 0) return index;
+
+  for (const cell of gridData) {
+    const lat = parseFloat(cell.latitud);
+    const lon = parseFloat(cell.longitud);
+    const snow = parseFloat(cell.snow);
+    const snowFresh = parseFloat(cell.snow_fresh);
+
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+
+    const col = Math.round(lon + 179.5);
+    const row = Math.round(lat + 89.5);
+
+    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
+
+    index.set(`${row}_${col}`, {
+      accumulated: isFinite(snow) ? snow : 0,
+      fresh: isFinite(snowFresh) ? snowFresh : 0
+    });
+  }
+
+  return index;
+}
+
+function readSnowCell(gridIndex, col, row) {
+  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
+  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
+  return gridIndex.get(`${row}_${col}`) || { accumulated: 0, fresh: 0 };
+}
+
+export function sampleSnowBilinear(gridIndex, lng, lat) {
+  if (!gridIndex || gridIndex.size === 0) return { accumulated: 0, fresh: 0 };
+  if (!isFinite(lng) || !isFinite(lat)) return { accumulated: 0, fresh: 0 };
+  
+  lng = ((lng % 360) + 540) % 360 - 180;
+  lat = Math.max(-90, Math.min(90, lat));
+  
+  const texX = lng + 179.5;
+  const texY = lat + 89.5;
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+  
+  const s00 = readSnowCell(gridIndex, x0, y0);
+  const s10 = readSnowCell(gridIndex, x0 + 1, y0);
+  const s01 = readSnowCell(gridIndex, x0, y0 + 1);
+  const s11 = readSnowCell(gridIndex, x0 + 1, y0 + 1);
+  
+  const bAcc = s00.accumulated * (1 - fx) + s10.accumulated * fx;
+  const tAcc = s01.accumulated * (1 - fx) + s11.accumulated * fx;
+  const acc = bAcc * (1 - fy) + tAcc * fy;
+
+  const bFr = s00.fresh * (1 - fx) + s10.fresh * fx;
+  const tFr = s01.fresh * (1 - fx) + s11.fresh * fx;
+  const fr = bFr * (1 - fy) + tFr * fy;
+  
+  return {
+    accumulated: Math.max(0, Math.round(acc * 100) / 100),
+    fresh: Math.max(0, Math.round(fr * 100) / 100)
+  };
+}
+
+/**
+ * Crea un índice optimizado para buscar valores de visibilidad (escalar).
+ */
+export function buildVisibilityGridIndex(gridData) {
+  const index = new Map();
+  if (!gridData || gridData.length === 0) return index;
+
+  for (const cell of gridData) {
+    const lat = parseFloat(cell.latitud);
+    const lon = parseFloat(cell.longitud);
+    const vis = parseFloat(cell.vis); // asumiendo que el JSON tiene .vis
+
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+
+    const col = Math.round(lon + 179.5);
+    const row = Math.round(lat + 89.5);
+
+    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
+
+    index.set(`${row}_${col}`, isFinite(vis) ? vis : 0);
+  }
+
+  return index;
+}
+
+export function sampleVisibilityBilinear(gridIndex, lng, lat) {
+  if (!gridIndex || gridIndex.size === 0) return 0;
+  if (!isFinite(lng) || !isFinite(lat)) return 0;
+  
+  lng = ((lng % 360) + 540) % 360 - 180;
+  lat = Math.max(-90, Math.min(90, lat));
+  
+  const texX = lng + 179.5;
+  const texY = lat + 89.5;
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+  
+  const v00 = readRainCell(gridIndex, x0, y0);
+  const v10 = readRainCell(gridIndex, x0 + 1, y0);
+  const v01 = readRainCell(gridIndex, x0, y0 + 1);
+  const v11 = readRainCell(gridIndex, x0 + 1, y0 + 1);
+  
+  const bottom = v00 * (1 - fx) + v10 * fx;
+  const top    = v01 * (1 - fx) + v11 * fx;
+  const vis    = bottom * (1 - fy) + top * fy;
+  
+  return Math.max(0, Math.round(vis * 100) / 100);
+}

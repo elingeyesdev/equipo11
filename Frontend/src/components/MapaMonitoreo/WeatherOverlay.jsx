@@ -272,7 +272,7 @@ function WeatherOverlay({
       <GridRadarLayer
         scannedGrid={protectedGrid}
         currentZoom={currentZoom}
-        particleFilters={particleFilters}
+        particleFilters={{ ...particleFilters, fog: false }}
       />
 
       {particleFilters.wind && dynamicWindLabels && (

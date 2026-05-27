@@ -10,39 +10,69 @@ const GRID_HEIGHT = 180;
 const MAX_RAIN = 50.0; // mm/h esperado para lluvia intensa/tormenta
 
 // --- Paleta Forense Estilo Meteored (Escalones Discretos) ---
-export const METEORED_RAMP = [
-  { min: 0.0, max: 0.2, color: [0, 0, 0, 0] },         // Transparente
-  { min: 0.2, max: 1.0, color: [100, 220, 255, 128] }, // Celeste suave
-  { min: 1.0, max: 3.0, color: [0, 150, 255, 160] },   // Azul medio
-  { min: 3.0, max: 5.0, color: [0, 50, 200, 200] },    // Azul oscuro
-  { min: 5.0, max: 10.0, color: [150, 0, 200, 230] },  // Púrpura
-  { min: 10.0, max: 20.0, color: [200, 0, 150, 255] }, // Magenta/Rosa
-  { min: 20.0, max: 50.0, color: [255, 100, 100, 255] },// Rosa claro/Rojo
-  { min: 50.0, max: 999.0, color: [150, 0, 0, 255] }    // Rojo oscuro/Granate
+export const RAIN_COLOR_STOPS = [
+  { val: 0.0, color: [0, 0, 0, 0] },
+  { val: 0.2, color: [162, 248, 248, 160] },     // Cyan muy claro
+  { val: 1.0, color: [60, 180, 255, 180] },      // Azul claro
+  { val: 3.0, color: [0, 100, 220, 210] },       // Azul medio
+  { val: 5.0, color: [0, 20, 150, 255] },        // Azul marino profundo
+  { val: 10.0, color: [30, 0, 90, 255] },        // Índigo oscuro
+  { val: 20.0, color: [150, 0, 150, 255] },      // Púrpura
+  { val: 30.0, color: [220, 40, 150, 255] },     // Rosa fuerte
+  { val: 40.0, color: [255, 0, 0, 255] },        // Rojo
+  { val: 50.0, color: [100, 0, 0, 255] }         // Granate
 ];
 
-function buildRainColorRampTexture(ramp, maxRain) {
-  // Aumentamos a 1024 píxeles para tener súper precisión en valores < 1mm
-  // 50 mm / 1024 = ~0.048 mm por píxel (resolución más que suficiente para el umbral de 0.2mm)
+function buildRainColorRampTexture(stops, maxRain) {
   const size = 1024;
   const pixels = new Uint8Array(size * 4);
+
+  // Asegurarnos de que los stops están ordenados por val
+  const sortedStops = [...stops].sort((a, b) => a.val - b.val);
 
   for (let i = 0; i < size; i++) {
     const rain = (i / (size - 1)) * maxRain;
 
-    let targetColor = ramp[ramp.length - 1].color; // Default al máximo
+    // Si es menor que el primer stop, asignamos el primer color
+    if (rain <= sortedStops[0].val) {
+      const c = sortedStops[0].color;
+      pixels[i * 4 + 0] = c[0];
+      pixels[i * 4 + 1] = c[1];
+      pixels[i * 4 + 2] = c[2];
+      pixels[i * 4 + 3] = c[3];
+      continue;
+    }
 
-    for (let j = 0; j < ramp.length; j++) {
-      if (rain >= ramp[j].min && (rain < ramp[j].max || j === ramp.length - 1)) {
-        targetColor = ramp[j].color;
+    // Si es mayor que el último stop, asignamos el último color
+    if (rain >= sortedStops[sortedStops.length - 1].val) {
+      const c = sortedStops[sortedStops.length - 1].color;
+      pixels[i * 4 + 0] = c[0];
+      pixels[i * 4 + 1] = c[1];
+      pixels[i * 4 + 2] = c[2];
+      pixels[i * 4 + 3] = c[3];
+      continue;
+    }
+
+    // Buscar entre qué dos stops se encuentra y hacer LERP
+    for (let j = 0; j < sortedStops.length - 1; j++) {
+      const currentStop = sortedStops[j];
+      const nextStop = sortedStops[j + 1];
+
+      if (rain >= currentStop.val && rain <= nextStop.val) {
+        const range = nextStop.val - currentStop.val;
+        // Evitar división por cero
+        const t = range > 0 ? (rain - currentStop.val) / range : 0;
+
+        const c1 = currentStop.color;
+        const c2 = nextStop.color;
+
+        pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * t;
+        pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * t;
+        pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * t;
+        pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * t;
         break;
       }
     }
-
-    pixels[i * 4 + 0] = targetColor[0];
-    pixels[i * 4 + 1] = targetColor[1];
-    pixels[i * 4 + 2] = targetColor[2];
-    pixels[i * 4 + 3] = targetColor[3];
   }
 
   return pixels;
@@ -78,7 +108,7 @@ export default class RainDataTexture {
 
     // --- Textura de paleta de color (256×1, RGBA) ---
     this.rampTexture = gl.createTexture();
-    this._uploadRamp(METEORED_RAMP);
+    this._uploadRamp(RAIN_COLOR_STOPS);
   }
 
   /**
@@ -91,9 +121,9 @@ export default class RainDataTexture {
     gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // Usamos NEAREST para mantener los escalones discretos duros y no difuminarlos
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // Cambiamos a LINEAR para maximizar la suavidad del LERP generado
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
       1024, 1, 0,
@@ -130,7 +160,7 @@ export default class RainDataTexture {
 
       // Normalizar intensidad de lluvia a [0, 255]
       const pixelValue = Math.max(0, Math.min(255, Math.round((rain / this.maxRain) * 255)));
-      
+
       // Empaquetado RGBA (Stride = 4)
       const index = (row * GRID_WIDTH + col) * 4;
       pixels[index] = pixelValue;     // R: Canal activo (Intensidad Lluvia)
@@ -140,7 +170,7 @@ export default class RainDataTexture {
     }
 
     gl.bindTexture(gl.TEXTURE_2D, this.rainTexture);
-    
+
     // Fuerza Interpolación Lineal estrictamente
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

@@ -70,7 +70,12 @@ export const fragmentSource = `
     // Buscar el color exacto en la textura de la paleta discreta (SNOW_RAMP)
     vec4 baseColor = texture2D(u_color_ramp, vec2(activeSnowNorm, 0.5));
     
+    // Filtrado de Ruido en el borde:
+    // Smoothstep difumina suavemente el borde exterior absoluto (de 0.0013 a 0.005)
+    // Conserva los escalones duros internos, pero funde la frontera exterior con el mapa.
+    float edgeAlpha = smoothstep(0.00133, 0.005, activeSnowNorm);
+
     // Aplicar opacidad
-    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
+    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity * edgeAlpha);
   }
 `;

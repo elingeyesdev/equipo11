@@ -1,4 +1,5 @@
 export const vertexSource = `
+  precision highp float;
   attribute vec2 a_pos;
   uniform mat4 u_matrix;
   varying vec2 v_mercator;
@@ -29,22 +30,47 @@ export const fragmentSource = `
     float ex = exp(merc_y);
     float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
 
-    // Calcular las coordenadas UV directamente basadas en lat y lon
-    vec2 uv = vec2((lon + 180.0) / 360.0, (lat + 90.0) / 180.0);
+    // 1. Mapear a resolución del Grid (Asumiendo 360x180)
+    float normalized_x = (lon + 180.0) / 360.0;
+    float normalized_y = (lat + 90.0) / 180.0;
 
-    // Extraer valor normalizado de visibilidad usando el filtro de textura (gl.LINEAR)
-    float visNorm = texture2D(u_vis_data, uv).r; 
+    // 2. Coordenadas de píxel continuas (el -0.5 alinea el centro del texel)
+    float px = normalized_x * 360.0 - 0.5;
+    float py = normalized_y * 180.0 - 0.5;
 
-    // Descartar solo si la visibilidad es mayor a ~22 km (cielo totalmente despejado)
-    // 22000 / 24000 = ~0.916
-    if (visNorm > 0.916) {
-      discard;
-    }
-    
-    // Buscar el color exacto en la textura de la paleta
+    // 3. Obtener el índice del píxel base y los pesos de mezcla (fract)
+    float x0 = floor(px);
+    float y0 = floor(py);
+    float u = fract(px); // ¡ESTO ES CRÍTICO PARA EL SUAVIZADO!
+    float v = fract(py); // ¡ESTO ES CRÍTICO PARA EL SUAVIZADO!
+
+    float x1 = x0 + 1.0;
+    float y1 = y0 + 1.0;
+
+    // 4. Clampear Y para no leer fuera de los polos (0 a 179)
+    float y0_c = clamp(y0, 0.0, 179.0);
+    float y1_c = clamp(y1, 0.0, 179.0);
+
+    // 5. WRAP MANUAL DEL ANTIMERIDIANO (Solo en la coordenada X de la textura)
+    // Usamos mod() en lugar de fract para manejar correctamente valores negativos si los hay
+    float wrap_x0 = mod(x0, 360.0);
+    float wrap_x1 = mod(x1, 360.0);
+
+    vec2 uv00 = vec2((wrap_x0 + 0.5) / 360.0, (y0_c + 0.5) / 180.0);
+    vec2 uv10 = vec2((wrap_x1 + 0.5) / 360.0, (y0_c + 0.5) / 180.0);
+    vec2 uv01 = vec2((wrap_x0 + 0.5) / 360.0, (y1_c + 0.5) / 180.0);
+    vec2 uv11 = vec2((wrap_x1 + 0.5) / 360.0, (y1_c + 0.5) / 180.0);
+
+    // 6. Leer los 4 píxeles exactos
+    float val00 = texture2D(u_vis_data, uv00).r;
+    float val10 = texture2D(u_vis_data, uv10).r;
+    float val01 = texture2D(u_vis_data, uv01).r;
+    float val11 = texture2D(u_vis_data, uv11).r;
+
+    // 7. Mezcla matemática final (Promedio Ponderado)
+    float visNorm = mix( mix(val00, val10, u), mix(val01, val11, u), v );
+
     vec4 baseColor = texture2D(u_color_ramp, vec2(visNorm, 0.5));
-    
-    // Aplicar opacidad
     gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
   }
 `;

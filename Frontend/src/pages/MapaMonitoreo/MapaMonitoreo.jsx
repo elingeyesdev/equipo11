@@ -9,7 +9,7 @@
  */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import Map, { NavigationControl, FullscreenControl, GeolocateControl } from 'react-map-gl/mapbox';
+import Map, { NavigationControl, FullscreenControl, GeolocateControl, Popup } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
@@ -36,7 +36,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear } from '../../utils/windMath';
+import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -44,6 +44,7 @@ function MapaMonitoreo() {
 
   const { unidades, cambiarUnidad } = useUnidades();
   const [selectedCity, setSelectedCity] = useState(null);
+  const [scalarPopup, setScalarPopup] = useState(null);
 
   // ─── Modo Simulación y Estado del Mapa ───────────────────────────────────
   const {
@@ -152,6 +153,16 @@ function MapaMonitoreo() {
   const rainGridIndex = useMemo(() => {
     if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
     return buildRainGridIndex(scannedGrid.data);
+  }, [scannedGrid]);
+
+  const snowGridIndex = useMemo(() => {
+    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
+    return buildSnowGridIndex(scannedGrid.data);
+  }, [scannedGrid]);
+
+  const visGridIndex = useMemo(() => {
+    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
+    return buildVisibilityGridIndex(scannedGrid.data);
   }, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
@@ -298,12 +309,71 @@ function MapaMonitoreo() {
     }
   };
 
+  // Sincronización del Popup con los toggles de las capas
+  useEffect(() => {
+    if (!scalarPopup) return;
+    
+    // Si la visualización principal está apagada, cerramos el popup
+    if (!isParticlesActive) {
+      setScalarPopup(null);
+      return;
+    }
+
+    const nextMetrics = [];
+    // Revisamos qué métricas del popup actual siguen estando activas en los filtros
+    for (const metric of scalarPopup.metrics) {
+      if (metric.label === 'Viento' && particleFilters.wind) nextMetrics.push(metric);
+      if (metric.label === 'Precipitación' && particleFilters.rain) nextMetrics.push(metric);
+      if (metric.label.includes('Nieve') && particleFilters.snow) nextMetrics.push(metric);
+      if (metric.label === 'Visibilidad' && particleFilters.fog) nextMetrics.push(metric);
+    }
+
+    if (nextMetrics.length === 0) {
+      setScalarPopup(null);
+    } else if (nextMetrics.length !== scalarPopup.metrics.length) {
+      setScalarPopup(prev => ({ ...prev, metrics: nextMetrics }));
+    }
+  }, [isParticlesActive, particleFilters, scalarPopup]);
+
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
 
     // ─── Modo Simulación: salir (ahora las zonas se manejan por FronterasPanel) ───
     if (isSimMode) {
       return;
+    }
+
+    // Interpolar de forma instantánea escalar/vectorial
+    const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
+    const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
+    const localSnow = snowGridIndex ? sampleSnowBilinear(snowGridIndex, lng, lat) : null;
+    const localVisRaw = visGridIndex ? sampleVisibilityBilinear(visGridIndex, lng, lat) : null;
+
+    let displayVis = null;
+    if (localVisRaw !== null) {
+      const visKm = localVisRaw / 1000.0;
+      displayVis = visKm > 24.0 ? '> 24.0' : visKm.toFixed(1);
+    }
+
+    const activeMetrics = [];
+    if (isParticlesActive && particleFilters.wind && localWind) {
+      activeMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
+    }
+    if (isParticlesActive && particleFilters.rain && localRain !== null) {
+      activeMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
+    }
+    if (isParticlesActive && particleFilters.snow && localSnow !== null) {
+      activeMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
+      activeMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
+    }
+    if (isParticlesActive && particleFilters.fog && displayVis !== null) {
+      activeMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
+    }
+
+    if (activeMetrics.length > 0) {
+      setScalarPopup({ lng, lat, metrics: activeMetrics });
+    } else {
+      setScalarPopup(null);
     }
 
     // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
@@ -318,10 +388,6 @@ function MapaMonitoreo() {
     if (nearest.city && nearest.dist < 2.5) {
       // Usar datos del sensor IoT / simulador más cercano
       const sourceLabel = isRunning ? 'simulación' : '📡 Sensor IoT';
-
-      // Interpolar viento y lluvia vectorialmente/escalar desde el grid (instantáneo)
-      const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
-      const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
 
       setSelectedCity({
         ...nearest.city,
@@ -356,10 +422,6 @@ function MapaMonitoreo() {
     }
 
     // Fuera del radio de sensores → consultar backend (datos reales completos)
-    // Interpolar de forma instantánea (sin esperar API)
-    const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
-    const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
-
     const clickCity = {
       id: `click_${Date.now()}`,
       name: 'Buscando zona...',
@@ -545,6 +607,31 @@ function MapaMonitoreo() {
               scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
               onCityClick={handleCityClick}
             />
+
+            {scalarPopup && (
+              <Popup
+                longitude={scalarPopup.lng}
+                latitude={scalarPopup.lat}
+                closeButton={true}
+                closeOnClick={false}
+                onClose={() => setScalarPopup(null)}
+                anchor="bottom"
+                offset={15}
+                className="premium-weather-popup"
+              >
+                <div style={{ background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', padding: '8px', minWidth: '120px' }}>
+                  {scalarPopup.metrics.map((m, idx) => (
+                    <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
+                      <div>
+                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
+                        <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Popup>
+            )}
           </Map>
 
           {isCompareMode && (

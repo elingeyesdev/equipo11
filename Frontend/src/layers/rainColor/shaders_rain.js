@@ -69,19 +69,16 @@ export const fragmentSource = `
       discard;
     }
 
-    // HACK DE DIAGNÓSTICO: Si rainNorm es > 0, pintar el fragmento de PÚRPURA NEÓN PURO.
-    // Si esto funciona y las manchas se ven suaves/interpoladas, sabemos que la textura 
-    // de datos llega y que el filtro LINEAR corre.
-    if (rainNorm > 0.05) {
-        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0); // Púrpura Neón / Magenta puro
-        return;
-    }
-
-    // Si el hack de arriba no corre, el problema está en la textura de rampa.
-    // Buscar el color en la textura de la paleta (código existente)
+    // Buscar el color exacto en la textura de la paleta discreta (RAIN_RAMP)
+    // El gl.NEAREST en JS nos garantiza el salto "duro" entre isobandas.
     vec4 baseColor = texture2D(u_color_ramp, vec2(rainNorm, 0.5));
     
-    // Aplicar la opacidad global conservando el diseño de la paleta
-    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
+    // Filtrado de Ruido en el borde:
+    // Smoothstep difumina suavemente el borde exterior absoluto (de 0.001 a 0.005)
+    // Esto funde el contorno exterior con el mapa, pero mantiene todos los cortes internos "duros".
+    float edgeAlpha = smoothstep(0.001, 0.005, rainNorm);
+    
+    // Aplicar la opacidad global multiplicada por el suavizado del borde
+    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity * edgeAlpha);
   }
 `;
