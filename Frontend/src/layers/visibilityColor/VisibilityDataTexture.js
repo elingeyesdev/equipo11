@@ -2,40 +2,30 @@ const GRID_WIDTH = 360;
 const GRID_HEIGHT = 180;
 const MAX_VISIBILITY = 24000.0;
 
-export const VISIBILITY_RAMP = [
-  { min: 0.0, max: 100.0, color: [130, 40, 0, 255] },        // Marrón muy oscuro (< 0.1 km)
-  { min: 100.0, max: 500.0, color: [190, 70, 0, 255] },      // Marrón anaranjado (0.1 - 0.5 km)
-  { min: 500.0, max: 1000.0, color: [230, 110, 20, 255] },   // Naranja fuerte (0.5 - 1.0 km)
-  { min: 1000.0, max: 2000.0, color: [245, 150, 50, 255] },  // Naranja medio (1.0 - 2.0 km)
-  { min: 2000.0, max: 3000.0, color: [250, 180, 100, 255] }, // Naranja claro (2.0 - 3.0 km)
-  { min: 3000.0, max: 5000.0, color: [240, 200, 150, 230] }, // Melocotón/Beige oscuro (3.0 - 5.0 km)
-  { min: 5000.0, max: 10000.0, color: [230, 220, 200, 180] },// Beige claro (5.0 - 10.0 km)
-  { min: 10000.0, max: 20000.0, color: [220, 220, 220, 100] },// Blanco bruma casi transparente (10.0 - 20.0 km)
-  { min: 20000.0, max: 99999.0, color: [0, 0, 0, 0] }        // Transparente (> 20.0 km)
-];
+function buildVisibilityColorRampTexture(maxVis) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1;
+  const ctx = canvas.getContext('2d');
 
-function buildVisibilityColorRampTexture(ramp, maxVis) {
-  const size = 1024;
-  const pixels = new Uint8Array(size * 4);
+  const gradient = ctx.createLinearGradient(0, 0, 1024, 0);
 
-  for (let i = 0; i < size; i++) {
-    const vis = (i / (size - 1)) * maxVis;
-    let targetColor = ramp[ramp.length - 1].color;
+  // Calculando offsets basados en 24km máximo (Meteored Palette):
+  gradient.addColorStop(0.00, "rgba(128, 32, 0, 1.0)");    // 0 km: Marrón muy oscuro
+  gradient.addColorStop(0.02, "rgba(180, 60, 0, 1.0)");    // ~0.5 km: Marrón anaranjado
+  gradient.addColorStop(0.04, "rgba(220, 100, 0, 1.0)");   // ~1 km: Naranja fuerte
+  gradient.addColorStop(0.08, "rgba(240, 140, 40, 0.9)");  // ~2 km: Naranja claro
+  gradient.addColorStop(0.12, "rgba(245, 180, 100, 0.8)"); // ~3 km: Naranja pálido / Ocre
+  gradient.addColorStop(0.20, "rgba(250, 210, 160, 0.7)"); // ~5 km: Beige oscuro
+  gradient.addColorStop(0.41, "rgba(255, 240, 220, 0.5)"); // ~10 km: Beige claro / Crema
+  gradient.addColorStop(0.83, "rgba(255, 255, 255, 0.0)"); // ~20 km: Transparente
+  gradient.addColorStop(1.00, "rgba(255, 255, 255, 0.0)"); // 24+ km: Transparente absoluto
 
-    for (let j = 0; j < ramp.length; j++) {
-      if (vis >= ramp[j].min && (vis < ramp[j].max || j === ramp.length - 1)) {
-        targetColor = ramp[j].color;
-        break;
-      }
-    }
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 1024, 1);
 
-    pixels[i * 4 + 0] = targetColor[0];
-    pixels[i * 4 + 1] = targetColor[1];
-    pixels[i * 4 + 2] = targetColor[2];
-    pixels[i * 4 + 3] = targetColor[3];
-  }
-
-  return pixels;
+  const imageData = ctx.getImageData(0, 0, 1024, 1);
+  return new Uint8Array(imageData.data.buffer);
 }
 
 export default class VisibilityDataTexture {
@@ -50,8 +40,8 @@ export default class VisibilityDataTexture {
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
     const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
     gl.texImage2D(
@@ -61,18 +51,18 @@ export default class VisibilityDataTexture {
     );
 
     this.rampTexture = gl.createTexture();
-    this._uploadRamp(VISIBILITY_RAMP);
+    this._uploadRamp();
   }
 
-  _uploadRamp(ramp) {
+  _uploadRamp() {
     const gl = this.gl;
-    const pixels = buildVisibilityColorRampTexture(ramp, this.maxVis);
+    const pixels = buildVisibilityColorRampTexture(this.maxVis);
 
     gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
       1024, 1, 0,
@@ -112,11 +102,10 @@ export default class VisibilityDataTexture {
     gl.bindTexture(gl.TEXTURE_2D, this.visTexture);
 
     // CONFIGURACIÓN CRÍTICA PARA EL SUAVIZADO:
-    // Usar Interpolación Lineal cuando el mapa se acerca (Magnificación)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    // Usar Interpolación Lineal cuando el mapa se aleja (Minificación)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    // Forzamos NEAREST (KISS). 
+    // La interpolación bilineal perfecta (con antimeridiano) se hace SIEMPRE en el shader mediante sampleBilinear()
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
     // Opcional pero recomendado para evitar artefactos en los bordes
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);

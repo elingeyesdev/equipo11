@@ -1,9 +1,12 @@
 const QUERY_PARAMS_BASE = [
   'lev_10_m_above_ground=on',
+  'lev_2_m_above_ground=on',
   'lev_mean_sea_level=on',
   'lev_surface=on',
   'lev_3000-0_m_above_ground=on',
   'lev_entire_atmosphere=on',
+  'var_TMP=on',
+  'var_TOZNE=on',
   'var_UGRD=on',
   'var_VGRD=on',
   'var_GUST=on',

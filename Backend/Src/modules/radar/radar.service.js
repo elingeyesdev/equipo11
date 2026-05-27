@@ -256,7 +256,7 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
         logger.error(`[DEBUG GRIB LS] Error: ${e.message}`);
       }
 
-      const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc, mapPrate, mapSdwe] = await Promise.all([
+      const [mapU, mapV, mapGust, mapPress, mapRain, mapSnow, mapVis, mapCape, mapHlcy, mapRefc, mapPrate, mapSdwe, mapTemp, mapOzone] = await Promise.all([
         extractGribData(getPathForVar('10u'), '10u', gridKeys),
         extractGribData(getPathForVar('10v'), '10v', gridKeys),
         extractGribData(getPathForVar('gust'), 'gust', gridKeys),
@@ -268,7 +268,9 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
         extractGribData(getPathForVar('hlcy'), 'hlcy', gridKeys),
         extractGribData(getPathForVar('refc'), 'refc', gridKeys),
         extractGribData(getPathForVar('prate'), 'prate', gridKeys),
-        extractGribData(getPathForVar('sdwe'), 'sdwe', gridKeys)
+        extractGribData(getPathForVar('sdwe'), 'sdwe', gridKeys),
+        extractGribData(getPathForVar('2t'), '2t', gridKeys), // ecCodes: 2t = Temperature at 2m
+        extractGribData(getPathForVar('tozne'), 'tozne', gridKeys) // ecCodes: tozne = Total Ozone
       ]);
 
       logger.info(`[Radar Scraper] Calculando vectores para ${forecastTimeStr}...`);
@@ -314,6 +316,12 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
           let visValue = mapVis.get(key);
           if (visValue === undefined || visValue < 0) visValue = null; // null explícito para pg
 
+          let tempValue = mapTemp.get(key);
+          if (tempValue === undefined) tempValue = null;
+
+          let ozoneValue = mapOzone.get(key);
+          if (ozoneValue === undefined) ozoneValue = null;
+
           gridData.push({
             lat, lon,
             wCode,
@@ -327,7 +335,9 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
             rain: Number(rainMmH.toFixed(2)),
             snow: Number(snowCm.toFixed(2)),
             snow_fresh: Number(snowFreshCm.toFixed(2)),
-            vis: visValue !== null ? Number(visValue.toFixed(2)) : null
+            vis: visValue !== null ? Number(visValue.toFixed(2)) : null,
+            temperatura: tempValue !== null ? Number(tempValue.toFixed(2)) : null,
+            ozono: ozoneValue !== null ? Number(ozoneValue.toFixed(2)) : null
           });
         }
       }
@@ -350,7 +360,8 @@ const processGribForUrl = async (url, dateStr, hourStr, forecastTimeStr, isBackg
       const values = [];
       const placeholders = chunk.map((p, idx) => {
         const offset = idx * 16;
-        values.push(p.lat, p.lon, p.wCode, null, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain, p.snow, p.snow_fresh, p.vis);
+        const tempVal = p.temperatura !== undefined ? p.temperatura : null;
+        values.push(p.lat, p.lon, p.wCode, tempVal, p.speed, p.dir, p.gust, p.press, forecastTimeStr, p.cape, p.hlcy, p.refc, p.rain, p.snow, p.snow_fresh, p.vis);
         return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14}, $${offset + 15}, $${offset + 16})`;
       }).join(',');
 

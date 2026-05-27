@@ -82,8 +82,7 @@ export default function ControlPanel({
               <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('clima_dinamico')}>
                 <div className="control-row-label">
                   <span className="control-icon">🌦️</span>
-                  <span className="control-text">Clima dinámico</span>
-                  {isParticlesActive && <span className="control-status on" style={{ marginLeft: '6px' }}>ON</span>}
+                  <span className="control-text">Mapas atmosféricos</span>
                 </div>
                 <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
               </div>
@@ -182,25 +181,13 @@ export default function ControlPanel({
                 Volver a Capas
               </div>
 
-              <div className="control-row">
-                <div className="control-row-label">
-                  <span className="control-icon">🌦️</span>
-                  <span className="control-text">Motor de Partículas</span>
-                </div>
-                <label className="ios-switch">
-                  <input type="checkbox" checked={isParticlesActive} onChange={(e) => setIsParticlesActive(e.target.checked)} />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-
-              <div className="controls-divider"></div>
-
-              <div style={{ paddingLeft: '20px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px', opacity: isParticlesActive ? 1 : 0.5, pointerEvents: isParticlesActive ? 'auto' : 'none' }}>
+              <div style={{ paddingLeft: '20px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {[
-                  { key: 'rain', label: 'Lluvia / Tormentas' },
-                  { key: 'snow', label: 'Nieve' },
-                  { key: 'fog', label: 'Visibilidad' },
-                  { key: 'wind', label: 'Viento / Tornados' },
+                  { key: 'temp', label: 'Temperatura', icon: '🌡️' },
+                  { key: 'rain', label: 'Lluvia / Tormentas', icon: '🌧️' },
+                  { key: 'snow', label: 'Nieve', icon: '❄️' },
+                  { key: 'fog', label: 'Visibilidad', icon: '🌫️' },
+                  { key: 'wind', label: 'Viento / Tornados', icon: '🌪️' },
                 ].map(f => (
                   <div key={f.key}>
                     <div className="control-row" style={{ minHeight: '30px' }}>
@@ -211,6 +198,7 @@ export default function ControlPanel({
                       <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
                         <input type="checkbox" checked={particleFilters[f.key]} onChange={(e) => {
                           const isChecked = e.target.checked;
+                          if (!isParticlesActive && isChecked) setIsParticlesActive(true); // Activa el canvas principal
                           if (f.key === 'fog') console.log(`[DEBUG VISIBILITY] Toggle activado: ${isChecked}`);
                           setParticleFilters(prev => {
                             if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, wind: true };
