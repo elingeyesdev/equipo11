@@ -8,10 +8,27 @@ export default function usePushPermission() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Sincronizar estado inicial del permiso al montar el hook
+  // Sincronizar estado del permiso y auto-obtener el token si ya está otorgado
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission);
+      const currentPermission = Notification.permission;
+      setPermission(currentPermission);
+
+      if (currentPermission === 'granted') {
+        // Auto-obtener el token en segundo plano sin bloquear el estado de carga inicial
+        const autoFetchToken = async () => {
+          try {
+            const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+            const currentToken = await getToken(messaging, { vapidKey });
+            if (currentToken) {
+              setToken(currentToken);
+            }
+          } catch (err) {
+            console.warn('[usePushPermission] Error al auto-obtener token FCM:', err);
+          }
+        };
+        autoFetchToken();
+      }
     } else {
       setError('Las notificaciones no están soportadas en este navegador.');
     }
