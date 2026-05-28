@@ -180,7 +180,13 @@ async function iniciarSimulacionZona(config, onTick) {
   const fuenteId    = await getFuenteSimulacionId();
   const fechaInicio = new Date();
 
-  const globalEsc = escenario || (zonas[0] && zonas[0].escenario) || { id: 'custom', nombre: 'Personalizado' };
+  const globalEsc = escenario || (zonas[0] && zonas[0].escenario) || { 
+    id: 'custom', 
+    nombre: 'Personalizado',
+    inicio: 20,
+    fin: 35,
+    curva: 'lineal'
+  };
 
   const configuracionSnapshot = {
     metricaClave, metricaNombre: meta.nombre, unidad: meta.unidad,
@@ -194,7 +200,7 @@ async function iniciarSimulacionZona(config, onTick) {
 
   for (const z of zonas) {
     const localidadId = await crearLocalidadTemporal(z.centroide, z.nombre);
-    const escZ = z.escenario || escenario;
+    const escZ = z.escenario || escenario || globalEsc;
     const lecturas = generarDatos(escZ, metricaClave, dias, intervalMinutos, fechaInicio, umbrales);
     totalLecturas += lecturas.length;
     await guardarLecturas(lecturas, localidadId, metricaId, fuenteId, sesionId);

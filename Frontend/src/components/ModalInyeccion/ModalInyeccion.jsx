@@ -99,8 +99,8 @@ function ModalInyeccion({ isOpen, onClose }) {
                   { id: 'lapaz', name: 'La Paz' }, { id: 'cochabamba', name: 'Cochabamba' },
                   { id: 'santacruz', name: 'Santa Cruz' }, { id: 'oruro', name: 'Oruro' },
                   { id: 'potosi', name: 'Potosí' }, { id: 'sucre', name: 'Sucre' },
-                  { id: 'tarija', name: 'Tarija' }, { id: 'beni', name: 'Trinidad' },
-                  { id: 'pando', name: 'Cobija' }
+                  { id: 'tarija', name: 'Tarija' }, { id: 'trinidad', name: 'Trinidad' },
+                  { id: 'cobija', name: 'Cobija' }
                 ]).map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}

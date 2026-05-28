@@ -214,12 +214,15 @@ export function addTempLayers(map, customLayer, data) {
 }
 
 export function removeTempLayers(map) {
+  if (!map) return;
   try {
-    if (map.getLayer('temp-color-layer')) map.removeLayer('temp-color-layer');
-    if (map.getLayer('custom-coastline-temp')) map.removeLayer('custom-coastline-temp');
-    removeCityTempLabels(map);
+    if (map.getStyle()) {
+      if (map.getLayer('temp-color-layer')) map.removeLayer('temp-color-layer');
+      if (map.getLayer('custom-coastline-temp')) map.removeLayer('custom-coastline-temp');
+      removeCityTempLabels(map);
+    }
   } catch (e) {
-    console.warn('[TempColorLayer] Error removiendo capas:', e.message);
+    console.warn('[TempColorLayer] Error removiendo capas de temperatura:', e.message);
   }
 }
 

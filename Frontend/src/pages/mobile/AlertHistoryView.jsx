@@ -10,7 +10,7 @@ export default function AlertHistoryView() {
     const fetchAlertas = async () => {
       try {
         const { data } = await httpClient.get('/alertas?limit=20&page=1');
-        const items = data?.data?.rows || data?.rows || [];
+        const items = data?.data?.alertas || [];
         setAlertas(items);
       } catch (err) {
         console.error('[Mobile] Error fetching alertas:', err);
