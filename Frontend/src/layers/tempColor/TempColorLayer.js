@@ -13,6 +13,7 @@
 import mapboxgl from 'mapbox-gl';
 import TempDataTexture from './TempDataTexture.js';
 import { vertexSource, fragmentSource } from './shaders_temp.js';
+import { findOptimalInsertionPoint } from '../windColor/layerManager.js';
 
 export default class TempColorLayer {
   /**
@@ -24,7 +25,7 @@ export default class TempColorLayer {
     this.id = options.id || 'temp-color-layer';
     this.type = 'custom';
     this.renderingMode = '2d';
-    this.opacity = options.opacity ?? 0.6;
+    this.opacity = options.opacity ?? 0.90;
 
     // Estado interno
     this._program = null;
@@ -189,39 +190,112 @@ export default class TempColorLayer {
 // ─── Funciones de Gestión de Capa ────────────────────────────────────
 
 export function addTempLayers(map, customLayer, data) {
-  if (data) {
-    customLayer.updateData(data);
+  const insertBefore = findOptimalInsertionPoint(map);
+
+  map.addLayer(customLayer, insertBefore);
+
+  // Capa de costas (fronteras hacia el mar)
+  if (!map.getLayer('custom-coastline-temp')) {
+    map.addLayer({
+      id: 'custom-coastline-temp',
+      type: 'line',
+      source: 'composite',
+      'source-layer': 'water',
+      paint: {
+        'line-color': 'rgba(0, 0, 0, 0.4)',
+        'line-width': 1.5,
+      }
+    }, insertBefore);
   }
 
-  if (!map.getLayer(customLayer.id)) {
-    // Buscar la capa óptima para insertar debajo de etiquetas y fronteras
-    let beforeId = null;
-    const style = map.getStyle();
-    if (style && style.layers) {
-      for (const layer of style.layers) {
-        if (layer.type === 'symbol' || (layer.id && (layer.id.includes('boundary') || layer.id.includes('label')))) {
-          beforeId = layer.id;
-          break;
-        }
-      }
-    }
-
-    // Fallback por si acaso
-    if (!beforeId) {
-      beforeId = map.getLayer('waterway-label') ? 'waterway-label' :
-                 (map.getLayer('place-label') ? 'place-label' : null);
-    }
-
-    if (beforeId) {
-      map.addLayer(customLayer, beforeId);
-    } else {
-      map.addLayer(customLayer);
-    }
+  if (data && data.length > 0) {
+    customLayer.updateData(data);
   }
 }
 
 export function removeTempLayers(map) {
-  if (map.getLayer('temp-color-layer')) {
-    map.removeLayer('temp-color-layer');
+  try {
+    if (map.getLayer('temp-color-layer')) map.removeLayer('temp-color-layer');
+    if (map.getLayer('custom-coastline-temp')) map.removeLayer('custom-coastline-temp');
+    removeCityTempLabels(map);
+  } catch (e) {
+    console.warn('[TempColorLayer] Error removiendo capas:', e.message);
   }
+}
+
+// ─── Capa de Etiquetas de Temperatura en Ciudades Globales ─────────────────────
+
+const TEMP_CITY_SOURCE_ID = 'city-temp-source';
+const TEMP_CITY_LAYER_ID = 'city-temp-labels';
+
+export function addCityTempLabels(map, geojson, activeTempUnit) {
+  try {
+    if (map.getSource(TEMP_CITY_SOURCE_ID)) return; // Ya existe
+
+    map.addSource(TEMP_CITY_SOURCE_ID, {
+      type: 'geojson',
+      data: geojson,
+    });
+
+    map.addLayer({
+      id: TEMP_CITY_LAYER_ID,
+      type: 'symbol',
+      source: TEMP_CITY_SOURCE_ID,
+      layout: {
+        'text-field': [
+          'concat',
+          ['get', 'name'], '\n',
+          ['to-string', ['round', ['to-number', ['get', 'temperatura']]]],
+          ` °${activeTempUnit}`
+        ],
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': [
+          'interpolate', ['linear'], ['zoom'],
+          2, 10,
+          5, 12,
+          8, 14,
+        ],
+        'text-offset': [0, 0],
+        'text-anchor': 'center',
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+        'text-padding': 8,
+        'text-optional': true,
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.85)',
+        'text-halo-width': 1.8,
+        'text-halo-blur': 0.5,
+      },
+    });
+  } catch (e) {
+    console.warn('[TempColorLayer] Error añadiendo etiquetas:', e.message);
+  }
+}
+
+export function updateCityTempLabels(map, geojson, activeTempUnit) {
+  try {
+    const source = map.getSource(TEMP_CITY_SOURCE_ID);
+    if (source) {
+      source.setData(geojson);
+      if (map.getLayer(TEMP_CITY_LAYER_ID)) {
+        map.setLayoutProperty(TEMP_CITY_LAYER_ID, 'text-field', [
+          'concat',
+          ['get', 'name'], '\n',
+          ['to-string', ['round', ['to-number', ['get', 'temperatura']]]],
+          ` °${activeTempUnit}`
+        ]);
+      }
+    }
+  } catch (e) {
+    console.warn('[TempColorLayer] Error actualizando etiquetas:', e.message);
+  }
+}
+
+export function removeCityTempLabels(map) {
+  try {
+    if (map.getLayer(TEMP_CITY_LAYER_ID)) map.removeLayer(TEMP_CITY_LAYER_ID);
+    if (map.getSource(TEMP_CITY_SOURCE_ID)) map.removeSource(TEMP_CITY_SOURCE_ID);
+  } catch (_) { /* ignore */ }
 }

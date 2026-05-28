@@ -435,3 +435,49 @@ export function sampleTempBilinear(gridIndex, lng, lat) {
   return temp;
 }
 
+/**
+ * Convierte temperatura de Kelvin a la unidad solicitada.
+ * @param {number} k — Temperatura en Kelvin
+ * @param {'C'|'F'|'K'} unit — Unidad de destino
+ * @returns {number}
+ */
+function convertTemp(k, unit) {
+  let val;
+  if (unit === 'F') {
+    val = (k - 273.15) * 1.8 + 32;
+  } else if (unit === 'C') {
+    val = k - 273.15;
+  } else {
+    val = k;
+  }
+  return val;
+}
+
+/**
+ * Genera un GeoJSON FeatureCollection con la temperatura
+ * interpolada y convertida para cada ciudad del catálogo.
+ *
+ * @param {Array} cities — Array de { name, lng, lat }
+ * @param {Map} tempGridIndex — Índice precalculado via buildTempGridIndex()
+ * @param {'C'|'F'|'K'} unit — Unidad de temperatura del usuario (default: 'C')
+ * @returns {Object} — GeoJSON FeatureCollection
+ */
+export function buildCitiesTempGeoJSON(cities, tempGridIndex, unit = 'C') {
+  const features = cities.map(city => {
+    const tempK = sampleTempBilinear(tempGridIndex, city.lng, city.lat);
+    if (tempK === null) return null;
+
+    const converted = convertTemp(tempK, unit);
+    return {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [city.lng, city.lat] },
+      properties: {
+        name: city.name,
+        temperatura: Math.round(converted * 10) / 10, // 1 decimal de precisión
+      },
+    };
+  }).filter(Boolean);
+
+  return { type: 'FeatureCollection', features };
+}
+

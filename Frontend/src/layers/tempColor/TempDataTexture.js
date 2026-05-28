@@ -12,9 +12,9 @@
 // Constantes del grid global (1° resolución, centros en ±0.5)
 const GRID_WIDTH  = 360;
 const GRID_HEIGHT = 180;
-const MIN_TEMP    = -40;  // °C — límite inferior de normalización
-const MAX_TEMP    =  50;  // °C — límite superior de normalización
-const TEMP_RANGE  = MAX_TEMP - MIN_TEMP; // 90°C
+const MIN_TEMP    = -60;  // °C — límite inferior de normalización
+const MAX_TEMP    =  60;  // °C — límite superior de normalización
+const TEMP_RANGE  = MAX_TEMP - MIN_TEMP; // 120°C
 
 // ─── Paleta de Colores: Leyenda Meteorológica de 48 tonos ─────────────
 
@@ -30,18 +30,18 @@ function buildTempColorRampTexture() {
 
   // Los 11 stops de la leyenda meteorológica.
   // Cada stop: { t: posición normalizada [0,1], color: [R, G, B] en 0-255 }
+  // Rango: 0.0 = -60°C, 1.0 = +60°C (120° de amplitud)
   const stops = [
-    { t: 0.00, color: [255,   0, 255] },  // -40°C  Magenta
-    { t: 0.11, color: [128,   0, 128] },  // -30°C  Púrpura
-    { t: 0.22, color: [  0,   0, 139] },  // -20°C  Azul oscuro
-    { t: 0.33, color: [  0,   0, 255] },  // -10°C  Azul claro
-    { t: 0.44, color: [  0, 255, 255] },  //   0°C  Cian
-    { t: 0.45, color: [  0, 128, 128] },  //  +1°C  Teal (salto brusco en congelación)
-    { t: 0.55, color: [  0, 255,   0] },  //  10°C  Verde claro
-    { t: 0.66, color: [255, 255,   0] },  //  20°C  Amarillo
-    { t: 0.77, color: [255, 165,   0] },  //  30°C  Naranja
-    { t: 0.88, color: [139,   0,   0] },  //  40°C  Rojo oscuro
-    { t: 1.00, color: [128, 128, 128] },  //  50°C  Gris
+    { t: 0.00, color: [255, 255, 255] },  // -60°C  Blanco puro
+    { t: 0.08, color: [255, 255, 255] },  // -50.4°C Blanco puro
+    { t: 0.20, color: [128,   0, 128] },  // -36°C  Violeta/Magenta oscuro
+    { t: 0.40, color: [  0,   0, 255] },  // -12°C  Azul
+    { t: 0.50, color: [  0, 255, 255] },  //   0°C  Cian
+    { t: 0.60, color: [  0, 255,   0] },  //  12°C  Verde
+    { t: 0.75, color: [255, 165,   0] },  //  30°C  Naranja
+    { t: 0.79, color: [255,   0,   0] },  //  35°C  Rojo Puro
+    { t: 0.85, color: [178,  34,  34] },  //  42°C  Rojo Carmesí
+    { t: 1.00, color: [ 59,   0,   0] },  //  60°C  Granate casi negro
   ];
 
   for (let i = 0; i < size; i++) {
