@@ -12,10 +12,11 @@ import SnowColorLayer from '../../layers/snowColor/SnowColorLayer.js';
 import { addSnowLayers, removeSnowLayers } from '../../layers/snowColor/layerManager_snow.js';
 import VisibilityColorLayer from '../../layers/visibilityColor/VisibilityColorLayer.js';
 import { addVisibilityLayers, removeVisibilityLayers } from '../../layers/visibilityColor/layerManager_visibility.js';
-import TempColorLayer, { addTempLayers, removeTempLayers } from '../../layers/tempColor/TempColorLayer.js';
+import TempColorLayer, { addTempLayers, removeTempLayers, addCityTempLabels, updateCityTempLabels, removeCityTempLabels } from '../../layers/tempColor/TempColorLayer.js';
 import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 import { GLOBAL_CITIES } from '../../utils/globalCities.js';
-import { buildGridIndex, buildCitiesWindGeoJSON } from '../../utils/windMath.js';
+import { buildGridIndex, buildCitiesWindGeoJSON, buildTempGridIndex, buildCitiesTempGeoJSON } from '../../utils/windMath.js';
+import { useUnidades } from '../../hooks/useUnidades';
 
 /**
  * WeatherOverlay — Orquesta las capas visuales de clima dinámico.
@@ -40,6 +41,8 @@ function WeatherOverlay({
   dynamicWindLabels
 }) {
   const { snowMapType } = useMapVisuals();
+  const { unidades } = useUnidades();
+  const activeTempUnit = unidades['temperatura'] || 'C';
   const { current: map } = useMap();
   const windLayerRef = useRef(null);
   const rainLayerRef = useRef(null);
@@ -68,6 +71,18 @@ function WeatherOverlay({
     if (!gridIndex || gridIndex.size === 0) return null;
     return buildCitiesWindGeoJSON(GLOBAL_CITIES, gridIndex);
   }, [gridIndex]);
+
+  // --- Precalcular el índice escalar del grid para temperatura ---
+  const tempGridIndex = useMemo(() => {
+    if (!protectedGrid || protectedGrid.length === 0) return null;
+    return buildTempGridIndex(protectedGrid);
+  }, [protectedGrid]);
+
+  // --- Generar GeoJSON de ciudades con temperatura interpolada ---
+  const citiesTempGeoJSON = useMemo(() => {
+    if (!tempGridIndex || tempGridIndex.size === 0) return null;
+    return buildCitiesTempGeoJSON(GLOBAL_CITIES, tempGridIndex, activeTempUnit);
+  }, [tempGridIndex, activeTempUnit]);
 
   // --- Ciclo de vida del WindColorLayer (WebGL) ---
   useEffect(() => {
@@ -276,10 +291,16 @@ function WeatherOverlay({
       if (!rawMap.getLayer('temp-color-layer')) {
         const layer = new TempColorLayer({
           id: 'temp-color-layer',
-          opacity: 0.85,
+          opacity: 0.90,
         });
         tempLayerRef.current = layer;
         addTempLayers(rawMap, layer, dataRef.current);
+      }
+      // Inyectar etiquetas de ciudades globales si hay datos
+      if (citiesTempGeoJSON) {
+        if (!rawMap.getSource('city-temp-source')) {
+          addCityTempLabels(rawMap, citiesTempGeoJSON, activeTempUnit);
+        }
       }
     };
 
@@ -299,7 +320,15 @@ function WeatherOverlay({
       }
       tempLayerRef.current = null;
     };
-  }, [map, isParticlesActive, particleFilters.temp]);
+  }, [map, isParticlesActive, particleFilters.temp, citiesTempGeoJSON, activeTempUnit]);
+
+  // --- Forzar Sincronización de Unidades en Mapbox ---
+  useEffect(() => {
+    if (!map || !citiesTempGeoJSON) return;
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+    updateCityTempLabels(rawMap, citiesTempGeoJSON, activeTempUnit);
+  }, [map, citiesTempGeoJSON, activeTempUnit]);
 
   // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
   useEffect(() => {
@@ -343,6 +372,8 @@ function WeatherOverlay({
           />
         </Source>
       )}
+
+
     </>
   );
 }

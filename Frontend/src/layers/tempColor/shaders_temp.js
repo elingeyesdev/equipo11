@@ -1,61 +1,96 @@
-export const vertexShaderSource = `
-  uniform mat4 u_matrix;
+/**
+ * shaders_temp.js — Vertex y Fragment shaders GLSL para la capa de color de temperatura.
+ *
+ * Arquitectura clonada de windColor/shaders.js para garantizar
+ * alineación píxel-perfect con el mapa de Mapbox.
+ *
+ * Responsabilidad: definir únicamente la lógica de rendering.
+ * - El vertex shader posiciona un quad geográfico usando la matriz de Mapbox.
+ * - El fragment shader convierte coordenadas Mercator → lon/lat,
+ *   muestrea la textura de datos con interpolación bilineal,
+ *   y mapea la temperatura a color via la textura del color ramp.
+ *
+ * Interpolación bilineal manual:
+ *   El shader realiza 4 muestreos explícitos y mezcla con mix().
+ *   El eje X usa fract() para resolver el antimeridiano (lon ±180°).
+ */
+
+export const vertexSource = `
   attribute vec2 a_pos;
-  varying vec2 v_texCoord;
+  uniform mat4 u_matrix;
+  varying vec2 v_mercator;
+
   void main() {
-    v_texCoord = a_pos * 0.5 + 0.5; // Normalizar clip space a UV 0-1
     gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);
+    v_mercator = a_pos;
   }
 `;
 
-export const fragmentShaderSource = `
+export const fragmentSource = `
   precision highp float;
 
   uniform sampler2D u_temp_data;
   uniform sampler2D u_color_ramp;
   uniform float u_opacity;
-  uniform float u_offset;
+  uniform vec2 u_tex_size;
 
-  varying vec2 v_texCoord;
+  varying vec2 v_mercator;
 
-  // Manual bilinear interpolation to wrap properly
-  vec4 textureBilinear(sampler2D tex, vec2 uv, vec2 size) {
-    uv = clamp(uv, 0.0, 1.0);
-    vec2 pos = uv * size - 0.5;
-    vec2 f = fract(pos);
+  const float PI = 3.14159265359;
 
-    vec2 pos00 = floor(pos) / size;
-    vec2 pos10 = (floor(pos) + vec2(1.0, 0.0)) / size;
-    vec2 pos01 = (floor(pos) + vec2(0.0, 1.0)) / size;
-    vec2 pos11 = (floor(pos) + vec2(1.0, 1.0)) / size;
+  // Interpolación bilineal manual con wrap horizontal perfecto (antimeridiano).
+  // Muestrea 4 texeles vecinos y mezcla suavemente garantizando continuidad en longitud ±180°.
+  float sampleBilinear(vec2 uv) {
+    vec2 texelCoord = uv * u_tex_size - 0.5;
+    vec2 base = floor(texelCoord);
+    vec2 f = fract(texelCoord);
 
-    // Fix antimeridian wrap manually
-    pos00.x = fract(pos00.x);
-    pos10.x = fract(pos10.x);
-    pos01.x = fract(pos01.x);
-    pos11.x = fract(pos11.x);
+    // Wrap horizontal con fract() — continuidad perfecta en el Pacífico
+    float x0 = fract(base.x / u_tex_size.x) * u_tex_size.x;
+    float x1 = fract((base.x + 1.0) / u_tex_size.x) * u_tex_size.x;
 
-    vec4 t00 = texture2D(tex, pos00);
-    vec4 t10 = texture2D(tex, pos10);
-    vec4 t01 = texture2D(tex, pos01);
-    vec4 t11 = texture2D(tex, pos11);
+    // Clamp vertical — los polos no se envuelven
+    float y0 = clamp(base.y, 0.0, u_tex_size.y - 1.0);
+    float y1 = clamp(base.y + 1.0, 0.0, u_tex_size.y - 1.0);
 
-    vec4 tA = mix(t00, t10, f.x);
-    vec4 tB = mix(t01, t11, f.x);
-    return mix(tA, tB, f.y);
+    // Convertir a coordenadas UV normalizadas [0,1], centrado exacto en el texel
+    vec2 uv00 = (vec2(x0, y0) + 0.5) / u_tex_size;
+    vec2 uv10 = (vec2(x1, y0) + 0.5) / u_tex_size;
+    vec2 uv01 = (vec2(x0, y1) + 0.5) / u_tex_size;
+    vec2 uv11 = (vec2(x1, y1) + 0.5) / u_tex_size;
+
+    // 4 muestreos explícitos (NEAREST garantizado en JS)
+    // LUMINANCE: WebGL pone el byte en .r, .g, .b — leemos .r
+    float s00 = texture2D(u_temp_data, uv00).r;
+    float s10 = texture2D(u_temp_data, uv10).r;
+    float s01 = texture2D(u_temp_data, uv01).r;
+    float s11 = texture2D(u_temp_data, uv11).r;
+
+    // Mezcla bilineal: horizontal primero, luego vertical
+    return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
   }
 
   void main() {
-    // 1. Invertir el eje Y (1.0 - uv.y) para ver si la textura está "boca abajo"
-    vec2 uv = vec2(fract(v_texCoord.x + u_offset), 1.0 - v_texCoord.y);
-    
-    vec4 tempPixel = textureBilinear(u_temp_data, uv, vec2(360.0, 180.0));
-    
-    if (tempPixel.a < 0.1) discard;
+    // --- Mercator -> Geográfico ---
+    // Envolver la coordenada Mercator X para resolver el Antimeridiano / Mapbox Wrapping
+    float wrappedMercatorX = fract(v_mercator.x);
+    float lon = wrappedMercatorX * 360.0 - 180.0;
+    float merc_y = PI * (1.0 - 2.0 * v_mercator.y);
+    float ex = exp(merc_y);
+    float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
 
-    float tempNorm = clamp(tempPixel.r, 0.0, 1.0);
-    vec4 color = texture2D(u_color_ramp, vec2(tempNorm, 0.5));
+    // --- Geográfico -> UV de la textura equirectangular ---
+    vec2 uv = vec2(
+      (lon + 180.0) / 360.0,
+      (lat + 90.0) / 180.0
+    );
 
-    gl_FragColor = vec4(color.rgb, 0.7 * u_opacity);
+    // Interpolación bilineal manual SIEMPRE activa (KISS + Garantiza antimeridiano)
+    float temp = sampleBilinear(uv);
+
+    // Muestrear la paleta de color (textura 1D de 256 px)
+    vec4 color = texture2D(u_color_ramp, vec2(temp, 0.5));
+
+    gl_FragColor = vec4(color.rgb, color.a * u_opacity);
   }
 `;
