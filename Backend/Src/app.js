@@ -4,6 +4,7 @@ const authRoutes = require('./modules/auth/auth.routes')
 const { globalLimiter, authLimiter } = require('./middleware/rateLimiter')
 const { success, error } = require('./utils/response')
 const whatsappClient = require('./config/whatsappClient')
+const cacheHeaders = require('./middleware/cacheHeaders')
 
 const app = express()
 
@@ -11,6 +12,7 @@ const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'
 app.use(cors({ origin: corsOrigin }))
 app.use(express.json())
 app.use('/api', globalLimiter)
+app.use(cacheHeaders)
 
 // Rutas
 app.use('/api/auth', authLimiter, authRoutes)

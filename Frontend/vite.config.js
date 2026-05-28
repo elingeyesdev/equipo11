@@ -44,6 +44,22 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
+            urlPattern: /\/api\/(historial|sensores|alertas)/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'api-data-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 3600 }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/api\.mapbox\.com/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'mapbox-cache',
+              expiration: { maxEntries: 30, maxAgeSeconds: 86400 }
+            }
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
