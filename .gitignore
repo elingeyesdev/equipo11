@@ -62,3 +62,5 @@ data/
 
 # Archivos temporales del Radar
 *.grib2
+backend_logs.txt
+package-lock.json
