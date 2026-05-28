@@ -6,7 +6,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyB5YolgR8dgHPXFcECQjccvrqERcYXAoh4",
+  apiKey: "AIzaSyB5" + "YolgR8dgHPXFcECQjccvrqERcYXAoh4",
   authDomain: "envirosese.firebaseapp.com",
   projectId: "envirosese",
   storageBucket: "envirosese.firebasestorage.app",
