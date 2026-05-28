@@ -68,14 +68,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['77749660e2248f.lhr.life', 'big-dolls-behave.loca.lt'],
     watch: {
       usePolling: true,
-    }
-  },
-  proxy: {
-    '/api': {
-      target: 'http://localhost:3000',
-      changeOrigin: true,
     },
+    proxy: {
+      '/api': {
+        target: 'http://backend:3000',
+        changeOrigin: true,
+      },
+    }
   }
 })

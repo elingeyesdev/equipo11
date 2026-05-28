@@ -7,7 +7,6 @@ const METRIC_CONFIG = {
   ica: { label: 'ICA', unit: '', accent: 'var(--moss)' },
   humedad: { label: 'Humedad', unit: '%', accent: 'var(--river)' },
   ruido: { label: 'Ruido', unit: 'dB', accent: 'var(--amber)' },
-  viento: { label: 'Viento', unit: 'km/h', accent: 'var(--violet)' },
 }
 
 function formatValue(v) {

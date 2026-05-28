@@ -31,15 +31,7 @@
   color: var(--text-primary);
 }
 
-.mobile-distance-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-extra-light);
-  padding: 3px 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-}
+
 
 .mobile-current-temp {
   font-size: 14px;

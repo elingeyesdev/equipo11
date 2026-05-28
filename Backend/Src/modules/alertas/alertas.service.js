@@ -215,7 +215,7 @@ function filtrarParaEmision(alertas) {
  * Inserta en batch las alertas nuevas en la tabla `alertas`.
  * @param {Array} alertas
  */
-async function guardarAlertas(alertas) {
+async function guardarAlertas(alertas, options = {}) {
   if (!alertas.length) return
 
   try {
@@ -235,6 +235,43 @@ async function guardarAlertas(alertas) {
     )
 
     logger.info(`[Alertas] ${alertas.length} alerta(s) guardada(s)`)
+
+    // Integración de Notificaciones Push (FCM)
+    const { sendPushNotification } = require('../notifications/notification.service')
+    const { getSubscriberTokens } = require('../notifications/notification.model')
+
+    for (const a of alertas) {
+      if (a.severidad === 'critica' || a.severidad === 'emergencia') {
+        try {
+          const tokens = await getSubscriberTokens(a.localidad_id)
+          if (tokens.length > 0) {
+            let title, body;
+            const cityName = a.ciudad_nombre || 'Localidad';
+
+            if (options.isManual) {
+              title = `Inyección Manual: ${cityName}`;
+              body = `Valor inyectado de ${a.metrica_clave} (${a.valor}) a ${cityName} es muy peligroso y alcanzó nivel ${a.label.toLowerCase()}.`;
+            } else {
+              title = `Simulación: ${cityName}`;
+              body = `La simulación en ${cityName} detectó ${a.metrica_clave} en ${a.valor}, por lo tanto es muy peligroso (${a.label.toLowerCase()}).`;
+            }
+
+            await sendPushNotification(tokens, {
+              title,
+              body,
+              data: {
+                localidadId: String(a.localidad_id),
+                metricaClave: a.metrica_clave,
+                valor: String(a.valor),
+                severidad: a.severidad
+              }
+            })
+          }
+        } catch (pushErr) {
+          logger.error('[Alertas] Error al procesar envío de push para alerta:', pushErr.message)
+        }
+      }
+    }
   } catch (err) {
     logger.error('[Alertas] Error guardando alertas:', err.message)
   }

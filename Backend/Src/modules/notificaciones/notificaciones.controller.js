@@ -1,5 +1,13 @@
 const db = require('../../config/db');
 const { success, error } = require('../../utils/response');
+const { saveToken, removeToken } = require('../notifications/notification.model');
+const z = require('zod');
+const logger = require('../../utils/logger');
+
+// Validador Zod para el token
+const TokenSchema = z.object({
+  token: z.string().min(10, 'El token es demasiado corto').max(1024, 'El token es demasiado largo')
+});
 
 const getSettings = async (req, res) => {
   try {
@@ -33,4 +41,48 @@ const updateSettings = async (req, res) => {
   }
 };
 
-module.exports = { getSettings, updateSettings };
+const subscribe = async (req, res) => {
+  try {
+    const parseResult = TokenSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return error(res, parseResult.error.errors[0].message, 400);
+    }
+
+    const { token } = parseResult.data;
+    const userId = req.usuario?.id;
+    if (!userId) {
+      return error(res, 'No autorizado: usuario no identificado.', 401);
+    }
+
+    await saveToken(userId, token);
+    logger.info(`[notificaciones] Token FCM suscrito para el usuario ${userId}`);
+    success(res, { mensaje: 'Notificaciones activadas correctamente.' });
+  } catch (err) {
+    logger.error('[notificaciones] Error al guardar suscripción push:', err);
+    error(res, 'Error al activar las notificaciones push.', 500);
+  }
+};
+
+const unsubscribe = async (req, res) => {
+  try {
+    const parseResult = TokenSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return error(res, parseResult.error.errors[0].message, 400);
+    }
+
+    const { token } = parseResult.data;
+    await removeToken(token);
+    logger.info('[notificaciones] Token FCM desuscrito de la base de datos');
+    success(res, { mensaje: 'Notificaciones desactivadas correctamente.' });
+  } catch (err) {
+    logger.error('[notificaciones] Error al eliminar suscripción push:', err);
+    error(res, 'Error al desactivar las notificaciones push.', 500);
+  }
+};
+
+module.exports = { 
+  getSettings, 
+  updateSettings,
+  subscribe,
+  unsubscribe
+};

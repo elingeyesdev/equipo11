@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "pnpm install && nodemon index.js",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -22,6 +22,7 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
+    "firebase-admin": "^12.1.0",
     "jsonwebtoken": "^9.0.3",
     "node-telegram-bot-api": "^0.66.0",
     "nodemailer": "^6.9.13",

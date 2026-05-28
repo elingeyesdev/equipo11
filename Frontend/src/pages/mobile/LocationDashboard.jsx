@@ -6,6 +6,7 @@ import QuickMetricCard from '../../components/MobileCards/QuickMetricCard'
 import LocationHeader from '../../components/MobileCards/LocationHeader'
 import LoadingSkeleton from '../../components/MobileCards/LoadingSkeleton'
 import LocationError from '../../components/MobileCards/LocationError'
+import PushSubscriptionManager from '../../components/MobileCards/PushSubscriptionManager'
 import { getFullDataForPoint } from '../../utils/weatherApi'
 import './LocationDashboard.css'
 
@@ -189,6 +190,10 @@ export default function LocationDashboard() {
             />
           )
         })}
+      </div>
+
+      <div style={{ marginTop: '24px' }}>
+        <PushSubscriptionManager />
       </div>
     </div>
   )
