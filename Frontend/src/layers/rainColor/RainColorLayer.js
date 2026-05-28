@@ -146,6 +146,16 @@ export default class RainColorLayer {
     if (this._map) this._map.triggerRepaint();
   }
 
+  /**
+   * Cambia la paleta de colores dinámicamente (Open/Closed Principle).
+   */
+  setColorRamp(ramp) {
+    if (this._texManager) {
+      this._texManager.setColorRamp(ramp);
+      if (this._map) this._map.triggerRepaint();
+    }
+  }
+
   // ─── Helpers Privados ──────────────────────────────────────────
 
   _compileShader(gl, type, source) {

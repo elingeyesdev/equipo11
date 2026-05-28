@@ -7,7 +7,7 @@ export default class VisibilityColorLayer {
     this.id = options.id || 'visibility-color-layer';
     this.type = 'custom';
     this.renderingMode = '2d';
-    this.opacity = options.opacity ?? 0.85;
+    this.opacity = options.opacity ?? 0.90;
 
     this._program = null;
     this._buffer = null;
@@ -127,6 +127,13 @@ export default class VisibilityColorLayer {
   setOpacity(value) {
     this.opacity = value;
     if (this._map) this._map.triggerRepaint();
+  }
+
+  setColorRamp(ramp) {
+    if (this._texManager) {
+      this._texManager.setColorRamp(ramp);
+      if (this._map) this._map.triggerRepaint();
+    }
   }
 
   _compileShader(gl, type, source) {

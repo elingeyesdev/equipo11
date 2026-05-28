@@ -5,110 +5,44 @@
  *  - Textura 2D de intensidad de lluvia (360x180, LUMINANCE)
  */
 
+import { buildRainColorRampTexture, DEFAULT_RAIN_RAMP } from './colorRamps_rain.js';
+
 const GRID_WIDTH = 360;
 const GRID_HEIGHT = 180;
-const MAX_RAIN = 50.0; // mm/h esperado para lluvia intensa/tormenta
-
-// --- Paleta Forense Estilo Meteored (Escalones Discretos) ---
-export const RAIN_COLOR_STOPS = [
-  { val: 0.0, color: [0, 0, 0, 0] },
-  { val: 0.2, color: [162, 248, 248, 160] },     // Cyan muy claro
-  { val: 1.0, color: [60, 180, 255, 180] },      // Azul claro
-  { val: 3.0, color: [0, 100, 220, 210] },       // Azul medio
-  { val: 5.0, color: [0, 20, 150, 255] },        // Azul marino profundo
-  { val: 10.0, color: [30, 0, 90, 255] },        // Índigo oscuro
-  { val: 20.0, color: [150, 0, 150, 255] },      // Púrpura
-  { val: 30.0, color: [220, 40, 150, 255] },     // Rosa fuerte
-  { val: 40.0, color: [255, 0, 0, 255] },        // Rojo
-  { val: 50.0, color: [100, 0, 0, 255] }         // Granate
-];
-
-function buildRainColorRampTexture(stops, maxRain) {
-  const size = 1024;
-  const pixels = new Uint8Array(size * 4);
-
-  // Asegurarnos de que los stops están ordenados por val
-  const sortedStops = [...stops].sort((a, b) => a.val - b.val);
-
-  for (let i = 0; i < size; i++) {
-    const rain = (i / (size - 1)) * maxRain;
-
-    // Si es menor que el primer stop, asignamos el primer color
-    if (rain <= sortedStops[0].val) {
-      const c = sortedStops[0].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
-    }
-
-    // Si es mayor que el último stop, asignamos el último color
-    if (rain >= sortedStops[sortedStops.length - 1].val) {
-      const c = sortedStops[sortedStops.length - 1].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
-    }
-
-    // Buscar entre qué dos stops se encuentra y hacer LERP
-    for (let j = 0; j < sortedStops.length - 1; j++) {
-      const currentStop = sortedStops[j];
-      const nextStop = sortedStops[j + 1];
-
-      if (rain >= currentStop.val && rain <= nextStop.val) {
-        const range = nextStop.val - currentStop.val;
-        // Evitar división por cero
-        const t = range > 0 ? (rain - currentStop.val) / range : 0;
-
-        const c1 = currentStop.color;
-        const c2 = nextStop.color;
-
-        pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * t;
-        pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * t;
-        pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * t;
-        pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * t;
-        break;
-      }
-    }
-  }
-
-  return pixels;
-}
+const MAX_RAIN = 150.0;
 
 export default class RainDataTexture {
   /**
    * @param {WebGLRenderingContext} gl
+   * @param {Array} colorRamp
    */
-  constructor(gl) {
+  constructor(gl, colorRamp = DEFAULT_RAIN_RAMP) {
     this.gl = gl;
     this.maxRain = MAX_RAIN;
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
+    this.colorRamp = colorRamp;
 
-    // --- Textura de datos de lluvia (360x180, RGBA, UNSIGNED_BYTE) ---
+    // --- Textura de datos de lluvia (360x180, LUMINANCE, UNSIGNED_BYTE) ---
     this.rainTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.rainTexture);
 
-    // Forzar LINEAR explícitamente para habilitar interpolación suave (Anti-Puntillismo)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    // Inicializar con ceros (4 canales por pixel: R, G, B, A)
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+    // Inicializar con ceros (1 canal por píxel: LUMINANCE)
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
+      gl.TEXTURE_2D, 0, gl.LUMINANCE,
       GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
+      gl.LUMINANCE, gl.UNSIGNED_BYTE, emptyData
     );
 
     // --- Textura de paleta de color (256×1, RGBA) ---
     this.rampTexture = gl.createTexture();
-    this._uploadRamp(RAIN_COLOR_STOPS);
+    this._uploadRamp(this.colorRamp);
   }
 
   /**
@@ -116,17 +50,17 @@ export default class RainDataTexture {
    */
   _uploadRamp(ramp) {
     const gl = this.gl;
-    const pixels = buildRainColorRampTexture(ramp, this.maxRain);
+    const pixels = buildRainColorRampTexture(ramp);
 
     gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // Cambiamos a LINEAR para maximizar la suavidad del LERP generado
+    // Cambiamos a LINEAR para maximizar la suavidad del LERP
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
-      1024, 1, 0,
+      256, 1, 0,
       gl.RGBA, gl.UNSIGNED_BYTE, pixels
     );
   }
@@ -139,11 +73,12 @@ export default class RainDataTexture {
     if (!gridData || gridData.length === 0) return;
 
     const gl = this.gl;
-    // Buffer RGBA seguro (Width * Height * 4 bytes) para evitar Texture Stride mismatch
-    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+    // LUMINANCE = 1 byte por píxel
+    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
+    const stops = this.colorRamp;
+    const stopsCount = stops.length;
 
     for (const point of gridData) {
-      // Extracción dinámica de Latitud y Longitud
       const lat = Number(point.latitud !== undefined ? point.latitud : point.lat);
       const lon = Number(point.longitud !== undefined ? point.longitud : point.lon);
 
@@ -152,21 +87,38 @@ export default class RainDataTexture {
       const col = Math.round(lon + 179.5);
       const row = Math.round(lat + 89.5);
 
-      // Extracción dinámica del valor de la lluvia (KISS)
       let rain = Number(point.rain !== undefined ? point.rain : (point.value !== undefined ? point.value : point.val));
       if (isNaN(rain) || rain < 0) rain = 0;
 
       if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
 
-      // Normalizar intensidad de lluvia a [0, 255]
-      const pixelValue = Math.max(0, Math.min(255, Math.round((rain / this.maxRain) * 255)));
+      // Calcular norm [0.0 - 1.0] basado en interpolación por índices
+      let norm = 0;
+      if (rain <= stops[0].val) {
+        norm = 0;
+      } else if (rain >= stops[stopsCount - 1].val) {
+        norm = 1.0;
+      } else {
+        // Encontrar entre qué stops cae
+        for (let i = 0; i < stopsCount - 1; i++) {
+          const currentStop = stops[i];
+          const nextStop = stops[i + 1];
+          if (rain >= currentStop.val && rain <= nextStop.val) {
+            const range = nextStop.val - currentStop.val;
+            const t = range > 0 ? (rain - currentStop.val) / range : 0;
+            // Índice fraccional
+            const virtualIndex = i + t;
+            norm = virtualIndex / (stopsCount - 1);
+            break;
+          }
+        }
+      }
 
-      // Empaquetado RGBA (Stride = 4)
-      const index = (row * GRID_WIDTH + col) * 4;
-      pixels[index] = pixelValue;     // R: Canal activo (Intensidad Lluvia)
-      pixels[index + 1] = 0;          // G: Vacío
-      pixels[index + 2] = 0;          // B: Vacío
-      pixels[index + 3] = 255;        // A: Alpha en 1.0 (opaco)
+      const pixelValue = Math.max(0, Math.min(255, Math.round(norm * 255)));
+
+      // Empaquetado LUMINANCE (1 byte per pixel)
+      const index = (row * GRID_WIDTH + col);
+      pixels[index] = pixelValue;
     }
 
     gl.bindTexture(gl.TEXTURE_2D, this.rainTexture);
@@ -175,12 +127,17 @@ export default class RainDataTexture {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    // Subida estricta usando gl.RGBA
+    // Subida estricta usando gl.LUMINANCE
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
+      gl.TEXTURE_2D, 0, gl.LUMINANCE,
       GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, pixels
+      gl.LUMINANCE, gl.UNSIGNED_BYTE, pixels
     );
+  }
+  
+  setColorRamp(ramp) {
+    this.colorRamp = ramp;
+    this._uploadRamp(ramp);
   }
 
   /**

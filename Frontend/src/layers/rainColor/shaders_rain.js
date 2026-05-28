@@ -69,16 +69,10 @@ export const fragmentSource = `
       discard;
     }
 
-    // Buscar el color exacto en la textura de la paleta discreta (RAIN_RAMP)
-    // El gl.NEAREST en JS nos garantiza el salto "duro" entre isobandas.
+    // Buscar el color exacto en la textura de la paleta
     vec4 baseColor = texture2D(u_color_ramp, vec2(rainNorm, 0.5));
     
-    // Filtrado de Ruido en el borde:
-    // Smoothstep difumina suavemente el borde exterior absoluto (de 0.001 a 0.005)
-    // Esto funde el contorno exterior con el mapa, pero mantiene todos los cortes internos "duros".
-    float edgeAlpha = smoothstep(0.001, 0.005, rainNorm);
-    
-    // Aplicar la opacidad global multiplicada por el suavizado del borde
-    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity * edgeAlpha);
+    // Aplicar la opacidad global directamente
+    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
   }
 `;

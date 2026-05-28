@@ -16,14 +16,13 @@ export const fragmentSource = `
   uniform sampler2D u_color_ramp;
   uniform float u_opacity;
   uniform vec2 u_tex_size;
-  uniform int u_snow_type;
 
   varying vec2 v_mercator;
 
   const float PI = 3.14159265359;
 
   // Interpolación bilineal perfecta que corrige el desfase de medio píxel
-  vec2 sampleBilinear(float lon, float lat) {
+  float sampleBilinear(float lon, float lat) {
     vec2 texelCoord = vec2(lon + 180.0, lat + 90.0);
     vec2 base = floor(texelCoord);
     vec2 f = fract(texelCoord);
@@ -39,10 +38,10 @@ export const fragmentSource = `
     vec2 uv01 = (vec2(x0, y1) + 0.5) / u_tex_size;
     vec2 uv11 = (vec2(x1, y1) + 0.5) / u_tex_size;
 
-    vec2 s00 = texture2D(u_snow_data, uv00).rg;
-    vec2 s10 = texture2D(u_snow_data, uv10).rg;
-    vec2 s01 = texture2D(u_snow_data, uv01).rg;
-    vec2 s11 = texture2D(u_snow_data, uv11).rg;
+    float s00 = texture2D(u_snow_data, uv00).r;
+    float s10 = texture2D(u_snow_data, uv10).r;
+    float s01 = texture2D(u_snow_data, uv01).r;
+    float s11 = texture2D(u_snow_data, uv11).r;
 
     return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
   }
@@ -55,27 +54,15 @@ export const fragmentSource = `
     float ex = exp(merc_y);
     float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
 
-    // Extraer ambos valores normalizados de la nieve (r = acumulada, g = fresca)
-    vec2 snowNorms = sampleBilinear(lon, lat); 
-    
-    // Seleccionar según el toggle del usuario
-    float activeSnowNorm = u_snow_type == 1 ? snowNorms.g : snowNorms.r;
+    // Extraer valor de nieve
+    float activeSnowNorm = sampleBilinear(lon, lat); 
 
-    // Umbral estricto: Descartar si es menor a 0.2 cm. 
-    // Asumiendo MAX_SNOW = 150.0, entonces 0.2 / 150.0 = ~0.00133
-    if (activeSnowNorm < 0.00133) {
+    if (activeSnowNorm < 0.001) {
       discard;
     }
     
-    // Buscar el color exacto en la textura de la paleta discreta (SNOW_RAMP)
-    vec4 baseColor = texture2D(u_color_ramp, vec2(activeSnowNorm, 0.5));
+    vec4 color = texture2D(u_color_ramp, vec2(activeSnowNorm, 0.5));
     
-    // Filtrado de Ruido en el borde:
-    // Smoothstep difumina suavemente el borde exterior absoluto (de 0.0013 a 0.005)
-    // Conserva los escalones duros internos, pero funde la frontera exterior con el mapa.
-    float edgeAlpha = smoothstep(0.00133, 0.005, activeSnowNorm);
-
-    // Aplicar opacidad
-    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity * edgeAlpha);
+    gl_FragColor = vec4(color.rgb, color.a * u_opacity);
   }
 `;
