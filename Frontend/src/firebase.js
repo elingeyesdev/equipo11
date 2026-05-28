@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging } from 'firebase/messaging';
+import { getMessaging, onMessage } from 'firebase/messaging';
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'tu_api_key_aqui',
@@ -22,3 +22,11 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     console.error('Error al registrar el Firebase Service Worker:', err);
   });
 }
+
+onMessage(messaging, (payload) => {
+  console.log('[firebase.js] Recibida notificación en primer plano (foreground):', payload);
+  if (payload.notification) {
+    const { title, body } = payload.notification;
+    window.dispatchEvent(new CustomEvent('push-received', { detail: { title, body, data: payload.data } }));
+  }
+});
