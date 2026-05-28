@@ -1,28 +1,27 @@
 // Frontend/public/firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
+// Usar la misma versión major que el paquete npm (firebase@12.x → compat 11.x no existe → usar 10.14.1 última estable compat)
+// Firebase compat scripts solo están disponibles hasta v10. Para v11+ se usa el módulo ESM.
+// Pero Service Workers necesitan importScripts, así que usamos la última compat estable.
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
 
-// Inicializa Firebase en el Service Worker.
-// Nota: Dado que este archivo se sirve como un recurso estático en el navegador,
-// no puede acceder directamente a las variables de entorno de Vite en tiempo de compilación.
-// En producción, reemplaza estos marcadores con tus credenciales reales de Firebase.
 firebase.initializeApp({
-  apiKey: "tu_api_key_aqui",
-  authDomain: "tu_auth_domain_aqui",
-  projectId: "tu_proyecto_id_aqui",
-  messagingSenderId: "tu_messaging_sender_id_aqui",
-  appId: "tu_app_id_aqui"
+  apiKey: "AIzaSyB5YolgR8dgHPXFcECQjccvrqERcYXAoh4",
+  authDomain: "envirosese.firebaseapp.com",
+  projectId: "envirosese",
+  storageBucket: "envirosese.firebasestorage.app",
+  messagingSenderId: "1087204840916",
+  appId: "1:1087204840916:web:eeb3f07422c61e6830b241"
 });
 
 const messaging = firebase.messaging();
 
-// Handler para recibir notificaciones en segundo plano (cuando la app está cerrada)
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Recibida notificación en segundo plano:', payload);
+  console.log('[firebase-messaging-sw.js] Notificación en segundo plano:', payload);
 
-  const notificationTitle = payload.notification.title || 'Alerta EnviroSense';
+  const notificationTitle = payload.notification?.title || 'Alerta EnviroSense';
   const notificationOptions = {
-    body: payload.notification.body || 'Se ha detectado un cambio en los niveles ambientales.',
+    body: payload.notification?.body || 'Se ha detectado un cambio en los niveles ambientales.',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     data: payload.data

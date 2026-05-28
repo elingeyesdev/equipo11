@@ -28,7 +28,7 @@ function registerSocketEvents(io) {
         // ─ Detección de alertas ─
         const alertasNuevas = await alertasService.evaluarTick(data)
         if (alertasNuevas.length > 0) {
-          await alertasService.guardarAlertas(alertasNuevas)
+          await alertasService.guardarAlertas(alertasNuevas, { isManual: false })
           const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
           if (paraEmitir.length > 0) {
             io.emit('alertas:nueva', paraEmitir)
@@ -70,7 +70,7 @@ function registerSocketEvents(io) {
         if (ciudadInyectada) {
           const alertasNuevas = await alertasService.evaluarTick({ cities: [ciudadInyectada] })
           if (alertasNuevas.length > 0) {
-            await alertasService.guardarAlertas(alertasNuevas)
+            await alertasService.guardarAlertas(alertasNuevas, { isManual: true })
             const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas)
             if (paraEmitir.length > 0) {
               io.emit('alertas:nueva', paraEmitir)
