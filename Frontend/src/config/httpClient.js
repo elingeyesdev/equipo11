@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { clearSession } from '../utils/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_BASE } from './api';
 
 const httpClient = axios.create({
   baseURL: API_BASE,

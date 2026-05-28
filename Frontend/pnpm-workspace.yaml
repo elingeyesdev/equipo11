@@ -1,4 +1,6 @@
 packages:
   - '.'
 allowBuilds:
+  '@firebase/util': set this to true or false
   '@tsparticles/engine': false
+  protobufjs: set this to true or false

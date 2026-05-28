@@ -61,10 +61,17 @@ async function initDatabase() {
         wind_direction INT,
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS fcm_tokens (
+        id SERIAL PRIMARY KEY,
+        usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
     `);
-    logger.info('✅ Tablas de caché verificadas/creadas.');
+    logger.info('✅ Tablas de caché y fcm_tokens verificadas/creadas.');
   } catch (err) {
-    logger.error('❌ Error creando tablas de caché:', err.message);
+    logger.error('❌ Error creando tablas de caché/fcm_tokens:', err.message);
   }
 
   // 1. Verificar Notificaciones
