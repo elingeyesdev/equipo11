@@ -19,6 +19,7 @@
     "@turf/voronoi": "^7.3.5",
     "axios": "^1.15.1",
     "firebase": "^12.13.0",
+    "idb": "^8.0.0",
     "mapbox-gl": "^3.20.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
