@@ -1,9 +1,8 @@
 # Imagen base: Node.js 20 versión ligera
 FROM node:20-alpine
 
-# Habilitar Corepack para gestionar pnpm sin depender de npm
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Instalar pnpm globalmente
+RUN npm install -g pnpm@9
 
 WORKDIR /app
 
