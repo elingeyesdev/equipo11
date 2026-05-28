@@ -235,6 +235,32 @@ async function guardarAlertas(alertas) {
     )
 
     logger.info(`[Alertas] ${alertas.length} alerta(s) guardada(s)`)
+
+    // Integración de Notificaciones Push (FCM)
+    const { sendPushNotification } = require('../notifications/notification.service')
+    const { getSubscriberTokens } = require('../notifications/notification.model')
+
+    for (const a of alertas) {
+      if (a.severidad === 'critica' || a.severidad === 'emergencia') {
+        try {
+          const tokens = await getSubscriberTokens(a.localidad_id)
+          if (tokens.length > 0) {
+            await sendPushNotification(tokens, {
+              title: `Alerta ${a.severidad.toUpperCase()} - ${a.ciudad_nombre || 'Localidad'}`,
+              body: `Se ha detectado nivel ${a.label} (${a.severidad}) en ${a.metrica_clave}: ${a.valor}`,
+              data: {
+                localidadId: String(a.localidad_id),
+                metricaClave: a.metrica_clave,
+                valor: String(a.valor),
+                severidad: a.severidad
+              }
+            })
+          }
+        } catch (pushErr) {
+          logger.error('[Alertas] Error al procesar envío de push para alerta:', pushErr.message)
+        }
+      }
+    }
   } catch (err) {
     logger.error('[Alertas] Error guardando alertas:', err.message)
   }

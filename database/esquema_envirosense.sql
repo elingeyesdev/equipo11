@@ -657,3 +657,17 @@ INSERT INTO configuracion_notificaciones (tipo, habilitado, destino) VALUES
   ('telegram', false, '')
 ON CONFLICT (tipo) DO NOTHING;
 
+
+-- =============================================================================
+-- BLOQUE 12 — TOKENS DE DISPOSITIVOS PARA NOTIFICACIONES PUSH (FCM)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+  id SERIAL PRIMARY KEY,
+  usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_fcm_tokens_usuario ON fcm_tokens(usuario_id);
+
+
