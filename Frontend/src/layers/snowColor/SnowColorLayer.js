@@ -7,17 +7,17 @@ export default class SnowColorLayer {
     this.id = options.id || 'snow-color-layer';
     this.type = 'custom';
     this.renderingMode = '2d';
-    this.opacity = options.opacity ?? 0.85;
+    this.opacity = options.opacity ?? 0.90;
     this.snowType = options.snowType ?? 0;
 
     this._program = null;
     this._buffer = null;
     this._texManager = null;
     this._pendingData = null;
+    this._lastData = null;
   }
 
   onAdd(map, gl) {
-    console.log(" [DEBUG SNOW] Capa de nieve añadida al mapa, inicializando WebGL");
     this._map = map;
     this._gl = gl;
 
@@ -39,7 +39,6 @@ export default class SnowColorLayer {
     this._uColorRamp      = gl.getUniformLocation(this._program, 'u_color_ramp');
     this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
-    this._uSnowType       = gl.getUniformLocation(this._program, 'u_snow_type');
 
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
@@ -65,7 +64,8 @@ export default class SnowColorLayer {
     this._texManager = new SnowDataTexture(gl);
 
     if (this._pendingData) {
-      this._texManager.update(this._pendingData);
+      this._texManager.update(this._pendingData, this.snowType);
+      this._lastData = this._pendingData;
       this._pendingData = null;
     }
   }
@@ -78,7 +78,6 @@ export default class SnowColorLayer {
     gl.uniformMatrix4fv(this._uMatrix, false, matrix);
     gl.uniform1f(this._uOpacity, this.opacity);
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
-    gl.uniform1i(this._uSnowType, this.snowType);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.snowTexture);
@@ -116,8 +115,9 @@ export default class SnowColorLayer {
   }
 
   updateData(gridData) {
+    this._lastData = gridData;
     if (this._texManager) {
-      this._texManager.update(gridData);
+      this._texManager.update(gridData, this.snowType);
       if (this._map) this._map.triggerRepaint();
     } else {
       this._pendingData = gridData;
@@ -132,6 +132,9 @@ export default class SnowColorLayer {
   setSnowType(type) {
     if (this.snowType !== type) {
       this.snowType = type;
+      if (this._texManager && this._lastData) {
+        this._texManager.update(this._lastData, this.snowType);
+      }
       if (this._map) this._map.triggerRepaint();
     }
   }

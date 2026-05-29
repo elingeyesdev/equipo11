@@ -58,6 +58,20 @@ export function addRainLayers(map, rainColorLayer, currentData) {
     map.addLayer(rainColorLayer, insertBefore);
   }
 
+  // Capa de costas (fronteras hacia el mar) aislada para lluvia
+  if (!map.getLayer('custom-coastline-rain')) {
+    map.addLayer({
+      id: 'custom-coastline-rain',
+      type: 'line',
+      source: 'composite',
+      'source-layer': 'water',
+      paint: {
+        'line-color': 'rgba(0, 0, 0, 0.4)',
+        'line-width': 1.5,
+      }
+    }, insertBefore);
+  }
+
   if (currentData && currentData.length > 0) {
     rainColorLayer.updateData(currentData);
   }
@@ -71,6 +85,7 @@ export function addRainLayers(map, rainColorLayer, currentData) {
 export function removeRainLayers(map) {
   try {
     if (map.getLayer('rain-color-layer')) map.removeLayer('rain-color-layer');
+    if (map.getLayer('custom-coastline-rain')) map.removeLayer('custom-coastline-rain');
   } catch (e) {
     console.warn('[layerManager_rain] Error removiendo capas de lluvia:', e.message);
   }

@@ -70,7 +70,7 @@ export const fragmentSource = `
     // 7. Mezcla matemática final (Promedio Ponderado)
     float visNorm = mix( mix(val00, val10, u), mix(val01, val11, u), v );
 
-    vec4 baseColor = texture2D(u_color_ramp, vec2(visNorm, 0.5));
-    gl_FragColor = vec4(baseColor.rgb, baseColor.a * u_opacity);
+    vec4 color = texture2D(u_color_ramp, vec2(visNorm, 0.5));
+    gl_FragColor = vec4(color.rgb, color.a * u_opacity);
   }
 `;

@@ -1,40 +1,23 @@
-/**
- * RainColorLayer.js — Capa WebGL nativa para Mapbox GL JS.
- *
- * Implementa CustomLayerInterface para pintar un mapa de color
- * basado en la intensidad de lluvia con interpolación bilineal manual.
- */
-
 import mapboxgl from 'mapbox-gl';
-import RainDataTexture from './RainDataTexture.js';
-import { vertexSource, fragmentSource } from './shaders_rain.js';
+import AqiDataTexture from './AqiDataTexture.js';
+import { vertexSource, fragmentSource } from './shaders_aqi.js';
 
-export default class RainColorLayer {
-  /**
-   * @param {Object} options
-   * @param {string}  options.id      — ID único de la capa (default: 'rain-color-layer')
-   * @param {number}  options.opacity — Opacidad global 0-1 (default: 0.85)
-   */
+export default class AqiColorLayer {
   constructor(options = {}) {
-    this.id = options.id || 'rain-color-layer';
+    this.id = options.id || 'aqi-color-layer';
     this.type = 'custom';
     this.renderingMode = '2d';
-    this.opacity = options.opacity ?? 0.85;
+    this.opacity = options.opacity ?? 0.90;
 
-    // Estado interno
     this._program = null;
     this._buffer = null;
     this._texManager = null;
-    this._pendingData = null;
   }
-
-  // ─── CustomLayerInterface ──────────────────────────────────────
 
   onAdd(map, gl) {
     this._map = map;
-    this._gl = gl; // Guardamos contexto para limpieza forzada
+    this._gl = gl;
 
-    // 1. Compilar shaders
     const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
     const fs = this._compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
     this._program = gl.createProgram();
@@ -43,19 +26,17 @@ export default class RainColorLayer {
     gl.linkProgram(this._program);
 
     if (!gl.getProgramParameter(this._program, gl.LINK_STATUS)) {
-      console.error('[RainColorLayer] Program link error:', gl.getProgramInfoLog(this._program));
+      console.error('[AqiColorLayer] Program link error:', gl.getProgramInfoLog(this._program));
       return;
     }
 
-    // 2. Ubicaciones de uniforms y atributos
-    this._aPos            = gl.getAttribLocation(this._program, 'a_pos');
-    this._uMatrix         = gl.getUniformLocation(this._program, 'u_matrix');
-    this._uRainData       = gl.getUniformLocation(this._program, 'u_rain_data');
-    this._uColorRamp      = gl.getUniformLocation(this._program, 'u_color_ramp');
-    this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
-    this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._aPos       = gl.getAttribLocation(this._program, 'a_pos');
+    this._uMatrix    = gl.getUniformLocation(this._program, 'u_matrix');
+    this._uAqiData   = gl.getUniformLocation(this._program, 'u_aqi_data');
+    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
+    this._uOpacity   = gl.getUniformLocation(this._program, 'u_opacity');
+    this._uTexSize   = gl.getUniformLocation(this._program, 'u_tex_size');
 
-    // 3. Quad geográfico
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
 
@@ -77,13 +58,10 @@ export default class RainColorLayer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-    // 4. Inicializar texturas
-    this._texManager = new RainDataTexture(gl);
+    this._texManager = new AqiDataTexture(gl);
 
-    if (this._pendingData) {
-      this._texManager.update(this._pendingData);
-      this._pendingData = null;
-    }
+    // Cargar datos automáticamente al añadir la capa
+    this.loadData();
   }
 
   render(gl, matrix) {
@@ -93,11 +71,12 @@ export default class RainColorLayer {
 
     gl.uniformMatrix4fv(this._uMatrix, false, matrix);
     gl.uniform1f(this._uOpacity, this.opacity);
+
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rainTexture);
-    gl.uniform1i(this._uRainData, 0);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.dataTexture);
+    gl.uniform1i(this._uAqiData, 0);
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
@@ -119,7 +98,7 @@ export default class RainColorLayer {
     if (this._program) gl.deleteProgram(this._program);
     if (this._buffer) gl.deleteBuffer(this._buffer);
     if (this._texManager) this._texManager.destroy();
-    
+
     this._program = null;
     this._buffer = null;
     this._texManager = null;
@@ -130,14 +109,12 @@ export default class RainColorLayer {
     this.destroy();
   }
 
-  // ─── API Pública ───────────────────────────────────────────────
-
-  updateData(gridData) {
+  async loadData() {
     if (this._texManager) {
-      this._texManager.update(gridData);
-      if (this._map) this._map.triggerRepaint();
-    } else {
-      this._pendingData = gridData;
+      const success = await this._texManager.fetchDataAndUpdate();
+      if (success && this._map) {
+        this._map.triggerRepaint();
+      }
     }
   }
 
@@ -146,18 +123,6 @@ export default class RainColorLayer {
     if (this._map) this._map.triggerRepaint();
   }
 
-  /**
-   * Cambia la paleta de colores dinámicamente (Open/Closed Principle).
-   */
-  setColorRamp(ramp) {
-    if (this._texManager) {
-      this._texManager.setColorRamp(ramp);
-      if (this._map) this._map.triggerRepaint();
-    }
-  }
-
-  // ─── Helpers Privados ──────────────────────────────────────────
-
   _compileShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -165,7 +130,7 @@ export default class RainColorLayer {
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
       const label = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
-      console.error(`[RainColorLayer] ${label} shader error:`, gl.getShaderInfoLog(shader));
+      console.error(`[AqiColorLayer] ${label} shader error:`, gl.getShaderInfoLog(shader));
       gl.deleteShader(shader);
       return null;
     }
