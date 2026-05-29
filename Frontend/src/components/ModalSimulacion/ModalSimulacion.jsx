@@ -145,12 +145,12 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
       const config = {
         metricaClave: metric.metricaClave,
         // Usamos los parámetros globales de la primera zona para la sesión (días, etc)
-        dias: zoneConfigs[0].dias,
-        intervalMinutos: zoneConfigs[0].intervalMin,
-        intervalSimSeg: zoneConfigs[0].intervalSimSeg,
+        dias: zoneConfigs[0]?.dias || 1,
+        intervalMinutos: zoneConfigs[0]?.intervalMin || 60,
+        intervalSimSeg: zoneConfigs[0]?.intervalSimSeg || 3,
         zonas: fronteras.map((f, idx) => {
-          const zCfg = zoneConfigs[idx];
-          const esc = metric.escenarios[zCfg.escenarioIdx];
+          const zCfg = zoneConfigs[idx] || { escenarioIdx: 0 };
+          const esc = metric.escenarios[zCfg.escenarioIdx] || metric.escenarios[0];
           return {
             nombre: f.nombre,
             centroide: calcCenter(f.bbox),

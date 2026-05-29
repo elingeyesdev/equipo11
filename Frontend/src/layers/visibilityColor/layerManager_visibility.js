@@ -35,8 +35,12 @@ export function addVisibilityLayers(map, customLayer, data) {
 
 export function removeVisibilityLayers(map) {
   if (!map) return;
-  if (map.getLayer('visibility-color-layer')) {
-    map.removeLayer('visibility-color-layer');
+  try {
+    if (map.getStyle() && map.getLayer('visibility-color-layer')) {
+      map.removeLayer('visibility-color-layer');
+    }
+  } catch (err) {
+    console.warn('[layerManager_visibility] Error removiendo capa de neblina:', err.message);
   }
   if (map.getLayer('custom-coastline-vis')) {
     map.removeLayer('custom-coastline-vis');

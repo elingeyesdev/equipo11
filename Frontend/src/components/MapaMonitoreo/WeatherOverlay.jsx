@@ -13,6 +13,8 @@ import { addSnowLayers, removeSnowLayers } from '../../layers/snowColor/layerMan
 import VisibilityColorLayer from '../../layers/visibilityColor/VisibilityColorLayer.js';
 import { addVisibilityLayers, removeVisibilityLayers } from '../../layers/visibilityColor/layerManager_visibility.js';
 import TempColorLayer, { addTempLayers, removeTempLayers, addCityTempLabels, updateCityTempLabels, removeCityTempLabels } from '../../layers/tempColor/TempColorLayer.js';
+import AqiColorLayer from '../../layers/aqiColor/AqiColorLayer.js';
+import { addAqiLayers, removeAqiLayers } from '../../layers/aqiColor/layerManager_aqi.js';
 import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 import { GLOBAL_CITIES } from '../../utils/globalCities.js';
 import { buildGridIndex, buildCitiesWindGeoJSON, buildTempGridIndex, buildCitiesTempGeoJSON } from '../../utils/windMath.js';
@@ -49,6 +51,7 @@ function WeatherOverlay({
   const snowLayerRef = useRef(null);
   const visLayerRef = useRef(null);
   const tempLayerRef = useRef(null);
+  const aqiLayerRef = useRef(null);
   const dataRef = useRef(null);
 
   // --- 1. Proteger el Payload Masivo (Ahogo del Virtual DOM) ---
@@ -322,6 +325,46 @@ function WeatherOverlay({
     };
   }, [map, isParticlesActive, particleFilters.temp, citiesTempGeoJSON, activeTempUnit]);
 
+  // --- Ciclo de vida del AqiColorLayer (WebGL) ---
+  useEffect(() => {
+    if (!map) return;
+
+    const rawMap = map.getMap();
+    if (!rawMap) return;
+
+    const shouldShowAqi = isParticlesActive && particleFilters.aqi;
+
+    const addAqiIfMissing = () => {
+      if (!shouldShowAqi) return;
+
+      if (!rawMap.getLayer('aqi-color-layer')) {
+        const layer = new AqiColorLayer({
+          id: 'aqi-color-layer',
+          opacity: 0.90,
+        });
+        aqiLayerRef.current = layer;
+        addAqiLayers(rawMap, layer);
+      }
+    };
+
+    if (shouldShowAqi) {
+      addAqiIfMissing();
+      rawMap.on('styledata', addAqiIfMissing);
+    } else {
+      removeAqiLayers(rawMap);
+      aqiLayerRef.current = null;
+    }
+
+    return () => {
+      rawMap.off('styledata', addAqiIfMissing);
+      removeAqiLayers(rawMap);
+      if (aqiLayerRef.current && typeof aqiLayerRef.current.destroy === 'function') {
+        aqiLayerRef.current.destroy();
+      }
+      aqiLayerRef.current = null;
+    };
+  }, [map, isParticlesActive, particleFilters.aqi]);
+
   // --- Forzar Sincronización de Unidades en Mapbox ---
   useEffect(() => {
     if (!map || !citiesTempGeoJSON) return;
@@ -346,7 +389,7 @@ function WeatherOverlay({
       <GridRadarLayer
         scannedGrid={protectedGrid}
         currentZoom={currentZoom}
-        particleFilters={{ ...particleFilters, fog: false, temp: false }}
+        particleFilters={{ ...particleFilters, fog: false, temp: false, aqi: false }}
       />
 
       {particleFilters.wind && dynamicWindLabels && (

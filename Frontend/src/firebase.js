@@ -42,12 +42,13 @@ isSupported().then((supported) => {
   console.warn('[firebase.js] Error al verificar soporte de Messaging:', err);
 });
 
-/**
- * Obtiene el token FCM.
- */
 export async function getFCMToken() {
-  if (!messaging) {
+  const supported = await isSupported();
+  if (!supported) {
     throw new Error('Push no soportado en este dispositivo (Se requiere HTTPS o un navegador compatible).');
+  }
+  if (!messaging) {
+    messaging = getMessaging(app);
   }
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
   const token = await getToken(messaging, { vapidKey });

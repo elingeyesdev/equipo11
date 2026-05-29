@@ -135,8 +135,15 @@ function encontrarUmbral(metricaClave, valor) {
  * @param {{ cities: Array<{ id, name, data: {[metrica]: number} }> }} tickData
  * @returns {Array<{ localidad_id, metrica_id, umbral_id, valor, severidad, label, ciudad_nombre, metrica_clave }>}
  */
-function evaluarTick(tickData) {
-  if (umbralesCache.size === 0) return []  // Caché no cargada aún
+async function evaluarTick(tickData) {
+  if (umbralesCache.size === 0) {
+    logger.warn('[Alertas] La caché de umbrales está vacía. Intentando cargar bajo demanda...');
+    await cargarUmbralesCache();
+    if (umbralesCache.size === 0) {
+      logger.error('[Alertas] No se pudo inicializar la caché de umbrales. Omitiendo evaluación de tick.');
+      return [];
+    }
+  }
 
   const alertasNuevas = []
 

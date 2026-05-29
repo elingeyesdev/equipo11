@@ -9,7 +9,24 @@ export default function usePushPermission() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      setPermission(Notification.permission);
+      const currentPermission = Notification.permission;
+      setPermission(currentPermission);
+      
+      const isPushEnabled = localStorage.getItem('envirosense_push_enabled') === 'true';
+      
+      if (currentPermission === 'granted' && isPushEnabled) {
+        setLoading(true);
+        getFCMToken()
+          .then((t) => {
+            if (t) setToken(t);
+          })
+          .catch((err) => {
+            console.warn('[usePushPermission] Error al obtener token inicial:', err);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     } else {
       setError('Las notificaciones no están soportadas en este navegador.');
     }
@@ -33,6 +50,7 @@ export default function usePushPermission() {
 
         if (currentToken) {
           setToken(currentToken);
+          localStorage.setItem('envirosense_push_enabled', 'true');
           return currentToken;
         } else {
           throw new Error('No se pudo obtener el token de registro FCM.');
@@ -49,5 +67,5 @@ export default function usePushPermission() {
     return null;
   }, []);
 
-  return { permission, token, loading, error, requestPermission };
+  return { permission, token, setToken, loading, error, requestPermission };
 }

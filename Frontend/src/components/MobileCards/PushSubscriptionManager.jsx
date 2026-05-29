@@ -4,15 +4,16 @@ import httpClient from '../../config/httpClient';
 import './PushSubscriptionManager.css';
 
 export default function PushSubscriptionManager() {
-  const { permission, token, loading: hookLoading, error: hookError, requestPermission } = usePushPermission();
+  const { permission, token, setToken, loading: hookLoading, error: hookError, requestPermission } = usePushPermission();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Sincronizar el estado del switch con el permiso del navegador
+  // Sincronizar el estado del switch con el permiso del navegador e indicador de localStorage
   useEffect(() => {
-    if (permission === 'granted' && token) {
+    const isPushEnabled = localStorage.getItem('envirosense_push_enabled') === 'true';
+    if (permission === 'granted' && token && isPushEnabled) {
       setIsSubscribed(true);
     } else {
       setIsSubscribed(false);
@@ -32,6 +33,7 @@ export default function PushSubscriptionManager() {
         if (activeToken) {
           // Enviar token al backend
           await httpClient.post('/notificaciones/subscribe', { token: activeToken });
+          localStorage.setItem('envirosense_push_enabled', 'true');
           setIsSubscribed(true);
           setMessage('¡Notificaciones activadas con éxito! Recibirás alertas importantes.');
         } else {
@@ -51,10 +53,14 @@ export default function PushSubscriptionManager() {
         if (token) {
           await httpClient.post('/notificaciones/unsubscribe', { token });
         }
+        localStorage.setItem('envirosense_push_enabled', 'false');
+        setToken(null);
         setIsSubscribed(false);
         setMessage('Notificaciones desactivadas. Puedes volver a activarlas en cualquier momento.');
       } catch (err) {
         console.error('[PushSubscriptionManager] Error al desuscribirse:', err);
+        localStorage.setItem('envirosense_push_enabled', 'false');
+        setToken(null);
         setIsSubscribed(false);
         setMessage('Notificaciones desactivadas localmente.');
       } finally {

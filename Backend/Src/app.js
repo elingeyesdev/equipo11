@@ -26,6 +26,7 @@ app.use('/api/reportes', require('./modules/reportes/reportes.routes'))
 app.use('/api/simulacion', require('./modules/simulacion/simulacion.routes'))
 app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'))
 app.use('/api/sensores', require('./modules/sensores/sensores.routes'))
+app.use('/api/calidad-aire', require('./modules/calidad_aire/aqi.routes'))
 
 // Ruta de prueba
 app.get('/', (req, res) => success(res, { mensaje: 'API EnviroSense activa ✅' }))

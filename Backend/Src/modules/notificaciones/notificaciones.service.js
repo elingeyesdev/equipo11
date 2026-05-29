@@ -41,22 +41,23 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
       return;
     }
 
-    // 1. Obtener todos los usuarios con ubicación (latitud/longitud) y canales habilitados
+    // 1. Obtener todos los usuarios con ubicación y canales habilitados
     const { rows: usuarios } = await db.query(
       `SELECT id, nombre, email, latitud, longitud, 
               notif_email, notif_whatsapp, whatsapp_destino, 
               notif_telegram, telegram_destino 
        FROM usuarios 
-       WHERE latitud IS NOT NULL 
-         AND longitud IS NOT NULL 
-         AND (notif_email = TRUE OR notif_whatsapp = TRUE OR notif_telegram = TRUE)
+       WHERE (notif_email = TRUE OR notif_whatsapp = TRUE OR notif_telegram = TRUE)
          AND activo = TRUE`
     );
 
     if (usuarios.length === 0) return;
 
-    // 2. Filtrar usuarios en un radio de 50 Km del punto de alerta
+    // 2. Filtrar usuarios en un radio de 50 Km o enviar a todos por defecto si no tienen coordenadas (suscripción global)
     const usuariosEnZona = usuarios.filter(u => {
+      if (u.latitud === null || u.longitud === null) {
+        return true; // No tiene ubicación configurada, recibe notificaciones por defecto (suscripción global)
+      }
       const dist = getDistanceKm(numericLat, numericLng, parseFloat(u.latitud), parseFloat(u.longitud));
       return dist <= 50; // radio de 50 km
     });
