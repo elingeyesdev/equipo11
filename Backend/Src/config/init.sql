@@ -10,3 +10,12 @@ CREATE TABLE IF NOT EXISTS usuarios (
   activo        BOOLEAN DEFAULT TRUE,
   created_at    TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS usuarios_plantillas (
+    id SERIAL PRIMARY KEY,
+    usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+    nombre_plantilla VARCHAR(255) NOT NULL,
+    tipo VARCHAR(50) NOT NULL, -- Ej: 'ESTANDAR_LOGISTICA', 'PERSONALIZADA'
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    configuracion JSONB NOT NULL
+);

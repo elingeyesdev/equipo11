@@ -22,8 +22,8 @@ function verificarToken(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     req.usuario = decoded
     next()
-  } catch (error) {
-    return error(res, 'Token inválido o expirado', 401)
+  } catch (err) {
+    return res.status(401).json({ message: "Acceso denegado o token inválido" })
   }
 }
 
