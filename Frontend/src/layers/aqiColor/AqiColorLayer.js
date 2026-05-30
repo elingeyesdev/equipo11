@@ -33,7 +33,6 @@ export default class AqiColorLayer {
     this._aPos       = gl.getAttribLocation(this._program, 'a_pos');
     this._uMatrix    = gl.getUniformLocation(this._program, 'u_matrix');
     this._uAqiData   = gl.getUniformLocation(this._program, 'u_aqi_data');
-    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
     this._uOpacity   = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize   = gl.getUniformLocation(this._program, 'u_tex_size');
 
@@ -77,10 +76,6 @@ export default class AqiColorLayer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.dataTexture);
     gl.uniform1i(this._uAqiData, 0);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
-    gl.uniform1i(this._uColorRamp, 1);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);

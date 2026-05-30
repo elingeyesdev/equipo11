@@ -13,7 +13,6 @@ export const fragmentSource = `
   precision highp float;
 
   uniform sampler2D u_aqi_data;
-  uniform sampler2D u_color_ramp;
   uniform float u_opacity;
   uniform vec2 u_tex_size;
 
@@ -59,9 +58,37 @@ export const fragmentSource = `
 
     float aqi_norm = sampleBilinear(uv);
 
-    // aqi_norm is exactly the index in the color ramp (0 to 1)
-    vec4 color = texture2D(u_color_ramp, vec2(aqi_norm, 0.5));
+    // aqi_norm corresponds to the byte value (0 to 1). The actual value was divided by 2.
+    // So to get the real AQI value back, we do aqi_norm * 255.0 * 2.0
+    float aqi_val = aqi_norm * 510.0;
 
-    gl_FragColor = vec4(color.rgb, color.a * u_opacity);
+    vec3 c0 = vec3(0.867, 1.0, 1.0);     // 0: #ddffff
+    vec3 c1 = vec3(0.0, 0.816, 1.0);     // 50: #00d0ff
+    vec3 c2 = vec3(0.0, 0.902, 0.0);     // 100: #00e600
+    vec3 c3 = vec3(1.0, 1.0, 0.0);       // 150: #ffff00
+    vec3 c4 = vec3(1.0, 0.6, 0.2);       // 200: #ff9933
+    vec3 c5 = vec3(1.0, 0.0, 0.0);       // 300: #ff0000
+    vec3 c6 = vec3(0.6, 0.0, 0.0);       // 400: #990000
+    vec3 c7 = vec3(0.502, 0.0, 0.502);   // 500: #800080
+
+    vec3 finalColor = c0;
+    
+    if (aqi_val < 50.0) {
+      finalColor = mix(c0, c1, aqi_val / 50.0);
+    } else if (aqi_val < 100.0) {
+      finalColor = mix(c1, c2, (aqi_val - 50.0) / 50.0);
+    } else if (aqi_val < 150.0) {
+      finalColor = mix(c2, c3, (aqi_val - 100.0) / 50.0);
+    } else if (aqi_val < 200.0) {
+      finalColor = mix(c3, c4, (aqi_val - 150.0) / 50.0);
+    } else if (aqi_val < 300.0) {
+      finalColor = mix(c4, c5, (aqi_val - 200.0) / 100.0);
+    } else if (aqi_val < 400.0) {
+      finalColor = mix(c5, c6, (aqi_val - 300.0) / 100.0);
+    } else {
+      finalColor = mix(c6, c7, clamp((aqi_val - 400.0) / 100.0, 0.0, 1.0));
+    }
+
+    gl_FragColor = vec4(finalColor, u_opacity);
   }
 `;

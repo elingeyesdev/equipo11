@@ -481,3 +481,53 @@ export function buildCitiesTempGeoJSON(cities, tempGridIndex, unit = 'C') {
   return { type: 'FeatureCollection', features };
 }
 
+/**
+ * Crea un índice optimizado para buscar valores de AQI (escalar).
+ */
+export function buildAqiGridIndex(gridData) {
+  const index = new Map();
+  if (!gridData || gridData.length === 0) return index;
+
+  for (const cell of gridData) {
+    const lat = parseFloat(cell.latitud || cell.lat);
+    const lon = parseFloat(cell.longitud || cell.lon);
+    const aqi = parseFloat(cell.aqi);
+
+    if (!isFinite(lat) || !isFinite(lon)) continue;
+
+    const col = Math.round(lon + 179.5);
+    const row = Math.round(lat + 89.5);
+
+    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
+
+    index.set(`${row}_${col}`, isFinite(aqi) ? aqi : null);
+  }
+
+  return index;
+}
+
+function readAqiCell(gridIndex, col, row) {
+  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
+  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
+  return gridIndex.get(`${row}_${col}`) || null;
+}
+
+/**
+ * Snapping para AQI usando Nearest Neighbor en lugar de Bilinear.
+ */
+export function sampleAqiNearest(gridIndex, lng, lat) {
+  if (!gridIndex || gridIndex.size === 0) return null;
+  if (!isFinite(lng) || !isFinite(lat)) return null;
+  
+  lng = ((lng % 360) + 540) % 360 - 180;
+  lat = Math.max(-90, Math.min(90, lat));
+  
+  const texX = lng + 179.5;
+  const texY = lat + 89.5;
+  
+  const col = Math.round(texX);
+  const row = Math.round(texY);
+  
+  return readAqiCell(gridIndex, col, row);
+}
+

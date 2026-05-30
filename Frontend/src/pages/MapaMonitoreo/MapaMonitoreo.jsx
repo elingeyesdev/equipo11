@@ -36,7 +36,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear, buildTempGridIndex, sampleTempBilinear } from '../../utils/windMath';
+import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear, buildTempGridIndex, sampleTempBilinear, buildAqiGridIndex, sampleAqiNearest } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -168,6 +168,11 @@ function MapaMonitoreo() {
   const tempGridIndex = useMemo(() => {
     if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
     return buildTempGridIndex(scannedGrid.data);
+  }, [scannedGrid]);
+
+  const aqiGridIndex = useMemo(() => {
+    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
+    return buildAqiGridIndex(scannedGrid.data);
   }, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
@@ -318,8 +323,10 @@ function MapaMonitoreo() {
   useEffect(() => {
     if (!scalarPopup) return;
     
+    const aqiActive = (isParticlesActive && particleFilters.aqi) || (isHeatmapActive && heatmapMetric === 'aqi');
+    
     // Si la visualización principal está apagada, cerramos el popup
-    if (!isParticlesActive) {
+    if (!isParticlesActive && !isHeatmapActive) {
       setScalarPopup(null);
       return;
     }
@@ -327,11 +334,12 @@ function MapaMonitoreo() {
     const nextMetrics = [];
     // Revisamos qué métricas del popup actual siguen estando activas en los filtros
     for (const metric of scalarPopup.metrics) {
-      if (metric.label === 'Viento' && particleFilters.wind) nextMetrics.push(metric);
-      if (metric.label === 'Precipitación' && particleFilters.rain) nextMetrics.push(metric);
-      if (metric.label.includes('Nieve') && particleFilters.snow) nextMetrics.push(metric);
-      if (metric.label === 'Visibilidad' && particleFilters.fog) nextMetrics.push(metric);
-      if (metric.label === 'Temperatura' && particleFilters.temp) nextMetrics.push(metric);
+      if (metric.label === 'Viento' && isParticlesActive && particleFilters.wind) nextMetrics.push(metric);
+      if (metric.label === 'Precipitación' && isParticlesActive && particleFilters.rain) nextMetrics.push(metric);
+      if (metric.label.includes('Nieve') && isParticlesActive && particleFilters.snow) nextMetrics.push(metric);
+      if (metric.label === 'Visibilidad' && isParticlesActive && particleFilters.fog) nextMetrics.push(metric);
+      if (metric.label === 'Temperatura' && isParticlesActive && particleFilters.temp) nextMetrics.push(metric);
+      if (metric.label === 'Calidad del Aire (AQI)' && aqiActive) nextMetrics.push(metric);
     }
 
     if (nextMetrics.length === 0) {
@@ -339,7 +347,7 @@ function MapaMonitoreo() {
     } else if (nextMetrics.length !== scalarPopup.metrics.length) {
       setScalarPopup(prev => ({ ...prev, metrics: nextMetrics }));
     }
-  }, [isParticlesActive, particleFilters, scalarPopup]);
+  }, [isParticlesActive, isHeatmapActive, heatmapMetric, particleFilters, scalarPopup]);
 
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
@@ -354,6 +362,7 @@ function MapaMonitoreo() {
     const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
     const localSnow = snowGridIndex ? sampleSnowBilinear(snowGridIndex, lng, lat) : null;
     const localVisRaw = visGridIndex ? sampleVisibilityBilinear(visGridIndex, lng, lat) : null;
+    const localAqi = aqiGridIndex ? sampleAqiNearest(aqiGridIndex, lng, lat) : null;
     
     let localTempK = null;
     try {
@@ -370,30 +379,44 @@ function MapaMonitoreo() {
       displayVis = visKm > 24.0 ? '> 24.0' : visKm.toFixed(1);
     }
 
-    const activeMetrics = [];
+    const scalarMetrics = [];
     if (isParticlesActive && particleFilters.wind && localWind) {
-      activeMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
+      scalarMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
     }
     if (isParticlesActive && particleFilters.rain && localRain !== null) {
-      activeMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
+      scalarMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
     }
     if (isParticlesActive && particleFilters.snow && localSnow !== null) {
-      activeMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
-      activeMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
+      scalarMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
+      scalarMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
     }
     if (isParticlesActive && particleFilters.fog && displayVis !== null) {
-      activeMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
+      scalarMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
     }
     if (isParticlesActive && particleFilters.temp && localTempK !== null && !isNaN(localTempK) && isFinite(localTempK)) {
       const baseTempC = localTempK - 273.15;
       const unitDef = METRICAS_UNIDADES['temperatura'].unidades.find(u => u.key === unidades['temperatura']) || METRICAS_UNIDADES['temperatura'].unidades[0];
       const formattedValue = unitDef.convertir(baseTempC).toFixed(unitDef.precision);
       const suffix = unitDef.sufijo.trim();
-      activeMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
+      scalarMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
     }
 
-    if (activeMetrics.length > 0) {
-      setScalarPopup({ lng, lat, metrics: activeMetrics });
+    const aqiActive = (isParticlesActive && particleFilters.aqi) || (isHeatmapActive && heatmapMetric === 'aqi');
+    if (aqiActive && localAqi !== null) {
+      let catLabel = 'Buena';
+      let catColor = '#00d0ff';
+      if (localAqi >= 400) { catLabel = 'Peligrosa (Extrema)'; catColor = '#800080'; }
+      else if (localAqi >= 300) { catLabel = 'Peligrosa'; catColor = '#990000'; }
+      else if (localAqi >= 200) { catLabel = 'Muy Dañina'; catColor = '#ff0000'; }
+      else if (localAqi >= 150) { catLabel = 'Dañina'; catColor = '#ff9933'; }
+      else if (localAqi >= 100) { catLabel = 'Dañina (Grupos Sensibles)'; catColor = '#ffff00'; }
+      else if (localAqi >= 50) { catLabel = 'Moderada'; catColor = '#00e600'; }
+      
+      scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
+    }
+
+    if (scalarMetrics.length > 0) {
+      setScalarPopup({ lng, lat, metrics: scalarMetrics });
     } else {
       setScalarPopup(null);
     }
@@ -451,7 +474,9 @@ function MapaMonitoreo() {
       latitude: lat,
       longitude: lng,
       data: {
-        temperatura: null, aqi: null, ica: null, ruido: null, humedad: null,
+        temperatura: localTempK !== null ? localTempK - 273.15 : null, 
+        aqi: localAqi !== null ? Math.round(localAqi) : null, 
+        ica: null, ruido: null, humedad: null,
         windSpeed: localWind ? localWind.speed : null,
         rain: localRain !== null ? localRain : null,
       },
@@ -645,7 +670,8 @@ function MapaMonitoreo() {
                   {scalarPopup.metrics.map((m, idx) => (
                     <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {m.color && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: m.color, marginRight: '6px', boxShadow: '0 0 4px rgba(0,0,0,0.5)' }}></div>}
                         <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
                         <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
                       </div>

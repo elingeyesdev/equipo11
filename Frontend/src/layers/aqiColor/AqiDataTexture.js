@@ -1,8 +1,5 @@
-import { buildAqiColorRampTexture } from './colorRamps_aqi.js';
-
 const GRID_WIDTH = 360;
 const GRID_HEIGHT = 181; // Ajustado a 181 para resolución GEFS
-const MAX_AQI = 500;
 
 export default class AqiDataTexture {
   constructor(gl) {
@@ -16,8 +13,8 @@ export default class AqiDataTexture {
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
     // Inicializar vacía
     const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
@@ -25,26 +22,6 @@ export default class AqiDataTexture {
       gl.TEXTURE_2D, 0, gl.LUMINANCE,
       GRID_WIDTH, GRID_HEIGHT, 0,
       gl.LUMINANCE, gl.UNSIGNED_BYTE, emptyData
-    );
-
-    // Textura de la paleta de color
-    this.rampTexture = gl.createTexture();
-    this._uploadRamp();
-  }
-
-  _uploadRamp() {
-    const gl = this.gl;
-    const pixels = buildAqiColorRampTexture();
-
-    gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      256, 1, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, pixels
     );
   }
 
@@ -64,14 +41,15 @@ export default class AqiDataTexture {
   }
 
   update(gridData) {
-    if (!gridData || gridData.length === 0) return;
+    const actualData = gridData.data || gridData;
+    if (!Array.isArray(actualData) || actualData.length === 0) return;
 
     const gl = this.gl;
     const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
 
-    for (const point of gridData) {
-      const lat = Number(point.lat);
-      const lon = Number(point.lon);
+    for (const point of actualData) {
+      const lat = Number(point.lat || point.latitud);
+      const lon = Number(point.lon || point.longitud);
       const aqiValue = Number(point.aqi);
 
       if (isNaN(lat) || isNaN(lon) || isNaN(aqiValue) || point.aqi === null) continue;
@@ -82,9 +60,9 @@ export default class AqiDataTexture {
 
       if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
 
-      // Normalización 0-500 a byte (0-255)
-      const norm = Math.min(1.0, Math.max(0.0, aqiValue / MAX_AQI));
-      pixels[row * GRID_WIDTH + col] = Math.round(norm * 255);
+      // Dividimos entre 2 para meter 0-500 en un byte 0-255
+      const val = Math.round(aqiValue / 2.0);
+      pixels[row * GRID_WIDTH + col] = Math.min(255, Math.max(0, val));
     }
 
     gl.bindTexture(gl.TEXTURE_2D, this.dataTexture);
@@ -98,8 +76,6 @@ export default class AqiDataTexture {
   destroy() {
     const gl = this.gl;
     if (this.dataTexture) gl.deleteTexture(this.dataTexture);
-    if (this.rampTexture) gl.deleteTexture(this.rampTexture);
     this.dataTexture = null;
-    this.rampTexture = null;
   }
 }
