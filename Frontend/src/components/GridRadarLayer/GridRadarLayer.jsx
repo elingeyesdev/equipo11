@@ -1,32 +1,17 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { Source, Layer, useMap } from 'react-map-gl/mapbox';
+import { getImageDataArray } from '../../utils/windMath';
 
-const getWeatherType = (cell) => {
-  if (!cell) return null;
-  const code = cell.weather_code;
-
-  // Si tenemos CAPE y REFC altos, es tormenta eléctrica
-  if (cell.cape > 1000 && cell.refc > 35) return 'thunderstorm';
-  // Si tenemos CAPE alto y HLCY (Helicidad) alto, es advertencia de tornado
-  if (cell.cape > 1000 && cell.hlcy > 150) return 'tornado_warning';
-
-  if (code == null || code === 0) return null;
-  // Lluvia
-  if ((code >= 51 && code <= 69) || (code >= 80 && code <= 82) || (code >= 95 && code <= 99)) return 'rain';
-  // Nieve
-  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'snow';
-  // Niebla
-  if (code === 45 || code === 48) return 'fog';
-  return null;
-};
+const GRID_WIDTH = 360;
+const GRID_HEIGHT = 180;
 
 const getWeatherColor = (type) => {
   if (type === 'rain') return '#3b82f6';
   if (type === 'snow') return '#ffffff';
   if (type === 'fog') return '#9ca3af';
   if (type === 'wind') return '#a7f3d0';
-  if (type === 'thunderstorm') return '#fbbf24'; // Amarillo rayo
-  if (type === 'tornado_warning') return '#9333ea'; // Púrpura tornado
+  if (type === 'thunderstorm') return '#fbbf24';
+  if (type === 'tornado_warning') return '#9333ea';
   return null;
 };
 
@@ -38,50 +23,91 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
     const features = [];
     const nodes = [];
 
-    if (scannedGrid && scannedGrid.length > 0) {
-      scannedGrid.forEach((cell, index) => {
-        let type = getWeatherType(cell);
+    // scannedGrid es ahora un objeto de HTMLImageElements
+    if (!scannedGrid) return { geojson: { type: 'FeatureCollection', features }, activeNodes: nodes };
 
-        let isTypeEnabled = particleFilters[type];
-        if (type === 'thunderstorm') isTypeEnabled = particleFilters.rain;
-        if (type === 'tornado_warning') isTypeEnabled = particleFilters.wind;
+    // Extraer pixel data de las texturas PNG
+    const windPixels = scannedGrid.windImg ? getImageDataArray(scannedGrid.windImg) : null;
+    const rainPixels = scannedGrid.rainImg ? getImageDataArray(scannedGrid.rainImg) : null;
+    const snowPixels = scannedGrid.snowImg ? getImageDataArray(scannedGrid.snowImg) : null;
 
-        // Si el tipo actual está desactivado en los filtros, intentamos caer en "wind" si hay viento
-        if (type && isTypeEnabled === false) {
-          type = null;
+    if (!windPixels) return { geojson: { type: 'FeatureCollection', features }, activeNodes: nodes };
+
+    let nodeIndex = 0;
+    // Iterar sobre el grid de 360×180 para reconstruir nodos de partículas
+    for (let row = 0; row < GRID_HEIGHT; row++) {
+      for (let col = 0; col < GRID_WIDTH; col++) {
+        const idx = (row * GRID_WIDTH + col) * 4;
+
+        // Leer datos del viento
+        const windR = windPixels.data[idx];     // speed normalized
+        const windG = windPixels.data[idx + 1]; // direction normalized
+        const windA = windPixels.data[idx + 3]; // alpha (data present)
+
+        if (windA === 0) continue; // Sin dato
+
+        const speed = (windR / 255.0) * 150.0;  // km/h
+        const direction = (windG / 255.0) * 360.0;
+
+        // Determinar tipo de clima desde las texturas
+        let type = null;
+        let isTypeEnabled = false;
+
+        // Comprobar nieve (R channel del snowPixels)
+        if (snowPixels && particleFilters.snow !== false) {
+          const snowVal = snowPixels.data[idx]; // R = snow accumulated
+          const snowA = snowPixels.data[idx + 3];
+          if (snowA > 0 && snowVal > 5) { // ~3cm threshold
+            type = 'snow';
+            isTypeEnabled = particleFilters.snow;
+          }
         }
 
-        // Si no hay lluvia/nieve/niebla activa, pero hay viento fuerte, y el filtro de viento está activo
-        if (!type && cell.wind_speed > 15 && particleFilters.wind !== false) {
+        // Comprobar lluvia (R channel del rainPixels)
+        if (!type && rainPixels && particleFilters.rain !== false) {
+          const rainVal = rainPixels.data[idx]; // R = rain normalized
+          const rainA = rainPixels.data[idx + 3];
+          if (rainA > 0 && rainVal > 5) { // >0.2mm threshold
+            type = 'rain';
+            isTypeEnabled = particleFilters.rain;
+          }
+        }
+
+        // Comprobar viento fuerte
+        if (!type && speed > 15 && particleFilters.wind !== false) {
           type = 'wind';
           isTypeEnabled = particleFilters.wind;
         }
 
-        if (type && cell.latitud && cell.longitud && isTypeEnabled !== false) {
-          features.push({
-            type: 'Feature',
-            properties: {
-              color: getWeatherColor(type),
-              wind_speed: cell.wind_speed || 0
-            },
-            geometry: {
-              type: 'Point',
-              coordinates: [cell.longitud, cell.latitud]
-            }
-          });
+        if (!type || isTypeEnabled === false) continue;
 
-          nodes.push({
-            id: index,
-            longitude: cell.longitud,
-            latitude: cell.latitud,
-            type: type,
-            direction: cell.wind_direction || 0,
-            wind_speed: cell.wind_speed || 0,
-            presion: cell.presion || 1013,
-            rafagas: cell.rafagas || 0
-          });
-        }
-      });
+        // Reconstruir coordenadas geográficas desde índices del grid
+        const lat = row - 89.5;
+        const lon = col - 179.5;
+
+        features.push({
+          type: 'Feature',
+          properties: {
+            color: getWeatherColor(type),
+            wind_speed: speed
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [lon, lat]
+          }
+        });
+
+        nodes.push({
+          id: nodeIndex++,
+          longitude: lon,
+          latitude: lat,
+          type: type,
+          direction: direction,
+          wind_speed: speed,
+          presion: 1013,
+          rafagas: 0
+        });
+      }
     }
 
     return {
@@ -197,10 +223,11 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
 
     const updateSize = () => {
       const container = map.getContainer();
-      // Multiplicar por pixelRatio para pantallas retina
-      const pixelRatio = window.devicePixelRatio || 1;
+      // Limitar pixelRatio a 1.5 para evitar 4x overdraw en pantallas Retina/4K
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = container.clientWidth * pixelRatio;
       canvas.height = container.clientHeight * pixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset antes de escalar
       ctx.scale(pixelRatio, pixelRatio);
     };
 
@@ -399,19 +426,47 @@ const GridRadarLayer = ({ scannedGrid, currentZoom = 6, particleFilters = { rain
       animationId = requestAnimationFrame(render);
     };
 
+    // --- Pausa Temprana: Control de arranque/parada del motor ---
+    let isRunning = false;
+
+    const maybeStartEngine = () => {
+      const currentZoom = map.getZoom();
+      const shouldRun = currentZoom >= 3.0 && visibleNodes.length > 0;
+
+      if (shouldRun && !isRunning) {
+        isRunning = true;
+        lastTime = performance.now();
+        animationId = requestAnimationFrame(render);
+        console.log('[Performance] Motor de partículas REANUDADO');
+      } else if (!shouldRun && isRunning) {
+        isRunning = false;
+        cancelAnimationFrame(animationId);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log('[Performance] Motor de partículas PAUSADO (Zoom out / Fuera de vista)');
+      }
+    };
+
+    // Envolver updateVisibleNodes para re-evaluar el throttle
+    const originalUpdateVisibleNodes = updateVisibleNodes;
+    const throttledUpdate = () => {
+      originalUpdateVisibleNodes();
+      maybeStartEngine();
+    };
+
     map.on('resize', updateSize);
-    map.on('moveend', updateVisibleNodes);
-    map.on('zoomend', updateVisibleNodes);
+    map.on('moveend', throttledUpdate);
+    map.on('zoomend', throttledUpdate);
 
     updateSize();
-    updateVisibleNodes();
-    animationId = requestAnimationFrame(render);
+    throttledUpdate(); // Evaluar si el motor debe arrancar
 
     return () => {
+      isRunning = false;
       cancelAnimationFrame(animationId);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       map.off('resize', updateSize);
-      map.off('moveend', updateVisibleNodes);
-      map.off('zoomend', updateVisibleNodes);
+      map.off('moveend', throttledUpdate);
+      map.off('zoomend', throttledUpdate);
     };
   }, [map, activeNodes]);
 

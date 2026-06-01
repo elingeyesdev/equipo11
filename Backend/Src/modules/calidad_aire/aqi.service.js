@@ -27,7 +27,7 @@ const getLatestGEFSUrl = async () => {
   for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
     const d = new Date(now);
     d.setUTCDate(d.getUTCDate() - dayOffset);
-    
+
     const yyyy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -56,7 +56,7 @@ const extractPM25 = async (gribPath, gridKeys) => {
   // En GEFS-Aerosol, el PM2.5 superficial se suele identificar como PMTF (Particulate Matter Fine)
   // Intentamos con pmtf minúscula y mayúscula
   let shortName = 'pmtf';
-  
+
   const tryExtract = async (nameToTry) => {
     let whereClause = `shortName=${nameToTry},typeOfLevel=surface`;
     const { stdout } = await execPromise(`grib_get_data -F "%.4f" -w ${whereClause} ${gribPath}`, { maxBuffer: 150 * 1024 * 1024 });
@@ -125,7 +125,7 @@ const runAqiScraper = async () => {
         throw new Error(`HTTP ${response.status} ${response.statusText} - Falló la descarga final de: ${url}`);
       }
       const buffer = await response.arrayBuffer();
-      
+
       const tempPath = gribPath + '.tmp';
       fs.writeFileSync(tempPath, Buffer.from(buffer));
       fs.renameSync(tempPath, gribPath);
@@ -165,7 +165,7 @@ const runAqiScraper = async () => {
     const tempJsonPath = jsonPath + '.tmp';
     fs.writeFileSync(tempJsonPath, JSON.stringify(gridData));
     fs.renameSync(tempJsonPath, jsonPath);
-    
+
     logger.info(`[AQI Scraper] ✅ Malla global AQI generada exitosamente: aqi_global.json con ${gridData.length} puntos.`);
 
   } catch (error) {

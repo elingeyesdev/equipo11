@@ -54,12 +54,14 @@ export default class TempColorLayer {
     }
 
     // 2. Ubicaciones de uniforms y atributos
-    this._aPos       = gl.getAttribLocation(this._program, 'a_pos');
-    this._uMatrix    = gl.getUniformLocation(this._program, 'u_matrix');
-    this._uTempData  = gl.getUniformLocation(this._program, 'u_temp_data');
-    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
-    this._uOpacity   = gl.getUniformLocation(this._program, 'u_opacity');
-    this._uTexSize   = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._aPos         = gl.getAttribLocation(this._program, 'a_pos');
+    this._uMatrix      = gl.getUniformLocation(this._program, 'u_matrix');
+    this._uDataCurrent = gl.getUniformLocation(this._program, 'u_data_current');
+    this._uDataNext    = gl.getUniformLocation(this._program, 'u_data_next');
+    this._uColorRamp   = gl.getUniformLocation(this._program, 'u_color_ramp');
+    this._uOpacity     = gl.getUniformLocation(this._program, 'u_opacity');
+    this._uMixFactor   = gl.getUniformLocation(this._program, 'u_mix_factor');
+    this._uTexSize     = gl.getUniformLocation(this._program, 'u_tex_size');
 
     // 3. Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
     //    Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
@@ -107,15 +109,23 @@ export default class TempColorLayer {
     // Uniform: resolución del grid
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
 
-    // Textura 0: datos de temperatura
+    // Textura 0: datos de temperatura current
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.tempTexture);
-    gl.uniform1i(this._uTempData, 0);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.tempTextureCurrent);
+    gl.uniform1i(this._uDataCurrent, 0);
 
-    // Textura 1: paleta de color
+    // Textura 1: datos de temperatura next
     gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.tempTextureNext);
+    gl.uniform1i(this._uDataNext, 1);
+
+    // Textura 2: paleta de color
+    gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
-    gl.uniform1i(this._uColorRamp, 1);
+    gl.uniform1i(this._uColorRamp, 2);
+
+    // Mix Factor
+    gl.uniform1f(this._uMixFactor, this.mixFactor !== undefined ? this.mixFactor : 0.0);
 
     // Buffer de vértices
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
@@ -155,11 +165,26 @@ export default class TempColorLayer {
   updateData(gridData) {
     if (this._texManager) {
       this._texManager.update(gridData);
+      this.mixFactor = 0.0;
       if (this._map) this._map.triggerRepaint();
     } else {
       // onAdd aún no fue llamado; guardar para después
       this._pendingData = gridData;
     }
+  }
+
+  updateDataDual(currentData, nextData, mixFactor = 0.0) {
+    if (this._texManager) {
+      this._texManager.updateDual(currentData, nextData);
+      this.mixFactor = mixFactor;
+      if (this._map) this._map.triggerRepaint();
+    }
+  }
+
+  setMixFactor(value) {
+    if (this.mixFactor === value) return;
+    this.mixFactor = value;
+    if (this._map) this._map.triggerRepaint();
   }
 
   /**

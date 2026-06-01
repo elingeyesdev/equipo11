@@ -12,7 +12,7 @@ router.get('/global', (req, res) => {
     if (!fs.existsSync(AQI_FILE_PATH)) {
       return error(res, 'Los datos de AQI global aún no están listos. El scraper está en proceso.', 404);
     }
-    
+
     // Al ser un archivo estático precompilado, podemos leerlo y parsearlo
     // o enviarlo directamente usando res.sendFile
     // Enviaremos usando res.sendFile para mejor rendimiento

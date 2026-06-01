@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getSensoresIoT } from '../utils/weatherApi';
 import { FALLBACK_DATA } from '../data/fallbackData';
+import { getImageDataArray, sampleWindBilinear } from '../utils/windMath';
 
 export default function useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters }) {
   const [iotSensors, setIotSensors] = useState([]);
@@ -19,34 +20,33 @@ export default function useSensors({ scannedGrid, simulatedCities, isParticlesAc
     return () => clearInterval(interval);
   }, []);
 
+  // Extraer pixel data del wind PNG una sola vez
+  const windPixelData = useMemo(() => {
+    if (!scannedGrid?.data?.windImg) return null;
+    return getImageDataArray(scannedGrid.data.windImg);
+  }, [scannedGrid]);
+
   useEffect(() => {
-    if (!scannedGrid?.data || !isParticlesActive || !particleFilters.wind) return;
+    if (!windPixelData || !isParticlesActive || !particleFilters.wind) return;
 
     let activeCities = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
 
     const newFeatures = activeCities.map((city) => {
-      let nearestCell = null;
-      let minDist = Infinity;
       const lng = city.longitude;
       const lat = city.latitude;
 
-      const roughGrid = scannedGrid.data.filter(c => Math.abs(c.latitud - lat) < 1.5 && Math.abs(c.longitud - lng) < 1.5);
-      const searchSpace = roughGrid.length > 0 ? roughGrid : scannedGrid.data;
-
-      searchSpace.forEach(cell => {
-        const dist = Math.hypot(cell.latitud - lat, cell.longitud - lng);
-        if (dist < minDist) { minDist = dist; nearestCell = cell; }
-      });
+      // Leer la velocidad del viento desde la textura PNG
+      const wind = sampleWindBilinear(windPixelData, lng, lat);
 
       return {
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lng, lat] },
-        properties: { name: city.name || city.ciudad || 'Desconocido', wind_speed: nearestCell ? nearestCell.wind_speed : 0 }
+        properties: { name: city.name || city.ciudad || 'Desconocido', wind_speed: wind.speed }
       };
     });
 
     setDynamicWindLabels({ type: 'FeatureCollection', features: newFeatures });
-  }, [scannedGrid, simulatedCities, iotSensors, isParticlesActive, particleFilters.wind]);
+  }, [windPixelData, simulatedCities, iotSensors, isParticlesActive, particleFilters.wind]);
 
   const citiesData = simulatedCities.length > 0 ? simulatedCities : (iotSensors.length > 0 ? iotSensors : FALLBACK_DATA);
 

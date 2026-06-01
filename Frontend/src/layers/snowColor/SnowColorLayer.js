@@ -33,20 +33,20 @@ export default class SnowColorLayer {
       return;
     }
 
-    this._aPos            = gl.getAttribLocation(this._program, 'a_pos');
-    this._uMatrix         = gl.getUniformLocation(this._program, 'u_matrix');
-    this._uSnowData       = gl.getUniformLocation(this._program, 'u_snow_data');
-    this._uColorRamp      = gl.getUniformLocation(this._program, 'u_color_ramp');
-    this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
-    this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._aPos = gl.getAttribLocation(this._program, 'a_pos');
+    this._uMatrix = gl.getUniformLocation(this._program, 'u_matrix');
+    this._uSnowData = gl.getUniformLocation(this._program, 'u_snow_data');
+    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
+    this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
+    this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
 
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
 
     const nw = { x: -5.0, y: yTop };
-    const ne = { x:  6.0, y: yTop };
+    const ne = { x: 6.0, y: yTop };
     const sw = { x: -5.0, y: yBottom };
-    const se = { x:  6.0, y: yBottom };
+    const se = { x: 6.0, y: yBottom };
 
     const vertices = new Float32Array([
       nw.x, nw.y,
@@ -103,7 +103,7 @@ export default class SnowColorLayer {
     if (this._program) gl.deleteProgram(this._program);
     if (this._buffer) gl.deleteBuffer(this._buffer);
     if (this._texManager) this._texManager.destroy();
-    
+
     this._program = null;
     this._buffer = null;
     this._texManager = null;

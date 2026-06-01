@@ -54,12 +54,12 @@ export default class WindColorLayer {
     }
 
     // 2. Ubicaciones de uniforms y atributos
-    this._aPos            = gl.getAttribLocation(this._program, 'a_pos');
-    this._uMatrix         = gl.getUniformLocation(this._program, 'u_matrix');
-    this._uWindData       = gl.getUniformLocation(this._program, 'u_wind_data');
-    this._uColorRamp      = gl.getUniformLocation(this._program, 'u_color_ramp');
-    this._uOpacity        = gl.getUniformLocation(this._program, 'u_opacity');
-    this._uTexSize        = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._aPos = gl.getAttribLocation(this._program, 'a_pos');
+    this._uMatrix = gl.getUniformLocation(this._program, 'u_matrix');
+    this._uWindData = gl.getUniformLocation(this._program, 'u_wind_data');
+    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
+    this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
+    this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
 
     // 3. Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
     //    Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
@@ -67,9 +67,9 @@ export default class WindColorLayer {
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
 
     const nw = { x: -5.0, y: yTop };
-    const ne = { x:  6.0, y: yTop };
+    const ne = { x: 6.0, y: yTop };
     const sw = { x: -5.0, y: yBottom };
-    const se = { x:  6.0, y: yBottom };
+    const se = { x: 6.0, y: yBottom };
 
     // Dos triángulos: NW-NE-SW, NE-SE-SW
     const vertices = new Float32Array([
@@ -135,7 +135,7 @@ export default class WindColorLayer {
     if (this._program) gl.deleteProgram(this._program);
     if (this._buffer) gl.deleteBuffer(this._buffer);
     if (this._texManager) this._texManager.destroy();
-    
+
     this._program = null;
     this._buffer = null;
     this._texManager = null;

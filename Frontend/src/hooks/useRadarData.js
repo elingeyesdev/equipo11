@@ -1,13 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import httpClient from '../config/httpClient';
 
+// Helper: Carga un PNG como HTMLImageElement (0% CPU, nativo del navegador)
+const _loadPng = (path, params = {}) => new Promise((resolve) => {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
+  img.onload = () => resolve(img);
+  img.onerror = () => resolve(null);
+  img.src = `${httpClient.defaults.baseURL}${path}${timeParam}`;
+});
+
 export default function useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode }) {
   const [availableRadarDates, setAvailableRadarDates] = useState([]);
   const [globalHistoryArray, setGlobalHistoryArray] = useState([]);
   const [globalTimelineIndex, setGlobalTimelineIndex] = useState(0);
-  const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: [] });
-  const [scannedGridA, setScannedGridA] = useState({ status: 'idle', data: [] });
-  const [scannedGridB, setScannedGridB] = useState({ status: 'idle', data: [] });
+  const [scannedGrid, setScannedGrid] = useState({ status: 'idle', progress: 0, data: null });
+  const [scannedGridA, setScannedGridA] = useState({ status: 'idle', data: null });
+  const [scannedGridB, setScannedGridB] = useState({ status: 'idle', data: null });
   const [isFetchingRadar, setIsFetchingRadar] = useState(false);
   const hasSetInitialIndex = useRef(false);
 
@@ -69,84 +79,62 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
     setGlobalTimelineIndex(prev => prev === 0 ? initialIndex : prev);
   }, [availableRadarDates]);
 
-  // Radar fetch effect
+  // ─── Descarga de 6 PNGs RGBA (Arquitectura Data Texture) ─────────
   useEffect(() => {
-    let intervalId;
-    if (isParticlesActive) {
-      const fetchRadar = async () => {
-        try {
-          if (isDynamicHistoricalMode) setIsFetchingRadar(true);
-
-          if (isCompareMode) {
-            const fetchSide = async (timeIndex, setter) => {
-              const entry = globalHistoryArray[timeIndex];
-              if (!entry) return;
-              const path = entry.isPrediction ? '/radar/prediction' : '/radar/bolivia';
-              const { data: resp } = await httpClient.get(path, { params: { time: entry.timestamp } });
-              const r = resp.data;
-              setter(r);
-              return r.status;
-            };
-            const [statusA, statusB] = await Promise.all([
-              fetchSide(compareIndexA ?? globalTimelineIndex, setScannedGridA),
-              fetchSide(compareIndexB ?? globalTimelineIndex, setScannedGridB)
-            ]);
-            if (statusA === 'ready' && statusB === 'ready') {
-              clearInterval(intervalId);
-              setIsFetchingRadar(false);
-            }
-          } else {
-            let path = '/radar/bolivia';
-            const selectedEntry = globalHistoryArray[globalTimelineIndex];
-            const params = {};
-            if (isDynamicHistoricalMode && selectedEntry) {
-              if (selectedEntry.isPrediction) path = '/radar/prediction';
-              params.time = selectedEntry.timestamp;
-            }
-            const { data: resp } = await httpClient.get(path, { params });
-            const res = resp.data;
-            
-            // DEBUG SENSOR: Verificar llaves del JSON crudo
-            if (res && res.data && res.data.length > 0) {
-              res.data.forEach(cell => {
-                if (cell.temperatura !== undefined && cell.temperatura !== null) {
-                  const tempVal = parseFloat(cell.temperatura);
-                  cell.temperatura = isNaN(tempVal) ? null : tempVal;
-                }
-              });
-              console.log("🔍 Sonda GFS Backend (Primera Celda):", res.data[0]);
-            } else if (Array.isArray(res) && res.length > 0) {
-              res.forEach(cell => {
-                if (cell.temperatura !== undefined && cell.temperatura !== null) {
-                  const tempVal = parseFloat(cell.temperatura);
-                  cell.temperatura = isNaN(tempVal) ? null : tempVal;
-                }
-              });
-              console.log("🔍 Sonda GFS Backend (Primera Celda):", res[0]);
-            }
-
-            setScannedGrid(res);
-            if (res && res.status === 'ready') {
-              clearInterval(intervalId);
-              setIsFetchingRadar(false);
-            } else {
-              setIsFetchingRadar(true);
-            }
-          }
-        } catch (e) {
-          console.error('Error fetching radar:', e);
-          setIsFetchingRadar(false);
-        }
-      };
-      fetchRadar();
-      intervalId = setInterval(fetchRadar, 1000);
-    } else {
-      setScannedGrid({ status: 'idle', progress: 0, data: [] });
-      setScannedGridA({ status: 'idle', data: [] });
-      setScannedGridB({ status: 'idle', data: [] });
+    if (!isParticlesActive) {
+      setScannedGrid({ status: 'idle', progress: 0, data: null });
+      setScannedGridA({ status: 'idle', data: null });
+      setScannedGridB({ status: 'idle', data: null });
+      return;
     }
-    return () => { if (intervalId) clearInterval(intervalId); };
-  }, [isParticlesActive, isCompareMode, isDynamicHistoricalMode, globalTimelineIndex, compareIndexA, compareIndexB, globalHistoryArray]);
+
+    const fetchRadar = async () => {
+      try {
+        if (isDynamicHistoricalMode) setIsFetchingRadar(true);
+
+        const selectedEntry = globalHistoryArray[globalTimelineIndex];
+        const params = {};
+        if (isDynamicHistoricalMode && selectedEntry) {
+          params.time = selectedEntry.timestamp;
+        }
+
+        // Descarga de los 6 PNGs RGBA en paralelo con aislamiento de errores
+        const [tempResult, visResult, rainResult, snowResult, windResult, aqiResult] =
+          await Promise.allSettled([
+            _loadPng('/radar/bolivia/temp/png', params),
+            _loadPng('/radar/bolivia/vis/png', params),
+            _loadPng('/radar/bolivia/rain/png', params),
+            _loadPng('/radar/bolivia/snow/png', params),
+            _loadPng('/radar/bolivia/wind/png', params),
+            _loadPng('/radar/bolivia/aqi/png', params),
+          ]);
+
+        const imgData = {
+          tempImg: tempResult.status === 'fulfilled' ? tempResult.value : null,
+          visImg: visResult.status === 'fulfilled' ? visResult.value : null,
+          rainImg: rainResult.status === 'fulfilled' ? rainResult.value : null,
+          snowImg: snowResult.status === 'fulfilled' ? snowResult.value : null,
+          windImg: windResult.status === 'fulfilled' ? windResult.value : null,
+          aqiImg: aqiResult.status === 'fulfilled' ? aqiResult.value : null,
+        };
+
+        // Verificar que al menos una textura se cargó
+        const anyLoaded = Object.values(imgData).some(v => v !== null);
+        if (anyLoaded) {
+          setScannedGrid({ status: 'ready', data: imgData });
+          setIsFetchingRadar(false);
+        } else {
+          console.warn('[useRadarData] Ninguna textura PNG se cargó correctamente.');
+          setIsFetchingRadar(true);
+        }
+      } catch (e) {
+        console.error('Error fetching radar PNGs:', e);
+        setIsFetchingRadar(false);
+      }
+    };
+
+    fetchRadar();
+  }, [isParticlesActive, isDynamicHistoricalMode, globalTimelineIndex, globalHistoryArray]);
 
   return {
     availableRadarDates,

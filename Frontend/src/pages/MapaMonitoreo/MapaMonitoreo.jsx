@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
+import TimePlayer from '../../components/TimePlayer/TimePlayer';
 import { getWeatherAtLocation, getPlaceName, getFullDataForPoint } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
@@ -36,7 +37,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear, buildTempGridIndex, sampleTempBilinear, buildAqiGridIndex, sampleAqiNearest } from '../../utils/windMath';
+import { getImageDataArray, sampleWindBilinear, sampleRainBilinear, sampleSnowBilinear, sampleVisibilityBilinear, sampleTempBilinear, sampleAqiNearest } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -143,37 +144,13 @@ function MapaMonitoreo() {
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
   const containerRef = useRef(null); // ref para el ResizeObserver
 
-  // --- Índice vectorial del grid (U,V) para interpolación local del viento ---
-  // Se recalcula solo cuando cambian los datos de la NOAA (scannedGrid)
-  const windGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const rainGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildRainGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const snowGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildSnowGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const visGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildVisibilityGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const tempGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildTempGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const aqiGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildAqiGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
+  // --- Extracción de Uint8ClampedArray de los PNGs (0% CPU O(1) Lookups) ---
+  const windData = useMemo(() => scannedGrid?.data?.windImg ? getImageDataArray(scannedGrid.data.windImg) : null, [scannedGrid]);
+  const rainData = useMemo(() => scannedGrid?.data?.rainImg ? getImageDataArray(scannedGrid.data.rainImg) : null, [scannedGrid]);
+  const snowData = useMemo(() => scannedGrid?.data?.snowImg ? getImageDataArray(scannedGrid.data.snowImg) : null, [scannedGrid]);
+  const visData = useMemo(() => scannedGrid?.data?.visImg ? getImageDataArray(scannedGrid.data.visImg) : null, [scannedGrid]);
+  const tempData = useMemo(() => scannedGrid?.data?.tempImg ? getImageDataArray(scannedGrid.data.tempImg) : null, [scannedGrid]);
+  const aqiData = useMemo(() => scannedGrid?.data?.aqiImg ? getImageDataArray(scannedGrid.data.aqiImg) : null, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
   useEffect(() => {
@@ -358,16 +335,16 @@ function MapaMonitoreo() {
     }
 
     // Interpolar de forma instantánea escalar/vectorial
-    const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
-    const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
-    const localSnow = snowGridIndex ? sampleSnowBilinear(snowGridIndex, lng, lat) : null;
-    const localVisRaw = visGridIndex ? sampleVisibilityBilinear(visGridIndex, lng, lat) : null;
-    const localAqi = aqiGridIndex ? sampleAqiNearest(aqiGridIndex, lng, lat) : null;
+    const localWind = windData ? sampleWindBilinear(windData, lng, lat) : null;
+    const localRain = rainData ? sampleRainBilinear(rainData, lng, lat) : null;
+    const localSnow = snowData ? sampleSnowBilinear(snowData, lng, lat) : null;
+    const localVisRaw = visData ? sampleVisibilityBilinear(visData, lng, lat) : null;
+    const localAqi = aqiData ? sampleAqiNearest(aqiData, lng, lat) : null;
     
     let localTempK = null;
     try {
-      if (tempGridIndex) {
-        localTempK = sampleTempBilinear(tempGridIndex, lng, lat);
+      if (tempData) {
+        localTempK = sampleTempBilinear(tempData, lng, lat);
       }
     } catch (err) {
       console.error("Error interpolando temperatura en CPU:", err);
@@ -776,6 +753,7 @@ function MapaMonitoreo() {
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
             <span style={{ opacity: 0.8 }}>Mostrando el clima global en la fecha seleccionada.</span>
           </div>
+          {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
           <Timeline
             cityHistoryArray={globalHistoryArray}
             currentIndex={globalTimelineIndex}
@@ -788,6 +766,12 @@ function MapaMonitoreo() {
               if (side === 'A') setCompareIndexA(idx);
               else setCompareIndexB(idx);
             }}
+          /> */}
+          <TimePlayer 
+            globalHistoryArray={globalHistoryArray}
+            currentIndex={globalTimelineIndex}
+            onIndexChange={(idx) => setGlobalTimelineIndex(idx)}
+            isDynamicHistoricalMode={isDynamicHistoricalMode}
           />
         </>
       )}
@@ -800,11 +784,20 @@ function MapaMonitoreo() {
       )}
 
       {isHistoricalMode && activeCity && (
-        <Timeline
-          cityHistoryArray={cityHistoryArray}
-          currentIndex={timelineIndex}
-          onIndexChange={(idx) => setTimelineIndex(idx)}
-        />
+        <>
+          {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
+          <Timeline
+            cityHistoryArray={cityHistoryArray}
+            currentIndex={timelineIndex}
+            onIndexChange={(idx) => setTimelineIndex(idx)}
+          /> */}
+          <TimePlayer 
+            globalHistoryArray={cityHistoryArray}
+            currentIndex={timelineIndex}
+            onIndexChange={(idx) => setTimelineIndex(idx)}
+            isDynamicHistoricalMode={false}
+          />
+        </>
       )}
 
       <SimulationStatus

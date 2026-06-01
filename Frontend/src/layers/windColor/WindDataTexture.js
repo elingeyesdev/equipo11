@@ -9,9 +9,9 @@
 import { buildColorRampTexture, DEFAULT_RAMP } from './colorRamps.js';
 
 // Constantes del grid global (1° resolución, centros en ±0.5)
-const GRID_WIDTH  = 360;
+const GRID_WIDTH = 360;
 const GRID_HEIGHT = 180;
-const MAX_SPEED   = 150; // km/h — para normalizar a [0, 1]
+const MAX_SPEED = 150; // km/h — para normalizar a [0, 1]
 
 export default class WindDataTexture {
   /**
@@ -32,14 +32,14 @@ export default class WindDataTexture {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     // Inicializar con ceros
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.LUMINANCE,
+      gl.TEXTURE_2D, 0, gl.RGBA,
       GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.LUMINANCE, gl.UNSIGNED_BYTE, emptyData
+      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
     );
 
     // --- Textura de paleta de color (256×1, RGBA) ---
@@ -68,40 +68,15 @@ export default class WindDataTexture {
   }
 
   /**
-   * Actualiza la textura de datos con el grid de radar actual.
-   * @param {Array} gridData — Array de { latitud, longitud, wind_speed, ... }
+   * Actualiza la textura de datos con un PNG RGBA del backend.
+   * @param {HTMLImageElement} gridData — Imagen PNG RGBA 360×180
    */
   update(gridData) {
-    if (!gridData || gridData.length === 0) return;
+    if (!gridData || !(gridData instanceof HTMLImageElement)) return;
 
     const gl = this.gl;
-    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
-
-    for (const point of gridData) {
-      // PostgreSQL devuelve DECIMAL como string — parsear explícitamente
-      const lat = Number(point.latitud);
-      const lon = Number(point.longitud);
-      const speed = Number(point.wind_speed) || 0;
-
-      if (isNaN(lat) || isNaN(lon)) continue;
-
-      // Mapear coordenadas geográficas a índices de textura
-      const col = Math.round(lon + 179.5);
-      const row = Math.round(lat + 89.5);
-
-      if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-      // Normalizar velocidad a [0, 255]
-      const norm = Math.min(speed / this.maxSpeed, 1.0);
-      pixels[row * GRID_WIDTH + col] = Math.round(norm * 255);
-    }
-
     gl.bindTexture(gl.TEXTURE_2D, this.windTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.LUMINANCE,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.LUMINANCE, gl.UNSIGNED_BYTE, pixels
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, gridData);
   }
 
   /**
