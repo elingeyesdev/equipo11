@@ -29,9 +29,11 @@ export const vertexSource = `
 export const fragmentSource = `
   precision highp float;
 
-  uniform sampler2D u_temp_data;
+  uniform sampler2D u_data_current;
+  uniform sampler2D u_data_next;
   uniform sampler2D u_color_ramp;
   uniform float u_opacity;
+  uniform float u_mix_factor;
   uniform vec2 u_tex_size;
 
   varying vec2 v_mercator;
@@ -40,7 +42,7 @@ export const fragmentSource = `
 
   // Interpolación bilineal manual con wrap horizontal perfecto (antimeridiano).
   // Muestrea 4 texeles vecinos y mezcla suavemente garantizando continuidad en longitud ±180°.
-  float sampleBilinear(vec2 uv) {
+  float sampleBilinear(vec2 uv, sampler2D tex) {
     vec2 texelCoord = uv * u_tex_size - 0.5;
     vec2 base = floor(texelCoord);
     vec2 f = fract(texelCoord);
@@ -61,10 +63,10 @@ export const fragmentSource = `
 
     // 4 muestreos explícitos (NEAREST garantizado en JS)
     // LUMINANCE: WebGL pone el byte en .r, .g, .b — leemos .r
-    float s00 = texture2D(u_temp_data, uv00).r;
-    float s10 = texture2D(u_temp_data, uv10).r;
-    float s01 = texture2D(u_temp_data, uv01).r;
-    float s11 = texture2D(u_temp_data, uv11).r;
+    float s00 = texture2D(tex, uv00).r;
+    float s10 = texture2D(tex, uv10).r;
+    float s01 = texture2D(tex, uv01).r;
+    float s11 = texture2D(tex, uv11).r;
 
     // Mezcla bilineal: horizontal primero, luego vertical
     return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
@@ -85,8 +87,10 @@ export const fragmentSource = `
       (lat + 90.0) / 180.0
     );
 
-    // Interpolación bilineal manual SIEMPRE activa (KISS + Garantiza antimeridiano)
-    float temp = sampleBilinear(uv);
+    // Interpolación temporal
+    float tempCurrent = sampleBilinear(uv, u_data_current);
+    float tempNext = sampleBilinear(uv, u_data_next);
+    float temp = mix(tempCurrent, tempNext, u_mix_factor);
 
     // Muestrear la paleta de color (textura 1D de 256 px)
     vec4 color = texture2D(u_color_ramp, vec2(temp, 0.5));

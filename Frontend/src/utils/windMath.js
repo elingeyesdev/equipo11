@@ -40,444 +40,256 @@ function speedDirToUV(speed, dirDeg) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// PNG DATA TEXTURE PIPELINE — Funciones de lectura de píxeles RGBA
+// Estas funciones trabajan sobre Uint8ClampedArray extraída de los PNGs
+// que el backend genera como Data Textures RGBA 360×180.
+// ═══════════════════════════════════════════════════════════════════════
+
 /**
- * Construye un lookup Map indexado por "row_col" para acceso O(1) al grid.
- * Se cachea externamente (useMemo) para no recalcular cada frame.
+ * Extrae el array de píxeles RGBA de un HTMLImageElement usando OffscreenCanvas.
+ * El resultado es un Uint8ClampedArray de 360*180*4 bytes.
  *
- * Nota: PostgreSQL DECIMAL devuelve strings. Parseamos explícitamente.
- *
- * @param {Array} gridData — Array de { latitud, longitud, wind_speed, wind_direction }
- * @returns {Map<string, { u: number, v: number }>}
+ * @param {HTMLImageElement} imgElement — Imagen PNG cargada del backend
+ * @returns {{ data: Uint8ClampedArray, width: number, height: number } | null}
  */
-export function buildGridIndex(gridData) {
-  const index = new Map();
-  if (!gridData || gridData.length === 0) return index;
+export function getImageDataArray(imgElement) {
+  if (!imgElement || imgElement.width === 0 || imgElement.height === 0) return null;
 
-  for (const cell of gridData) {
-    const lat = parseFloat(cell.latitud);
-    const lon = parseFloat(cell.longitud);
-    const speed = parseFloat(cell.wind_speed);
-    const dir = parseFloat(cell.wind_direction);
+  const w = imgElement.width;
+  const h = imgElement.height;
 
-    // Validación estricta: cualquier NaN descarta la celda
-    if (!isFinite(lat) || !isFinite(lon)) continue;
-
-    // Mapeo de coordenadas geográficas → índices del grid
-    // lat -89.5 → row 0,  lat 89.5 → row 179
-    // lon -179.5 → col 0, lon 179.5 → col 359
-    const col = Math.round(lon + 179.5);
-    const row = Math.round(lat + 89.5);
-
-    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-    const { u, v } = speedDirToUV(isFinite(speed) ? speed : 0, isFinite(dir) ? dir : 0);
-    index.set(`${row}_${col}`, { u, v });
+  // Preferir OffscreenCanvas si está disponible (sin contaminar el DOM)
+  let canvas, ctx;
+  if (typeof OffscreenCanvas !== 'undefined') {
+    canvas = new OffscreenCanvas(w, h);
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
+  } else {
+    canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    ctx = canvas.getContext('2d', { willReadFrequently: true });
   }
 
-  return index;
+  ctx.drawImage(imgElement, 0, 0);
+  const imageData = ctx.getImageData(0, 0, w, h);
+  return { data: imageData.data, width: w, height: h };
 }
 
 /**
- * Lee un punto del índice del grid. Retorna {0,0} si no existe.
+ * Lee los 4 bytes RGBA de un píxel específico del grid.
+ * Aplica wrap horizontal (antimeridiano) y clamp vertical (polos).
  *
- * @param {Map} gridIndex
- * @param {number} col — Columna (0-359)
- * @param {number} row — Fila (0-179)
- * @returns {{ u: number, v: number }}
+ * @param {{ data: Uint8ClampedArray, width: number, height: number }} imgData
+ * @param {number} col — Columna (puede ser negativa o > 359, se wrappea)
+ * @param {number} row — Fila (se clampea a [0, height-1])
+ * @returns {[number, number, number, number]} — [R, G, B, A]
  */
-function readCell(gridIndex, col, row) {
+function readPixel(imgData, col, row) {
+  const w = imgData.width;
+  const h = imgData.height;
+
   // Wrap horizontal (antimeridiano)
-  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
+  col = ((col % w) + w) % w;
   // Clamp vertical (polos)
-  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
+  row = Math.max(0, Math.min(row, h - 1));
 
-  return gridIndex.get(`${row}_${col}`) || { u: 0, v: 0 };
+  const idx = (row * w + col) * 4;
+  return [
+    imgData.data[idx],
+    imgData.data[idx + 1],
+    imgData.data[idx + 2],
+    imgData.data[idx + 3]
+  ];
 }
 
-/**
- * Interpolación bilineal vectorial del viento en una coordenada continua.
- *
- * Descompone speed+direction → U,V en los 4 texeles vecinos,
- * interpola U y V por separado con mix(), y recompone la magnitud.
- *
- * @param {Map} gridIndex — Índice precalculado via buildGridIndex()
- * @param {number} lng — Longitud (-180 a 180, o cualquier rango — se normaliza)
- * @param {number} lat — Latitud (-90 a 90)
- * @returns {{ speed: number, u: number, v: number }}
- */
-export function sampleWindBilinear(gridIndex, lng, lat) {
-  if (!gridIndex || gridIndex.size === 0) return { speed: 0, u: 0, v: 0 };
-
-  // Validar inputs
-  if (!isFinite(lng) || !isFinite(lat)) {
-    console.warn('[windMath] sampleWindBilinear: coordenadas inválidas', { lng, lat });
-    return { speed: 0, u: 0, v: 0 };
-  }
-
-  // Normalizar longitud a rango [-180, 180)
+// Helper: convierte lng/lat a coordenadas de texel continuas
+function _geoToTexel(lng, lat) {
   lng = ((lng % 360) + 540) % 360 - 180;
-  // Clamp latitud a [-90, 90]
   lat = Math.max(-90, Math.min(90, lat));
+  return { texX: lng + 179.5, texY: lat + 89.5 };
+}
 
-  // Geo → coordenadas continuas del texel (centrado en el grid del backend)
-  // lon -179.5 → texX 0.0, lon 179.5 → texX 359.0
-  const texX = lng + 179.5;
-  // lat -89.5 → texY 0.0, lat 89.5 → texY 179.0
-  const texY = lat + 89.5;
+// ─── VIENTO (PNG: R=speed, G=dir, B=gust) ──────────────────────────
+// R: speed / 150 * 255 => speed = (R / 255) * 150
+// G: dir / 360 * 255   => dir   = (G / 255) * 360
+// B: gust / 150 * 255  => gust  = (B / 255) * 150
+export function sampleWindBilinear(data, lng, lat) {
+  if (!data) return { speed: 0, u: 0, v: 0 };
+  if (!isFinite(lng) || !isFinite(lat)) return { speed: 0, u: 0, v: 0 };
 
+  const { texX, texY } = _geoToTexel(lng, lat);
   const x0 = Math.floor(texX);
   const y0 = Math.floor(texY);
   const fx = texX - x0;
   const fy = texY - y0;
 
-  // Leer los 4 vecinos (con wrap horizontal y clamp vertical)
-  const c00 = readCell(gridIndex, x0, y0);
-  const c10 = readCell(gridIndex, x0 + 1, y0);
-  const c01 = readCell(gridIndex, x0, y0 + 1);
-  const c11 = readCell(gridIndex, x0 + 1, y0 + 1);
+  const decode = (p) => {
+    if (p[3] === 0) return { speed: 0, dir: 0 };
+    return {
+      speed: (p[0] / 255.0) * 150.0,
+      dir: (p[1] / 255.0) * 360.0
+    };
+  };
 
-  // Interpolar U y V por separado (mix horizontal, luego vertical)
-  const u = (c00.u * (1 - fx) + c10.u * fx) * (1 - fy) +
-            (c01.u * (1 - fx) + c11.u * fx) * fy;
+  const w00 = decode(readPixel(data, x0, y0));
+  const w10 = decode(readPixel(data, x0 + 1, y0));
+  const w01 = decode(readPixel(data, x0, y0 + 1));
+  const w11 = decode(readPixel(data, x0 + 1, y0 + 1));
 
-  const v = (c00.v * (1 - fx) + c10.v * fx) * (1 - fy) +
-            (c01.v * (1 - fx) + c11.v * fx) * fy;
+  // Descomponer a U/V para interpolar vectorialmente
+  const toUV = (s, d) => speedDirToUV(s, d);
+  const uv00 = toUV(w00.speed, w00.dir);
+  const uv10 = toUV(w10.speed, w10.dir);
+  const uv01 = toUV(w01.speed, w01.dir);
+  const uv11 = toUV(w11.speed, w11.dir);
 
-  // Recomponer magnitud desde el vector interpolado
+  const u = (uv00.u * (1 - fx) + uv10.u * fx) * (1 - fy) +
+            (uv01.u * (1 - fx) + uv11.u * fx) * fy;
+  const v = (uv00.v * (1 - fx) + uv10.v * fx) * (1 - fy) +
+            (uv01.v * (1 - fx) + uv11.v * fx) * fy;
+
   const speed = Math.sqrt(u * u + v * v);
-
-  // Guardia final contra NaN (no debería ocurrir, pero seguridad defensiva)
-  if (!isFinite(speed)) {
-    console.warn('[windMath] sampleWindBilinear: resultado NaN', { lng, lat, texX, texY, x0, y0 });
-    return { speed: 0, u: 0, v: 0 };
-  }
-
   return { speed: Math.round(speed * 100) / 100, u, v };
 }
 
-/**
- * Genera un GeoJSON FeatureCollection con la velocidad del viento
- * interpolada vectorialmente para cada ciudad del catálogo.
- *
- * @param {Array} cities — Array de { name, lng, lat }
- * @param {Map} gridIndex — Índice precalculado via buildGridIndex()
- * @returns {Object} — GeoJSON FeatureCollection
- */
-export function buildCitiesWindGeoJSON(cities, gridIndex) {
-  const features = cities.map(city => {
-    const { speed } = sampleWindBilinear(gridIndex, city.lng, city.lat);
-    return {
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [city.lng, city.lat] },
-      properties: {
-        name: city.name,
-        wind_speed: speed,
-      },
-    };
-  });
+// ─── VISIBILIDAD (PNG: R=G=B=norm) ─────────────────────────────────
+// R = vis / 24135 * 255 => vis = (R / 255) * 24135
+export function sampleVisibilityBilinear(data, lng, lat) {
+  if (!data) return null;
 
-  return { type: 'FeatureCollection', features };
-}
-
-/**
- * Crea un índice optimizado para buscar valores de lluvia (escalar).
- * @param {Array} gridData 
- * @returns {Map} index structure
- */
-export function buildRainGridIndex(gridData) {
-  const index = new Map();
-  if (!gridData || gridData.length === 0) return index;
-
-  for (const cell of gridData) {
-    const lat = parseFloat(cell.latitud);
-    const lon = parseFloat(cell.longitud);
-    const rain = parseFloat(cell.rain);
-
-    if (!isFinite(lat) || !isFinite(lon)) continue;
-
-    const col = Math.round(lon + 179.5);
-    const row = Math.round(lat + 89.5);
-
-    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-    index.set(`${row}_${col}`, isFinite(rain) ? rain : 0);
-  }
-
-  return index;
-}
-
-/**
- * Lee un punto del índice de lluvia. Retorna 0 si no existe.
- */
-function readRainCell(gridIndex, col, row) {
-  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
-  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
-  return gridIndex.get(`${row}_${col}`) || 0;
-}
-
-/**
- * Interpolación bilineal de lluvia (escalar) en una coordenada continua.
- *
- * @param {Map} gridIndex
- * @param {number} lng
- * @param {number} lat
- * @returns {number} Intensidad de lluvia (mm/h)
- */
-export function sampleRainBilinear(gridIndex, lng, lat) {
-  if (!gridIndex || gridIndex.size === 0) return 0;
-
-  if (!isFinite(lng) || !isFinite(lat)) return 0;
-
-  lng = ((lng % 360) + 540) % 360 - 180;
-  lat = Math.max(-90, Math.min(90, lat));
-
-  const texX = lng + 179.5;
-  const texY = lat + 89.5;
-
+  const { texX, texY } = _geoToTexel(lng, lat);
   const x0 = Math.floor(texX);
   const y0 = Math.floor(texY);
   const fx = texX - x0;
   const fy = texY - y0;
 
-  const r00 = readRainCell(gridIndex, x0, y0);
-  const r10 = readRainCell(gridIndex, x0 + 1, y0);
-  const r01 = readRainCell(gridIndex, x0, y0 + 1);
-  const r11 = readRainCell(gridIndex, x0 + 1, y0 + 1);
+  const getVis = (p) => p[3] === 0 ? null : (p[0] / 255.0) * 24135.0;
 
-  // Interpolar escalar directamente
-  const bottom = r00 * (1 - fx) + r10 * fx;
-  const top    = r01 * (1 - fx) + r11 * fx;
-  const rain   = bottom * (1 - fy) + top * fy;
+  const v00 = getVis(readPixel(data, x0, y0));
+  const v10 = getVis(readPixel(data, x0 + 1, y0));
+  const v01 = getVis(readPixel(data, x0, y0 + 1));
+  const v11 = getVis(readPixel(data, x0 + 1, y0 + 1));
 
-  return Math.max(0, Math.round(rain * 100) / 100);
-}
+  if (v00 === null || v10 === null || v01 === null || v11 === null) return null;
 
-/**
- * Crea un índice optimizado para buscar valores de nieve (escalar).
- */
-export function buildSnowGridIndex(gridData) {
-  const index = new Map();
-  if (!gridData || gridData.length === 0) return index;
-
-  for (const cell of gridData) {
-    const lat = parseFloat(cell.latitud);
-    const lon = parseFloat(cell.longitud);
-    const snow = parseFloat(cell.snow);
-    const snowFresh = parseFloat(cell.snow_fresh);
-
-    if (!isFinite(lat) || !isFinite(lon)) continue;
-
-    const col = Math.round(lon + 179.5);
-    const row = Math.round(lat + 89.5);
-
-    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-    index.set(`${row}_${col}`, {
-      accumulated: isFinite(snow) ? snow : 0,
-      fresh: isFinite(snowFresh) ? snowFresh : 0
-    });
-  }
-
-  return index;
-}
-
-function readSnowCell(gridIndex, col, row) {
-  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
-  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
-  return gridIndex.get(`${row}_${col}`) || { accumulated: 0, fresh: 0 };
-}
-
-export function sampleSnowBilinear(gridIndex, lng, lat) {
-  if (!gridIndex || gridIndex.size === 0) return { accumulated: 0, fresh: 0 };
-  if (!isFinite(lng) || !isFinite(lat)) return { accumulated: 0, fresh: 0 };
-  
-  lng = ((lng % 360) + 540) % 360 - 180;
-  lat = Math.max(-90, Math.min(90, lat));
-  
-  const texX = lng + 179.5;
-  const texY = lat + 89.5;
-  const x0 = Math.floor(texX);
-  const y0 = Math.floor(texY);
-  const fx = texX - x0;
-  const fy = texY - y0;
-  
-  const s00 = readSnowCell(gridIndex, x0, y0);
-  const s10 = readSnowCell(gridIndex, x0 + 1, y0);
-  const s01 = readSnowCell(gridIndex, x0, y0 + 1);
-  const s11 = readSnowCell(gridIndex, x0 + 1, y0 + 1);
-  
-  const bAcc = s00.accumulated * (1 - fx) + s10.accumulated * fx;
-  const tAcc = s01.accumulated * (1 - fx) + s11.accumulated * fx;
-  const acc = bAcc * (1 - fy) + tAcc * fy;
-
-  const bFr = s00.fresh * (1 - fx) + s10.fresh * fx;
-  const tFr = s01.fresh * (1 - fx) + s11.fresh * fx;
-  const fr = bFr * (1 - fy) + tFr * fy;
-  
-  return {
-    accumulated: Math.max(0, Math.round(acc * 100) / 100),
-    fresh: Math.max(0, Math.round(fr * 100) / 100)
-  };
-}
-
-/**
- * Crea un índice optimizado para buscar valores de visibilidad (escalar).
- */
-export function buildVisibilityGridIndex(gridData) {
-  const index = new Map();
-  if (!gridData || gridData.length === 0) return index;
-
-  for (const cell of gridData) {
-    const lat = parseFloat(cell.latitud);
-    const lon = parseFloat(cell.longitud);
-    const vis = parseFloat(cell.vis); // asumiendo que el JSON tiene .vis
-
-    if (!isFinite(lat) || !isFinite(lon)) continue;
-
-    const col = Math.round(lon + 179.5);
-    const row = Math.round(lat + 89.5);
-
-    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-    index.set(`${row}_${col}`, isFinite(vis) ? vis : 0);
-  }
-
-  return index;
-}
-
-export function sampleVisibilityBilinear(gridIndex, lng, lat) {
-  if (!gridIndex || gridIndex.size === 0) return 0;
-  if (!isFinite(lng) || !isFinite(lat)) return 0;
-  
-  lng = ((lng % 360) + 540) % 360 - 180;
-  lat = Math.max(-90, Math.min(90, lat));
-  
-  const texX = lng + 179.5;
-  const texY = lat + 89.5;
-  const x0 = Math.floor(texX);
-  const y0 = Math.floor(texY);
-  const fx = texX - x0;
-  const fy = texY - y0;
-  
-  const v00 = readRainCell(gridIndex, x0, y0);
-  const v10 = readRainCell(gridIndex, x0 + 1, y0);
-  const v01 = readRainCell(gridIndex, x0, y0 + 1);
-  const v11 = readRainCell(gridIndex, x0 + 1, y0 + 1);
-  
   const bottom = v00 * (1 - fx) + v10 * fx;
-  const top    = v01 * (1 - fx) + v11 * fx;
-  const vis    = bottom * (1 - fy) + top * fy;
-  
-  return Math.max(0, Math.round(vis * 100) / 100);
+  const top = v01 * (1 - fx) + v11 * fx;
+  return bottom * (1 - fy) + top * fy;
 }
 
-/**
- * Crea un índice optimizado para buscar valores de temperatura (escalar).
- */
-export function buildTempGridIndex(gridData) {
-  const index = new Map();
-  if (!gridData || gridData.length === 0) return index;
+// ─── NIEVE (PNG: R=acumulada, G=fresca) ────────────────────────────
+// R = accum / 150 * 255 => accum = (R / 255) * 150
+// G = fresh / 300 * 255 => fresh = (G / 255) * 300
+export function sampleSnowBilinear(data, lng, lat) {
+  if (!data) return null;
 
-  for (const cell of gridData) {
-    const lat = parseFloat(cell.latitud);
-    const lon = parseFloat(cell.longitud);
-    const temp = parseFloat(cell.temp || cell.temperatura); // Soporta ambas convenciones
-
-    if (!isFinite(lat) || !isFinite(lon)) continue;
-
-    const col = Math.round(lon + 179.5);
-    const row = Math.round(lat + 89.5);
-
-    if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-    index.set(`${row}_${col}`, isFinite(temp) ? temp : null);
-  }
-
-  return index;
-}
-
-function readTempCell(gridIndex, col, row) {
-  col = ((col % GRID_WIDTH) + GRID_WIDTH) % GRID_WIDTH;
-  row = Math.max(0, Math.min(row, GRID_HEIGHT - 1));
-  return gridIndex.get(`${row}_${col}`) || null;
-}
-
-/**
- * Interpolación bilineal de temperatura (escalar) en una coordenada continua.
- * Retorna en Kelvin crudo (o null si no hay datos).
- */
-export function sampleTempBilinear(gridIndex, lng, lat) {
-  if (!gridIndex || gridIndex.size === 0) return null;
-  if (!isFinite(lng) || !isFinite(lat)) return null;
-  
-  lng = ((lng % 360) + 540) % 360 - 180;
-  lat = Math.max(-90, Math.min(90, lat));
-  
-  const texX = lng + 179.5;
-  const texY = lat + 89.5;
+  const { texX, texY } = _geoToTexel(lng, lat);
   const x0 = Math.floor(texX);
   const y0 = Math.floor(texY);
   const fx = texX - x0;
   const fy = texY - y0;
-  
-  const t00 = readTempCell(gridIndex, x0, y0);
-  const t10 = readTempCell(gridIndex, x0 + 1, y0);
-  const t01 = readTempCell(gridIndex, x0, y0 + 1);
-  const t11 = readTempCell(gridIndex, x0 + 1, y0 + 1);
-  
-  // Si falta alguno de los 4, retornamos null para no promediar contra 0K (-273C)
+
+  const getSnow = (p) => {
+    if (p[3] === 0) return { a: 0, f: 0 };
+    return { a: (p[0] / 255.0) * 150.0, f: (p[1] / 255.0) * 300.0 };
+  };
+
+  const s00 = getSnow(readPixel(data, x0, y0));
+  const s10 = getSnow(readPixel(data, x0 + 1, y0));
+  const s01 = getSnow(readPixel(data, x0, y0 + 1));
+  const s11 = getSnow(readPixel(data, x0 + 1, y0 + 1));
+
+  const accBottom = s00.a * (1 - fx) + s10.a * fx;
+  const accTop = s01.a * (1 - fx) + s11.a * fx;
+  const accumulated = accBottom * (1 - fy) + accTop * fy;
+
+  const freBottom = s00.f * (1 - fx) + s10.f * fx;
+  const freTop = s01.f * (1 - fx) + s11.f * fx;
+  const fresh = freBottom * (1 - fy) + freTop * fy;
+
+  return { accumulated, fresh };
+}
+
+// ─── LLUVIA (PNG: R=G=B=norm no-lineal) ────────────────────────────
+const RAIN_STOPS = [
+  0.0, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,
+  15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 70.0, 85.0, 100.0, 150.0
+];
+const RAIN_STOPS_COUNT = RAIN_STOPS.length;
+
+function decodeRain(byteVal) {
+  if (byteVal === 0) return 0;
+  const norm = byteVal / 255.0;
+  const virtualIndex = norm * (RAIN_STOPS_COUNT - 1);
+  let i = Math.floor(virtualIndex);
+  let t = virtualIndex - i;
+  if (i >= RAIN_STOPS_COUNT - 1) return RAIN_STOPS[RAIN_STOPS_COUNT - 1];
+  return RAIN_STOPS[i] + t * (RAIN_STOPS[i + 1] - RAIN_STOPS[i]);
+}
+
+export function sampleRainBilinear(data, lng, lat) {
+  if (!data) return null;
+
+  const { texX, texY } = _geoToTexel(lng, lat);
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+
+  const getRain = (p) => p[3] === 0 ? 0 : decodeRain(p[0]);
+
+  const r00 = getRain(readPixel(data, x0, y0));
+  const r10 = getRain(readPixel(data, x0 + 1, y0));
+  const r01 = getRain(readPixel(data, x0, y0 + 1));
+  const r11 = getRain(readPixel(data, x0 + 1, y0 + 1));
+
+  const bottom = r00 * (1 - fx) + r10 * fx;
+  const top = r01 * (1 - fx) + r11 * fx;
+  return bottom * (1 - fy) + top * fy;
+}
+
+// ─── AQI (PNG: Nearest Neighbor) ───────────────────────────────────
+// byte = Math.round(aqi / 2.0) => aqi = byte * 2.0
+export function sampleAqiNearest(data, lng, lat) {
+  if (!data) return null;
+
+  const { texX, texY } = _geoToTexel(lng, lat);
+
+  const col = Math.round(texX);
+  const row = Math.round(texY);
+
+  const p = readPixel(data, col, row);
+  if (p[3] === 0) return null;
+  return p[0] * 2.0;
+}
+
+// ─── TEMPERATURA (PNG: R=G=B=norm) ─────────────────────────────────
+// R = (tempC + 60) / 120 * 255 => tempK = ((R / 255) * 120 - 60) + 273.15
+export function sampleTempBilinear(data, lng, lat) {
+  if (!data) return null;
+
+  const { texX, texY } = _geoToTexel(lng, lat);
+  const x0 = Math.floor(texX);
+  const y0 = Math.floor(texY);
+  const fx = texX - x0;
+  const fy = texY - y0;
+
+  const getTemp = (p) => {
+    if (p[3] === 0) return null;
+    const tempC = (p[0] / 255.0) * 120.0 - 60.0;
+    return tempC + 273.15; // Retornamos en Kelvin para compatibilidad
+  };
+
+  const t00 = getTemp(readPixel(data, x0, y0));
+  const t10 = getTemp(readPixel(data, x0 + 1, y0));
+  const t01 = getTemp(readPixel(data, x0, y0 + 1));
+  const t11 = getTemp(readPixel(data, x0 + 1, y0 + 1));
+
   if (t00 === null || t10 === null || t01 === null || t11 === null) return null;
 
   const bottom = t00 * (1 - fx) + t10 * fx;
-  const top    = t01 * (1 - fx) + t11 * fx;
-  const temp   = bottom * (1 - fy) + top * fy;
-  
-  return temp;
-}
-
-/**
- * Convierte temperatura de Kelvin a la unidad solicitada.
- * @param {number} k — Temperatura en Kelvin
- * @param {'C'|'F'|'K'} unit — Unidad de destino
- * @returns {number}
- */
-function convertTemp(k, unit) {
-  let val;
-  if (unit === 'F') {
-    val = (k - 273.15) * 1.8 + 32;
-  } else if (unit === 'C') {
-    val = k - 273.15;
-  } else {
-    val = k;
-  }
-  return val;
-}
-
-/**
- * Genera un GeoJSON FeatureCollection con la temperatura
- * interpolada y convertida para cada ciudad del catálogo.
- *
- * @param {Array} cities — Array de { name, lng, lat }
- * @param {Map} tempGridIndex — Índice precalculado via buildTempGridIndex()
- * @param {'C'|'F'|'K'} unit — Unidad de temperatura del usuario (default: 'C')
- * @returns {Object} — GeoJSON FeatureCollection
- */
-export function buildCitiesTempGeoJSON(cities, tempGridIndex, unit = 'C') {
-  const features = cities.map(city => {
-    const tempK = sampleTempBilinear(tempGridIndex, city.lng, city.lat);
-    if (tempK === null) return null;
-
-    const converted = convertTemp(tempK, unit);
-    return {
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [city.lng, city.lat] },
-      properties: {
-        name: city.name,
-        temperatura: Math.round(converted * 10) / 10, // 1 decimal de precisión
-      },
-    };
-  }).filter(Boolean);
-
-  return { type: 'FeatureCollection', features };
+  const top = t01 * (1 - fx) + t11 * fx;
+  return bottom * (1 - fy) + top * fy;
 }
 

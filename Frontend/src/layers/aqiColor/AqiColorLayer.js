@@ -30,20 +30,21 @@ export default class AqiColorLayer {
       return;
     }
 
-    this._aPos       = gl.getAttribLocation(this._program, 'a_pos');
-    this._uMatrix    = gl.getUniformLocation(this._program, 'u_matrix');
-    this._uAqiData   = gl.getUniformLocation(this._program, 'u_aqi_data');
-    this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
-    this._uOpacity   = gl.getUniformLocation(this._program, 'u_opacity');
-    this._uTexSize   = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._aPos = gl.getAttribLocation(this._program, 'a_pos');
+    this._uMatrix = gl.getUniformLocation(this._program, 'u_matrix');
+    this._uAqiData = gl.getUniformLocation(this._program, 'u_aqi_data');
+    this._uAqiDataNext = gl.getUniformLocation(this._program, 'u_aqi_data_next');
+    this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
+    this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
 
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
 
     const nw = { x: -5.0, y: yTop };
-    const ne = { x:  6.0, y: yTop };
+    const ne = { x: 6.0, y: yTop };
     const sw = { x: -5.0, y: yBottom };
-    const se = { x:  6.0, y: yBottom };
+    const se = { x: 6.0, y: yBottom };
 
     const vertices = new Float32Array([
       nw.x, nw.y,
@@ -59,9 +60,6 @@ export default class AqiColorLayer {
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
     this._texManager = new AqiDataTexture(gl);
-
-    // Cargar datos automáticamente al añadir la capa
-    this.loadData();
   }
 
   render(gl, matrix) {
@@ -75,12 +73,14 @@ export default class AqiColorLayer {
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.dataTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.dataTextureCurrent);
     gl.uniform1i(this._uAqiData, 0);
 
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
-    gl.uniform1i(this._uColorRamp, 1);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.dataTextureNext);
+    gl.uniform1i(this._uAqiDataNext, 1);
+
+    gl.uniform1f(this._uMixFactor, this.mixFactor !== undefined ? this.mixFactor : 0.0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);
@@ -109,12 +109,23 @@ export default class AqiColorLayer {
     this.destroy();
   }
 
-  async loadData() {
+  /**
+   * Recibe la textura PNG RGBA directamente del orquestador (WeatherOverlay).
+   * @param {HTMLImageElement} imgElement
+   */
+  updateData(imgElement) {
+    if (this._texManager && imgElement) {
+      this._texManager.update(imgElement);
+      this.mixFactor = 0.0;
+      if (this._map) this._map.triggerRepaint();
+    }
+  }
+
+  updateDataDual(currentData, nextData, mixFactor = 0.0) {
     if (this._texManager) {
-      const success = await this._texManager.fetchDataAndUpdate();
-      if (success && this._map) {
-        this._map.triggerRepaint();
-      }
+      this._texManager.updateDual(currentData, nextData);
+      this.mixFactor = mixFactor;
+      if (this._map) this._map.triggerRepaint();
     }
   }
 

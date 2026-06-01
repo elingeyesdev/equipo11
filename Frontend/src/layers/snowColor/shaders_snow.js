@@ -13,16 +13,18 @@ export const fragmentSource = `
   precision highp float;
 
   uniform sampler2D u_snow_data;
+  uniform sampler2D u_snow_data_next;
   uniform sampler2D u_color_ramp;
   uniform float u_opacity;
   uniform vec2 u_tex_size;
+  uniform float u_mix_factor;
 
   varying vec2 v_mercator;
 
   const float PI = 3.14159265359;
 
   // Interpolación bilineal perfecta que corrige el desfase de medio píxel
-  float sampleBilinear(float lon, float lat) {
+  float sampleBilinear(float lon, float lat, sampler2D tex) {
     vec2 texelCoord = vec2(lon + 180.0, lat + 90.0);
     vec2 base = floor(texelCoord);
     vec2 f = fract(texelCoord);
@@ -38,10 +40,10 @@ export const fragmentSource = `
     vec2 uv01 = (vec2(x0, y1) + 0.5) / u_tex_size;
     vec2 uv11 = (vec2(x1, y1) + 0.5) / u_tex_size;
 
-    float s00 = texture2D(u_snow_data, uv00).r;
-    float s10 = texture2D(u_snow_data, uv10).r;
-    float s01 = texture2D(u_snow_data, uv01).r;
-    float s11 = texture2D(u_snow_data, uv11).r;
+    float s00 = texture2D(tex, uv00).r;
+    float s10 = texture2D(tex, uv10).r;
+    float s01 = texture2D(tex, uv01).r;
+    float s11 = texture2D(tex, uv11).r;
 
     return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
   }
@@ -55,7 +57,10 @@ export const fragmentSource = `
     float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
 
     // Extraer valor de nieve
-    float activeSnowNorm = sampleBilinear(lon, lat); 
+    float snowNormCurrent = sampleBilinear(lon, lat, u_snow_data); 
+    float snowNormNext = sampleBilinear(lon, lat, u_snow_data_next); 
+    
+    float activeSnowNorm = mix(snowNormCurrent, snowNormNext, u_mix_factor);
 
     if (activeSnowNorm < 0.001) {
       discard;

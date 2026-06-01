@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
 import Timeline from '../../components/Timeline/Timeline';
+import TimePlayer from '../../components/TimePlayer/TimePlayer';
 import { getWeatherAtLocation, getPlaceName, getFullDataForPoint } from '../../utils/weatherApi';
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor, METRICAS_UNIDADES } from '../../utils/unidades';
@@ -36,7 +37,7 @@ import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
-import { buildGridIndex, sampleWindBilinear, buildRainGridIndex, sampleRainBilinear, buildSnowGridIndex, sampleSnowBilinear, buildVisibilityGridIndex, sampleVisibilityBilinear, buildTempGridIndex, sampleTempBilinear } from '../../utils/windMath';
+import { getImageDataArray, sampleWindBilinear, sampleRainBilinear, sampleSnowBilinear, sampleVisibilityBilinear, sampleTempBilinear, sampleAqiNearest } from '../../utils/windMath';
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -133,7 +134,7 @@ function MapaMonitoreo() {
     availableRadarDates,
     globalHistoryArray, globalTimelineIndex, setGlobalTimelineIndex,
     scannedGrid, scannedGridA, scannedGridB,
-    isFetchingRadar
+    isFetchingRadar, setCorruptedDates
   } = useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode });
 
   const { iotSensors, iotLoading, dynamicWindLabels, citiesData } = useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters });
@@ -143,32 +144,13 @@ function MapaMonitoreo() {
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
   const containerRef = useRef(null); // ref para el ResizeObserver
 
-  // --- Índice vectorial del grid (U,V) para interpolación local del viento ---
-  // Se recalcula solo cuando cambian los datos de la NOAA (scannedGrid)
-  const windGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const rainGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildRainGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const snowGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildSnowGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const visGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildVisibilityGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
-
-  const tempGridIndex = useMemo(() => {
-    if (!scannedGrid?.data || scannedGrid.data.length === 0) return null;
-    return buildTempGridIndex(scannedGrid.data);
-  }, [scannedGrid]);
+  // --- Extracción de Uint8ClampedArray de los PNGs (0% CPU O(1) Lookups) ---
+  const windData = useMemo(() => scannedGrid?.data?.windImg ? getImageDataArray(scannedGrid.data.windImg) : null, [scannedGrid]);
+  const rainData = useMemo(() => scannedGrid?.data?.rainImg ? getImageDataArray(scannedGrid.data.rainImg) : null, [scannedGrid]);
+  const snowData = useMemo(() => scannedGrid?.data?.snowImg ? getImageDataArray(scannedGrid.data.snowImg) : null, [scannedGrid]);
+  const visData = useMemo(() => scannedGrid?.data?.visImg ? getImageDataArray(scannedGrid.data.visImg) : null, [scannedGrid]);
+  const tempData = useMemo(() => scannedGrid?.data?.tempImg ? getImageDataArray(scannedGrid.data.tempImg) : null, [scannedGrid]);
+  const aqiData = useMemo(() => scannedGrid?.data?.aqiImg ? getImageDataArray(scannedGrid.data.aqiImg) : null, [scannedGrid]);
 
   // ResizeObserver para arreglar el lag del canvas cuando se encoge el panel lateral
   useEffect(() => {
@@ -318,8 +300,10 @@ function MapaMonitoreo() {
   useEffect(() => {
     if (!scalarPopup) return;
     
+    const aqiActive = (isParticlesActive && particleFilters.aqi) || (isHeatmapActive && heatmapMetric === 'aqi');
+    
     // Si la visualización principal está apagada, cerramos el popup
-    if (!isParticlesActive) {
+    if (!isParticlesActive && !isHeatmapActive) {
       setScalarPopup(null);
       return;
     }
@@ -327,11 +311,12 @@ function MapaMonitoreo() {
     const nextMetrics = [];
     // Revisamos qué métricas del popup actual siguen estando activas en los filtros
     for (const metric of scalarPopup.metrics) {
-      if (metric.label === 'Viento' && particleFilters.wind) nextMetrics.push(metric);
-      if (metric.label === 'Precipitación' && particleFilters.rain) nextMetrics.push(metric);
-      if (metric.label.includes('Nieve') && particleFilters.snow) nextMetrics.push(metric);
-      if (metric.label === 'Visibilidad' && particleFilters.fog) nextMetrics.push(metric);
-      if (metric.label === 'Temperatura' && particleFilters.temp) nextMetrics.push(metric);
+      if (metric.label === 'Viento' && isParticlesActive && particleFilters.wind) nextMetrics.push(metric);
+      if (metric.label === 'Precipitación' && isParticlesActive && particleFilters.rain) nextMetrics.push(metric);
+      if (metric.label.includes('Nieve') && isParticlesActive && particleFilters.snow) nextMetrics.push(metric);
+      if (metric.label === 'Visibilidad' && isParticlesActive && particleFilters.fog) nextMetrics.push(metric);
+      if (metric.label === 'Temperatura' && isParticlesActive && particleFilters.temp) nextMetrics.push(metric);
+      if (metric.label === 'Calidad del Aire (AQI)' && aqiActive) nextMetrics.push(metric);
     }
 
     if (nextMetrics.length === 0) {
@@ -339,7 +324,7 @@ function MapaMonitoreo() {
     } else if (nextMetrics.length !== scalarPopup.metrics.length) {
       setScalarPopup(prev => ({ ...prev, metrics: nextMetrics }));
     }
-  }, [isParticlesActive, particleFilters, scalarPopup]);
+  }, [isParticlesActive, isHeatmapActive, heatmapMetric, particleFilters, scalarPopup]);
 
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
@@ -350,15 +335,16 @@ function MapaMonitoreo() {
     }
 
     // Interpolar de forma instantánea escalar/vectorial
-    const localWind = windGridIndex ? sampleWindBilinear(windGridIndex, lng, lat) : null;
-    const localRain = rainGridIndex ? sampleRainBilinear(rainGridIndex, lng, lat) : null;
-    const localSnow = snowGridIndex ? sampleSnowBilinear(snowGridIndex, lng, lat) : null;
-    const localVisRaw = visGridIndex ? sampleVisibilityBilinear(visGridIndex, lng, lat) : null;
+    const localWind = windData ? sampleWindBilinear(windData, lng, lat) : null;
+    const localRain = rainData ? sampleRainBilinear(rainData, lng, lat) : null;
+    const localSnow = snowData ? sampleSnowBilinear(snowData, lng, lat) : null;
+    const localVisRaw = visData ? sampleVisibilityBilinear(visData, lng, lat) : null;
+    const localAqi = aqiData ? sampleAqiNearest(aqiData, lng, lat) : null;
     
     let localTempK = null;
     try {
-      if (tempGridIndex) {
-        localTempK = sampleTempBilinear(tempGridIndex, lng, lat);
+      if (tempData) {
+        localTempK = sampleTempBilinear(tempData, lng, lat);
       }
     } catch (err) {
       console.error("Error interpolando temperatura en CPU:", err);
@@ -370,30 +356,44 @@ function MapaMonitoreo() {
       displayVis = visKm > 24.0 ? '> 24.0' : visKm.toFixed(1);
     }
 
-    const activeMetrics = [];
+    const scalarMetrics = [];
     if (isParticlesActive && particleFilters.wind && localWind) {
-      activeMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
+      scalarMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
     }
     if (isParticlesActive && particleFilters.rain && localRain !== null) {
-      activeMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
+      scalarMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
     }
     if (isParticlesActive && particleFilters.snow && localSnow !== null) {
-      activeMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
-      activeMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
+      scalarMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
+      scalarMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
     }
     if (isParticlesActive && particleFilters.fog && displayVis !== null) {
-      activeMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
+      scalarMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
     }
     if (isParticlesActive && particleFilters.temp && localTempK !== null && !isNaN(localTempK) && isFinite(localTempK)) {
       const baseTempC = localTempK - 273.15;
       const unitDef = METRICAS_UNIDADES['temperatura'].unidades.find(u => u.key === unidades['temperatura']) || METRICAS_UNIDADES['temperatura'].unidades[0];
       const formattedValue = unitDef.convertir(baseTempC).toFixed(unitDef.precision);
       const suffix = unitDef.sufijo.trim();
-      activeMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
+      scalarMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
     }
 
-    if (activeMetrics.length > 0) {
-      setScalarPopup({ lng, lat, metrics: activeMetrics });
+    const aqiActive = (isParticlesActive && particleFilters.aqi) || (isHeatmapActive && heatmapMetric === 'aqi');
+    if (aqiActive && localAqi !== null) {
+      let catLabel = 'Buena';
+      let catColor = '#00d0ff';
+      if (localAqi >= 400) { catLabel = 'Peligrosa (Extrema)'; catColor = '#800080'; }
+      else if (localAqi >= 300) { catLabel = 'Peligrosa'; catColor = '#990000'; }
+      else if (localAqi >= 200) { catLabel = 'Muy Dañina'; catColor = '#ff0000'; }
+      else if (localAqi >= 150) { catLabel = 'Dañina'; catColor = '#ff9933'; }
+      else if (localAqi >= 100) { catLabel = 'Dañina (Grupos Sensibles)'; catColor = '#ffff00'; }
+      else if (localAqi >= 50) { catLabel = 'Moderada'; catColor = '#00e600'; }
+      
+      scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
+    }
+
+    if (scalarMetrics.length > 0) {
+      setScalarPopup({ lng, lat, metrics: scalarMetrics });
     } else {
       setScalarPopup(null);
     }
@@ -451,7 +451,9 @@ function MapaMonitoreo() {
       latitude: lat,
       longitude: lng,
       data: {
-        temperatura: null, aqi: null, ica: null, ruido: null, humedad: null,
+        temperatura: localTempK !== null ? localTempK - 273.15 : null, 
+        aqi: localAqi !== null ? Math.round(localAqi) : null, 
+        ica: null, ruido: null, humedad: null,
         windSpeed: localWind ? localWind.speed : null,
         rain: localRain !== null ? localRain : null,
       },
@@ -645,7 +647,8 @@ function MapaMonitoreo() {
                   {scalarPopup.metrics.map((m, idx) => (
                     <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
-                      <div>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {m.color && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: m.color, marginRight: '6px', boxShadow: '0 0 4px rgba(0,0,0,0.5)' }}></div>}
                         <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
                         <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
                       </div>
@@ -750,6 +753,7 @@ function MapaMonitoreo() {
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
             <span style={{ opacity: 0.8 }}>Mostrando el clima global en la fecha seleccionada.</span>
           </div>
+          {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
           <Timeline
             cityHistoryArray={globalHistoryArray}
             currentIndex={globalTimelineIndex}
@@ -762,6 +766,13 @@ function MapaMonitoreo() {
               if (side === 'A') setCompareIndexA(idx);
               else setCompareIndexB(idx);
             }}
+          /> */}
+          <TimePlayer 
+            globalHistoryArray={globalHistoryArray}
+            currentIndex={globalTimelineIndex}
+            onIndexChange={setGlobalTimelineIndex}
+            isDynamicHistoricalMode={isDynamicHistoricalMode}
+            setCorruptedDates={setCorruptedDates}
           />
         </>
       )}
@@ -774,11 +785,20 @@ function MapaMonitoreo() {
       )}
 
       {isHistoricalMode && activeCity && (
-        <Timeline
-          cityHistoryArray={cityHistoryArray}
-          currentIndex={timelineIndex}
-          onIndexChange={(idx) => setTimelineIndex(idx)}
-        />
+        <>
+          {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
+          <Timeline
+            cityHistoryArray={cityHistoryArray}
+            currentIndex={timelineIndex}
+            onIndexChange={(idx) => setTimelineIndex(idx)}
+          /> */}
+          <TimePlayer 
+            globalHistoryArray={cityHistoryArray}
+            currentIndex={timelineIndex}
+            onIndexChange={(idx) => setTimelineIndex(idx)}
+            isDynamicHistoricalMode={false}
+          />
+        </>
       )}
 
       <SimulationStatus

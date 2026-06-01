@@ -27,7 +27,7 @@ const getLatestGEFSUrl = async () => {
   for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
     const d = new Date(now);
     d.setUTCDate(d.getUTCDate() - dayOffset);
-    
+
     const yyyy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(d.getUTCDate()).padStart(2, '0');
@@ -56,10 +56,10 @@ const extractPM25 = async (gribPath, gridKeys) => {
   // En GEFS-Aerosol, el PM2.5 superficial se suele identificar como PMTF (Particulate Matter Fine)
   // Intentamos con pmtf minúscula y mayúscula
   let shortName = 'pmtf';
-  
+
   const tryExtract = async (nameToTry) => {
-    let whereClause = `shortName=${nameToTry},level=surface`;
-    const { stdout } = await execPromise(`grib_get_data -F "%.4f" -w ${whereClause} ${gribPath}`, { maxBuffer: 50 * 1024 * 1024 });
+    let whereClause = `shortName=${nameToTry},typeOfLevel=surface`;
+    const { stdout } = await execPromise(`grib_get_data -F "%.4f" -w ${whereClause} ${gribPath}`, { maxBuffer: 150 * 1024 * 1024 });
     const lines = stdout.split('\n');
     const data = new Map();
 
@@ -72,6 +72,7 @@ const extractPM25 = async (gribPath, gridKeys) => {
       let lon = parseFloat(parts[1]);
       const val = parseFloat(parts[2]);
 
+      if (isNaN(lat) || isNaN(lon) || isNaN(val)) continue;
       if (val === 9999 || val <= -9999) continue;
 
       const key = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
@@ -124,7 +125,7 @@ const runAqiScraper = async () => {
         throw new Error(`HTTP ${response.status} ${response.statusText} - Falló la descarga final de: ${url}`);
       }
       const buffer = await response.arrayBuffer();
-      
+
       const tempPath = gribPath + '.tmp';
       fs.writeFileSync(tempPath, Buffer.from(buffer));
       fs.renameSync(tempPath, gribPath);
@@ -144,16 +145,8 @@ const runAqiScraper = async () => {
       let aqiValue = null;
 
       if (pm25 !== undefined) {
-        // En GRIB, los aerosoles pueden venir en kg/m3. 
-        // Si el valor es minúsculo (ej. 1e-9), hay que convertir a µg/m3 multiplicando por 1e9.
-        // Si el modelo ya entrega en µg/m3, se pasa directo. GEFS suele entregar en kg/m3.
-        // Asumiremos que si pm25 < 1, viene en kg/m3.
-        let pmUg = pm25;
-        if (pm25 < 1 && pm25 > 0) {
-          pmUg = pm25 * 1e9;
-        }
-        
-        aqiValue = pm25ToAqi(pmUg);
+        // El GRIB2 ya nos entrega los datos crudos en µg/m³. NO multiplicar por 1e9.
+        aqiValue = pm25ToAqi(pm25);
       }
 
       let [latStr, lonStr] = key.split('_');
@@ -172,7 +165,7 @@ const runAqiScraper = async () => {
     const tempJsonPath = jsonPath + '.tmp';
     fs.writeFileSync(tempJsonPath, JSON.stringify(gridData));
     fs.renameSync(tempJsonPath, jsonPath);
-    
+
     logger.info(`[AQI Scraper] ✅ Malla global AQI generada exitosamente: aqi_global.json con ${gridData.length} puntos.`);
 
   } catch (error) {

@@ -3,6 +3,7 @@ import Layout from './components/Layout/Layout'
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary'
 import MapaMonitoreo from './pages/MapaMonitoreo/MapaMonitoreo'
 import Reportes from './pages/Reportes/Reportes'
+import ReportTemplateBuilder from './pages/Reportes/ReportTemplateBuilder'
 import Usuarios from './pages/Usuarios/Usuarios'
 import Alertas from './pages/Alertas/Alertas'
 import Notificaciones from './pages/Notificaciones/Notificaciones'
@@ -58,6 +59,7 @@ function App() {
         <Route element={<ProtectedRoute><DesktopRoute><Layout /></DesktopRoute></ProtectedRoute>}>
           <Route path="mapa" element={<MapaMonitoreo />} />
           <Route path="reportes" element={<Reportes />} />
+          <Route path="plantillas" element={<ReportTemplateBuilder />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="alertas" element={<Alertas />} />
           <Route path="notificaciones" element={<Notificaciones />} />

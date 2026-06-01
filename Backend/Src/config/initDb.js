@@ -68,6 +68,15 @@ async function initDatabase() {
         token TEXT NOT NULL UNIQUE,
         creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS usuarios_plantillas (
+        id SERIAL PRIMARY KEY,
+        usuario_id INT REFERENCES usuarios(id) ON DELETE CASCADE,
+        nombre_plantilla VARCHAR(255) NOT NULL,
+        tipo VARCHAR(50) NOT NULL,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        configuracion JSONB NOT NULL
+      );
     `);
     logger.info('✅ Tablas de caché y fcm_tokens verificadas/creadas.');
   } catch (err) {

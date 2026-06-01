@@ -188,6 +188,7 @@ export default function ControlPanel({
                   { key: 'snow', label: 'Nieve', icon: '❄️' },
                   { key: 'fog', label: 'Visibilidad', icon: '🌫️' },
                   { key: 'wind', label: 'Viento / Tornados', icon: '🌪️' },
+                  { key: 'aqi', label: 'Calidad del Aire (AQI)', icon: '😷' },
                 ].map(f => (
                   <div key={f.key}>
                     <div className="control-row" style={{ minHeight: '30px' }}>
@@ -196,12 +197,12 @@ export default function ControlPanel({
                         <span className="control-text">{f.label}</span>
                       </div>
                       <label className="ios-switch" style={{ transform: 'scale(0.75)' }}>
-                        <input type="checkbox" checked={particleFilters[f.key]} onChange={(e) => {
+                        <input type="checkbox" checked={particleFilters[f.key] || false} onChange={(e) => {
                           const isChecked = e.target.checked;
                           if (!isParticlesActive && isChecked) setIsParticlesActive(true); // Activa el canvas principal
                           if (f.key === 'fog') console.log(`[DEBUG VISIBILITY] Toggle activado: ${isChecked}`);
                           setParticleFilters(prev => {
-                            if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, wind: true };
+                            if (f.key === 'wind' && isChecked) return { rain: false, snow: false, fog: false, temp: false, aqi: false, wind: true };
                             else if (f.key !== 'wind' && isChecked) return { ...prev, wind: false, [f.key]: true };
                             return { ...prev, [f.key]: isChecked };
                           });

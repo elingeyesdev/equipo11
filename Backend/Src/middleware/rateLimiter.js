@@ -5,6 +5,7 @@ const globalLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.originalUrl.startsWith('/api/radar') || req.originalUrl.startsWith('/api/calidad-aire'),
   message: { ok: false, error: 'Too many requests, try again later' },
 });
 
@@ -16,4 +17,12 @@ const authLimiter = rateLimit({
   message: { ok: false, error: 'Too many auth attempts' },
 });
 
-module.exports = { globalLimiter, authLimiter };
+const mapLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 1000, // Límite muy relajado para las texturas del mapa
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: 'Too many map requests' },
+});
+
+module.exports = { globalLimiter, authLimiter, mapLimiter };

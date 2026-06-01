@@ -580,9 +580,331 @@ const getRadarData = async (targetTime = null) => {
   return { status: 'ready', data: result.rows };
 };
 
+// ─── Data Textures PNG: RGBA (4 canales) ────────────────────────────
+// Todas las texturas usan colorType: 6 (RGBA), 4 bytes por píxel.
+// Canal Alfa = 255 si hay datos, 0 si el dato es nulo.
+// Esto permite inyección directa en la GPU vía gl.texImage2D(gl.RGBA).
+const { PNG } = require('pngjs');
+
+const GRID_W = 360;
+const GRID_H = 180;
+const MIN_TEMP_C = -60;
+const TEMP_RANGE_C = 120; // 60 - (-60)
+
+// Helper: construye la cláusula WHERE de forecast_time
+const _buildForecastWhere = (targetTime, params) => {
+  if (targetTime) {
+    params.push(targetTime);
+    return ` WHERE forecast_time = (
+        SELECT forecast_time FROM radar_grid_cache
+        ORDER BY ABS(EXTRACT(EPOCH FROM (forecast_time - $${params.length}::timestamp))) ASC
+        LIMIT 1
+    )`;
+  }
+  return ` WHERE forecast_time = (
+      SELECT forecast_time FROM radar_grid_cache
+      ORDER BY ABS(EXTRACT(EPOCH FROM (forecast_time - NOW()))) ASC
+      LIMIT 1
+  )`;
+};
+
+// Helper: crea un PNG RGBA vacío (todos los píxeles con alfa=0)
+const _createEmptyRGBA = () => {
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  // Inicializar a 0 (R=0, G=0, B=0, A=0 → sin dato)
+  for (let i = 0; i < png.data.length; i++) {
+    png.data[i] = 0;
+  }
+  return png;
+};
+
+// Helper: convierte coordenadas geográficas a índice de píxel
+const _geoToPixel = (lat, lon) => {
+  const col = Math.round(lon + 179.5);
+  const row = Math.round(lat + 89.5);
+  if (col < 0 || col >= GRID_W || row < 0 || row >= GRID_H) return -1;
+  return (row * GRID_W + col) * 4;
+};
+
+// ─── Temperatura (R=G=B=norm, A=255) ────────────────────────────────
+const getRadarTempPng = async (targetTime = null) => {
+  const params = [];
+  const where = _buildForecastWhere(targetTime, params);
+  const result = await pool.query(`SELECT latitud, longitud, temperatura FROM radar_grid_cache${where}`, params);
+
+  const png = _createEmptyRGBA();
+
+  for (const row of result.rows) {
+    const lat = parseFloat(row.latitud);
+    const lon = parseFloat(row.longitud);
+    const tempK = parseFloat(row.temperatura);
+
+    if (isNaN(lat) || isNaN(lon) || isNaN(tempK) || tempK === 0) continue;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    const tempC = tempK - 273.15;
+    const norm = Math.max(0, Math.min(1, (tempC - MIN_TEMP_C) / TEMP_RANGE_C));
+    const byteVal = Math.round(norm * 255);
+
+    png.data[idx]     = byteVal; // R
+    png.data[idx + 1] = byteVal; // G
+    png.data[idx + 2] = byteVal; // B
+    png.data[idx + 3] = 255;     // A = dato presente
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── Visibilidad (R=G=B=norm, A=255) ────────────────────────────────
+// Normalización lineal: 0 a 24135 metros
+const MAX_VIS_M = 24135;
+
+const getRadarVisPng = async (targetTime = null) => {
+  const params = [];
+  const where = _buildForecastWhere(targetTime, params);
+  const result = await pool.query(`SELECT latitud, longitud, vis FROM radar_grid_cache${where}`, params);
+
+  const png = _createEmptyRGBA();
+
+  for (const row of result.rows) {
+    const lat = parseFloat(row.latitud);
+    const lon = parseFloat(row.longitud);
+    const vis = parseFloat(row.vis);
+
+    if (isNaN(lat) || isNaN(lon) || isNaN(vis) || row.vis === null) continue;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    const norm = Math.max(0, Math.min(1, vis / MAX_VIS_M));
+    const byteVal = Math.round(norm * 255);
+
+    png.data[idx]     = byteVal;
+    png.data[idx + 1] = byteVal;
+    png.data[idx + 2] = byteVal;
+    png.data[idx + 3] = 255;
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── Lluvia (R=G=B=norm no-lineal, A=255) ───────────────────────────
+// Codificación por índice de 22 stops (idéntica al frontend RainDataTexture.js)
+const RAIN_STOPS = [
+  0.0, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,
+  15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 70.0, 85.0, 100.0, 150.0
+];
+const RAIN_STOPS_COUNT = RAIN_STOPS.length;
+
+const _encodeRain = (rainMmH) => {
+  if (rainMmH <= RAIN_STOPS[0]) return 0;
+  if (rainMmH >= RAIN_STOPS[RAIN_STOPS_COUNT - 1]) return 255;
+
+  for (let i = 0; i < RAIN_STOPS_COUNT - 1; i++) {
+    if (rainMmH >= RAIN_STOPS[i] && rainMmH <= RAIN_STOPS[i + 1]) {
+      const range = RAIN_STOPS[i + 1] - RAIN_STOPS[i];
+      const t = range > 0 ? (rainMmH - RAIN_STOPS[i]) / range : 0;
+      const virtualIndex = i + t;
+      const norm = virtualIndex / (RAIN_STOPS_COUNT - 1);
+      return Math.round(norm * 255);
+    }
+  }
+  return 0;
+};
+
+const getRadarRainPng = async (targetTime = null) => {
+  const params = [];
+  const where = _buildForecastWhere(targetTime, params);
+  const result = await pool.query(`SELECT latitud, longitud, rain FROM radar_grid_cache${where}`, params);
+
+  const png = _createEmptyRGBA();
+
+  for (const row of result.rows) {
+    const lat = parseFloat(row.latitud);
+    const lon = parseFloat(row.longitud);
+    let rain = parseFloat(row.rain);
+
+    if (isNaN(lat) || isNaN(lon) || isNaN(rain)) continue;
+    if (rain < 0) rain = 0;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    const byteVal = _encodeRain(rain);
+
+    png.data[idx]     = byteVal;
+    png.data[idx + 1] = byteVal;
+    png.data[idx + 2] = byteVal;
+    png.data[idx + 3] = 255;
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── AQI (R=G=B=aqi/2, A=255) ──────────────────────────────────────
+// Lee del archivo aqi_global.json generado por el scraper GEFS
+const AQI_FILE_PATH = path.join(process.cwd(), 'data', 'aqi', 'aqi_global.json');
+
+const getRadarAqiPng = async () => {
+  const png = _createEmptyRGBA();
+
+  if (!fs.existsSync(AQI_FILE_PATH)) {
+    logger.warn('[AQI PNG] Archivo aqi_global.json no encontrado.');
+    return PNG.sync.write(png, { deflateLevel: 9 });
+  }
+
+  const rawJson = fs.readFileSync(AQI_FILE_PATH, 'utf8');
+  const gridData = JSON.parse(rawJson);
+
+  for (const point of gridData) {
+    const lat = parseFloat(point.lat);
+    const lon = parseFloat(point.lon);
+    const aqi = point.aqi;
+
+    if (isNaN(lat) || isNaN(lon) || aqi === null || aqi === undefined) continue;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    const byteVal = Math.min(255, Math.max(0, Math.round(aqi / 2.0)));
+
+    png.data[idx]     = byteVal;
+    png.data[idx + 1] = byteVal;
+    png.data[idx + 2] = byteVal;
+    png.data[idx + 3] = 255;
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── Nieve Dual Channel (R=acumulada, G=fresca, B=0, A=255) ────────
+// R: snow (acumulada) normalizada 0..150 cm
+// G: snow_fresh (fresca) normalizada 0..300 cm
+const MAX_SNOW_ACC = 150; // cm
+const MAX_SNOW_FRESH = 300; // cm
+
+const getRadarSnowPng = async (targetTime = null) => {
+  const params = [];
+  const where = _buildForecastWhere(targetTime, params);
+  const result = await pool.query(`SELECT latitud, longitud, snow, snow_fresh FROM radar_grid_cache${where}`, params);
+
+  const png = _createEmptyRGBA();
+
+  for (const row of result.rows) {
+    const lat = parseFloat(row.latitud);
+    const lon = parseFloat(row.longitud);
+    let snowAcc = parseFloat(row.snow);
+    let snowFresh = parseFloat(row.snow_fresh);
+
+    if (isNaN(lat) || isNaN(lon)) continue;
+    if (isNaN(snowAcc)) snowAcc = 0;
+    if (isNaN(snowFresh)) snowFresh = 0;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    // Solo marcar como "con dato" si al menos una variable tiene valor > 0
+    const hasData = snowAcc > 0 || snowFresh > 0;
+
+    const rVal = Math.round(Math.max(0, Math.min(1, snowAcc / MAX_SNOW_ACC)) * 255);
+    const gVal = Math.round(Math.max(0, Math.min(1, snowFresh / MAX_SNOW_FRESH)) * 255);
+
+    png.data[idx]     = rVal;   // R = nieve acumulada
+    png.data[idx + 1] = gVal;   // G = nieve fresca
+    png.data[idx + 2] = 0;      // B = reservado
+    png.data[idx + 3] = hasData ? 255 : 0; // A
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── Viento Triple Channel (R=speed, G=dir, B=gust, A=255) ─────────
+// R: wind_speed normalizada 0..150 km/h
+// G: wind_direction normalizada 0..360°
+// B: rafagas normalizada 0..150 km/h
+const MAX_WIND_SPEED = 150; // km/h
+const MAX_WIND_DIR = 360;   // grados
+const MAX_WIND_GUST = 150;  // km/h
+
+const getRadarWindPng = async (targetTime = null) => {
+  const params = [];
+  const where = _buildForecastWhere(targetTime, params);
+  const result = await pool.query(`SELECT latitud, longitud, wind_speed, wind_direction, rafagas FROM radar_grid_cache${where}`, params);
+
+  const png = _createEmptyRGBA();
+
+  for (const row of result.rows) {
+    const lat = parseFloat(row.latitud);
+    const lon = parseFloat(row.longitud);
+    let speed = parseFloat(row.wind_speed);
+    let dir = parseFloat(row.wind_direction);
+    let gust = parseFloat(row.rafagas);
+
+    if (isNaN(lat) || isNaN(lon)) continue;
+    if (isNaN(speed)) speed = 0;
+    if (isNaN(dir)) dir = 0;
+    if (isNaN(gust)) gust = 0;
+
+    const idx = _geoToPixel(lat, lon);
+    if (idx < 0) continue;
+
+    const rVal = Math.round(Math.max(0, Math.min(1, speed / MAX_WIND_SPEED)) * 255);
+    const gVal = Math.round(Math.max(0, Math.min(1, dir / MAX_WIND_DIR)) * 255);
+    const bVal = Math.round(Math.max(0, Math.min(1, gust / MAX_WIND_GUST)) * 255);
+
+    png.data[idx]     = rVal;   // R = velocidad
+    png.data[idx + 1] = gVal;   // G = dirección
+    png.data[idx + 2] = bVal;   // B = ráfagas
+    png.data[idx + 3] = 255;    // A = dato presente
+  }
+
+  return PNG.sync.write(png, { deflateLevel: 9 });
+};
+
+// ─── Endpoint ligero: Detalles de un punto (nearest neighbor) ───────
+// Retorna JSON mínimo (~200 bytes) para popups de click
+const getRadarPointDetails = async (lat, lon, targetTime = null) => {
+  const params = [lat, lon];
+  let timeClause;
+  if (targetTime) {
+    params.push(targetTime);
+    timeClause = `forecast_time = (
+      SELECT forecast_time FROM radar_grid_cache
+      ORDER BY ABS(EXTRACT(EPOCH FROM (forecast_time - $3::timestamp))) ASC
+      LIMIT 1
+    )`;
+  } else {
+    timeClause = `forecast_time = (
+      SELECT forecast_time FROM radar_grid_cache
+      ORDER BY ABS(EXTRACT(EPOCH FROM (forecast_time - NOW()))) ASC
+      LIMIT 1
+    )`;
+  }
+
+  const result = await pool.query(`
+    SELECT weather_code, cape, hlcy, refc, presion, temperatura, wind_speed, wind_direction, rafagas, rain, snow, snow_fresh, vis
+    FROM radar_grid_cache
+    WHERE ${timeClause}
+    ORDER BY ABS(latitud - $1) + ABS(longitud - $2) ASC
+    LIMIT 1
+  `, params);
+
+  if (result.rowCount === 0) return null;
+  return result.rows[0];
+};
+
 module.exports = {
   runScraper,
   getRadarData,
+  getRadarTempPng,
+  getRadarVisPng,
+  getRadarRainPng,
+  getRadarAqiPng,
+  getRadarSnowPng,
+  getRadarWindPng,
+  getRadarPointDetails,
   extractGribData,
   generateGridKeys,
   GLOBAL_BBOX,

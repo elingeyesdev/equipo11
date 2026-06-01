@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, memo } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { Source, Layer, useMap } from 'react-map-gl/mapbox';
 import GridRadarLayer from '../GridRadarLayer/GridRadarLayer';
 import WindColorLayer from '../../layers/windColor/WindColorLayer.js';
@@ -16,24 +16,16 @@ import TempColorLayer, { addTempLayers, removeTempLayers, addCityTempLabels, upd
 import AqiColorLayer from '../../layers/aqiColor/AqiColorLayer.js';
 import { addAqiLayers, removeAqiLayers } from '../../layers/aqiColor/layerManager_aqi.js';
 import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
-import { GLOBAL_CITIES } from '../../utils/globalCities.js';
-import { buildGridIndex, buildCitiesWindGeoJSON, buildTempGridIndex, buildCitiesTempGeoJSON } from '../../utils/windMath.js';
 import { useUnidades } from '../../hooks/useUnidades';
 
 /**
  * WeatherOverlay — Orquesta las capas visuales de clima dinámico.
  *
- * Capas gestionadas:
- *  1. WindColorLayer       (WebGL)  — mapa de color por velocidad del viento
- *  2. GridRadarLayer       (Canvas) — partículas animadas de lluvia/nieve/viento/etc.
- *  3. City wind labels     (Symbol) — etiquetas globales de velocidad por ciudad
- *  4. Dynamic wind labels  (Symbol) — etiquetas dinámicas de sensores IoT
- *
- * Ambas capas (1 y 2) se activan/desactivan con el mismo toggle:
- *   isParticlesActive && particleFilters.wind
- *
- * La inserción inteligente de capas se delega a layerManager.js (SRP),
- * que posiciona el mapa de calor debajo de carreteras, fronteras y etiquetas.
+ * ARQUITECTURA DATA TEXTURE PNG:
+ * scannedGrid ahora es un objeto de HTMLImageElements:
+ *   { tempImg, visImg, rainImg, snowImg, windImg, aqiImg }
+ * Cada imagen se inyecta directamente en la GPU vía gl.texImage2D(gl.RGBA).
+ * Ya no existe transporte JSON masivo.
  */
 function WeatherOverlay({
   scannedGrid,
@@ -52,45 +44,70 @@ function WeatherOverlay({
   const visLayerRef = useRef(null);
   const tempLayerRef = useRef(null);
   const aqiLayerRef = useRef(null);
-  const dataRef = useRef(null);
 
-  // --- 1. Proteger el Payload Masivo (Ahogo del Virtual DOM) ---
-  // Memoizamos el arreglo de 64,800 nodos para evitar que React y DevTools
-  // lo clonen o lo re-evalúen constantemente en renders no relacionados (ej. al cambiar zoom).
-  const protectedGrid = useMemo(() => scannedGrid, [scannedGrid]);
+  // --- Actualizar texturas cuando cambian las imágenes PNG ---
+  useEffect(() => {
+    if (!scannedGrid) return;
 
-  // Guardar referencia a los datos más recientes
-  dataRef.current = protectedGrid;
+    if (windLayerRef.current && scannedGrid.windImg) {
+      windLayerRef.current.updateData(scannedGrid.windImg);
+    }
+    if (rainLayerRef.current && scannedGrid.rainImg) {
+      rainLayerRef.current.updateData(scannedGrid.rainImg);
+    }
+    if (snowLayerRef.current && scannedGrid.snowImg) {
+      snowLayerRef.current.updateData(scannedGrid.snowImg);
+    }
+    if (visLayerRef.current && scannedGrid.visImg) {
+      visLayerRef.current.updateData(scannedGrid.visImg);
+    }
+    if (tempLayerRef.current && scannedGrid.tempImg) {
+      tempLayerRef.current.updateData(scannedGrid.tempImg);
+    }
+    if (aqiLayerRef.current && scannedGrid.aqiImg) {
+      aqiLayerRef.current.updateData(scannedGrid.aqiImg);
+    }
+  }, [scannedGrid]);
 
-  // --- Precalcular el índice vectorial del grid (U,V) para interpolación ---
-  // Solo se recalcula cuando cambian los datos de la NOAA
-  const gridIndex = useMemo(() => {
-    if (!protectedGrid || protectedGrid.length === 0) return null;
-    return buildGridIndex(protectedGrid);
-  }, [protectedGrid]);
+  // --- Escuchar updates a 60fps del TimePlayer (Crossfading) ---
+  useEffect(() => {
+    const handleTimeUpdate = (e) => {
+      const {
+        currentTempImg, nextTempImg,
+        currentVisImg, nextVisImg,
+        currentRainImg, nextRainImg,
+        currentSnowImg, nextSnowImg,
+        currentWindImg, nextWindImg,
+        currentAqiImg, nextAqiImg,
+        mixFactor
+      } = e.detail;
 
-  // --- Generar GeoJSON de ciudades con viento interpolado vectorialmente ---
-  const citiesWindGeoJSON = useMemo(() => {
-    if (!gridIndex || gridIndex.size === 0) return null;
-    return buildCitiesWindGeoJSON(GLOBAL_CITIES, gridIndex);
-  }, [gridIndex]);
-
-  // --- Precalcular el índice escalar del grid para temperatura ---
-  const tempGridIndex = useMemo(() => {
-    if (!protectedGrid || protectedGrid.length === 0) return null;
-    return buildTempGridIndex(protectedGrid);
-  }, [protectedGrid]);
-
-  // --- Generar GeoJSON de ciudades con temperatura interpolada ---
-  const citiesTempGeoJSON = useMemo(() => {
-    if (!tempGridIndex || tempGridIndex.size === 0) return null;
-    return buildCitiesTempGeoJSON(GLOBAL_CITIES, tempGridIndex, activeTempUnit);
-  }, [tempGridIndex, activeTempUnit]);
+      if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function' && currentTempImg) {
+        tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
+      }
+      if (visLayerRef.current && typeof visLayerRef.current.updateDataDual === 'function' && currentVisImg) {
+        visLayerRef.current.updateDataDual(currentVisImg, nextVisImg || currentVisImg, mixFactor);
+      }
+      if (rainLayerRef.current && typeof rainLayerRef.current.updateDataDual === 'function' && currentRainImg) {
+        rainLayerRef.current.updateDataDual(currentRainImg, nextRainImg || currentRainImg, mixFactor);
+      }
+      if (snowLayerRef.current && typeof snowLayerRef.current.updateDataDual === 'function' && currentSnowImg) {
+        snowLayerRef.current.updateDataDual(currentSnowImg, nextSnowImg || currentSnowImg, mixFactor);
+      }
+      if (windLayerRef.current && typeof windLayerRef.current.updateDataDual === 'function' && currentWindImg) {
+        windLayerRef.current.updateDataDual(currentWindImg, nextWindImg || currentWindImg, mixFactor);
+      }
+      if (aqiLayerRef.current && typeof aqiLayerRef.current.updateDataDual === 'function' && currentAqiImg) {
+        aqiLayerRef.current.updateDataDual(currentAqiImg, nextAqiImg || currentAqiImg, mixFactor);
+      }
+    };
+    window.addEventListener('timeplayer-update', handleTimeUpdate);
+    return () => window.removeEventListener('timeplayer-update', handleTimeUpdate);
+  }, []);
 
   // --- Ciclo de vida del WindColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
@@ -98,22 +115,12 @@ function WeatherOverlay({
 
     const addLayersIfMissing = () => {
       if (!shouldShow) return;
-
-      // Mapbox elimina todas las custom layers cuando el estilo cambia (ej. dark a light)
       if (!rawMap.getLayer('wind-color-layer')) {
-        const layer = new WindColorLayer({
-          id: 'wind-color-layer',
-          opacity: 0.90,
-        });
+        const layer = new WindColorLayer({ id: 'wind-color-layer', opacity: 0.90 });
         windLayerRef.current = layer;
-        addWindLayers(rawMap, layer, dataRef.current);
-      }
-
-      // Inyectar etiquetas de ciudades globales si hay datos
-      if (citiesWindGeoJSON) {
-        if (!rawMap.getSource('global-wind-cities-source')) {
-          addCityWindLabels(rawMap, citiesWindGeoJSON);
-        }
+        addWindLayers(rawMap, layer);
+        // Anti-FOUC: inyectar textura si ya está disponible
+        if (scannedGrid?.windImg) layer.updateData(scannedGrid.windImg);
       }
     };
 
@@ -122,6 +129,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addLayersIfMissing);
     } else {
       removeWindLayers(rawMap);
+      windLayerRef.current?.destroy?.();
       windLayerRef.current = null;
     }
 
@@ -129,51 +137,27 @@ function WeatherOverlay({
       rawMap.off('styledata', addLayersIfMissing);
       removeWindLayers(rawMap);
       if (windLayerRef.current && typeof windLayerRef.current.destroy === 'function') {
-        windLayerRef.current.destroy(); // Limpieza forzada de GPU
+        windLayerRef.current.destroy();
       }
       windLayerRef.current = null;
     };
-  }, [map, isParticlesActive, particleFilters.wind, citiesWindGeoJSON]);
-
-  // --- Actualizar datos cuando cambia protectedGrid ---
-  useEffect(() => {
-    if (windLayerRef.current && protectedGrid && protectedGrid.length > 0) {
-      windLayerRef.current.updateData(protectedGrid);
-    }
-    if (rainLayerRef.current && protectedGrid && protectedGrid.length > 0) {
-      rainLayerRef.current.updateData(protectedGrid);
-    }
-    if (snowLayerRef.current && protectedGrid && protectedGrid.length > 0) {
-      snowLayerRef.current.updateData(protectedGrid);
-    }
-    if (visLayerRef.current && protectedGrid && protectedGrid.length > 0) {
-      visLayerRef.current.updateData(protectedGrid);
-    }
-    if (tempLayerRef.current && protectedGrid && protectedGrid.length > 0) {
-      tempLayerRef.current.updateData(protectedGrid);
-    }
-  }, [protectedGrid]);
+  }, [map, isParticlesActive, particleFilters.wind]);
 
   // --- Ciclo de vida del RainColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
-    // Asumimos que la llave del filtro es 'rain'
     const shouldShowRain = isParticlesActive && particleFilters.rain;
 
     const addRainIfMissing = () => {
       if (!shouldShowRain) return;
-
       if (!rawMap.getLayer('rain-color-layer')) {
-        const layer = new RainColorLayer({
-          id: 'rain-color-layer',
-          opacity: 0.85,
-        });
+        const layer = new RainColorLayer({ id: 'rain-color-layer', opacity: 0.85 });
         rainLayerRef.current = layer;
-        addRainLayers(rawMap, layer, dataRef.current);
+        addRainLayers(rawMap, layer);
+        if (scannedGrid?.rainImg) layer.updateData(scannedGrid.rainImg);
       }
     };
 
@@ -182,6 +166,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addRainIfMissing);
     } else {
       removeRainLayers(rawMap);
+      rainLayerRef.current?.destroy?.();
       rainLayerRef.current = null;
     }
 
@@ -189,7 +174,7 @@ function WeatherOverlay({
       rawMap.off('styledata', addRainIfMissing);
       removeRainLayers(rawMap);
       if (rainLayerRef.current && typeof rainLayerRef.current.destroy === 'function') {
-        rainLayerRef.current.destroy(); // Limpieza estricta de texturas WebGL
+        rainLayerRef.current.destroy();
       }
       rainLayerRef.current = null;
     };
@@ -198,24 +183,21 @@ function WeatherOverlay({
   // --- Ciclo de vida del SnowColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
-    // Asumimos que la llave del filtro es 'snow'
     const shouldShowSnow = isParticlesActive && particleFilters.snow;
 
     const addSnowIfMissing = () => {
       if (!shouldShowSnow) return;
-
       if (!rawMap.getLayer('snow-color-layer')) {
         const layer = new SnowColorLayer({
-          id: 'snow-color-layer',
-          opacity: 0.85,
+          id: 'snow-color-layer', opacity: 0.85,
           snowType: snowMapType === 'fresh' ? 1 : 0
         });
         snowLayerRef.current = layer;
-        addSnowLayers(rawMap, layer, dataRef.current);
+        addSnowLayers(rawMap, layer);
+        if (scannedGrid?.snowImg) layer.updateData(scannedGrid.snowImg);
       } else if (snowLayerRef.current) {
         snowLayerRef.current.setSnowType(snowMapType === 'fresh' ? 1 : 0);
       }
@@ -226,6 +208,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addSnowIfMissing);
     } else {
       removeSnowLayers(rawMap);
+      snowLayerRef.current?.destroy?.();
       snowLayerRef.current = null;
     }
 
@@ -233,7 +216,7 @@ function WeatherOverlay({
       rawMap.off('styledata', addSnowIfMissing);
       removeSnowLayers(rawMap);
       if (snowLayerRef.current && typeof snowLayerRef.current.destroy === 'function') {
-        snowLayerRef.current.destroy(); // Limpieza estricta de texturas WebGL
+        snowLayerRef.current.destroy();
       }
       snowLayerRef.current = null;
     };
@@ -242,7 +225,6 @@ function WeatherOverlay({
   // --- Ciclo de vida del VisibilityColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
@@ -250,14 +232,11 @@ function WeatherOverlay({
 
     const addVisIfMissing = () => {
       if (!shouldShowVis) return;
-
       if (!rawMap.getLayer('visibility-color-layer')) {
-        const layer = new VisibilityColorLayer({
-          id: 'visibility-color-layer',
-          opacity: 0.85,
-        });
+        const layer = new VisibilityColorLayer({ id: 'visibility-color-layer', opacity: 0.85 });
         visLayerRef.current = layer;
-        addVisibilityLayers(rawMap, layer, dataRef.current);
+        addVisibilityLayers(rawMap, layer);
+        if (scannedGrid?.visImg) layer.updateData(scannedGrid.visImg);
       }
     };
 
@@ -266,6 +245,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addVisIfMissing);
     } else {
       removeVisibilityLayers(rawMap);
+      visLayerRef.current?.destroy?.();
       visLayerRef.current = null;
     }
 
@@ -282,7 +262,6 @@ function WeatherOverlay({
   // --- Ciclo de vida del TempColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
@@ -290,20 +269,11 @@ function WeatherOverlay({
 
     const addTempIfMissing = () => {
       if (!shouldShowTemp) return;
-
       if (!rawMap.getLayer('temp-color-layer')) {
-        const layer = new TempColorLayer({
-          id: 'temp-color-layer',
-          opacity: 0.90,
-        });
+        const layer = new TempColorLayer({ id: 'temp-color-layer', opacity: 0.90 });
         tempLayerRef.current = layer;
-        addTempLayers(rawMap, layer, dataRef.current);
-      }
-      // Inyectar etiquetas de ciudades globales si hay datos
-      if (citiesTempGeoJSON) {
-        if (!rawMap.getSource('city-temp-source')) {
-          addCityTempLabels(rawMap, citiesTempGeoJSON, activeTempUnit);
-        }
+        addTempLayers(rawMap, layer);
+        if (scannedGrid?.tempImg) layer.updateData(scannedGrid.tempImg);
       }
     };
 
@@ -312,6 +282,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addTempIfMissing);
     } else {
       removeTempLayers(rawMap);
+      tempLayerRef.current?.destroy?.();
       tempLayerRef.current = null;
     }
 
@@ -323,12 +294,11 @@ function WeatherOverlay({
       }
       tempLayerRef.current = null;
     };
-  }, [map, isParticlesActive, particleFilters.temp, citiesTempGeoJSON, activeTempUnit]);
+  }, [map, isParticlesActive, particleFilters.temp]);
 
   // --- Ciclo de vida del AqiColorLayer (WebGL) ---
   useEffect(() => {
     if (!map) return;
-
     const rawMap = map.getMap();
     if (!rawMap) return;
 
@@ -336,14 +306,11 @@ function WeatherOverlay({
 
     const addAqiIfMissing = () => {
       if (!shouldShowAqi) return;
-
       if (!rawMap.getLayer('aqi-color-layer')) {
-        const layer = new AqiColorLayer({
-          id: 'aqi-color-layer',
-          opacity: 0.90,
-        });
+        const layer = new AqiColorLayer({ id: 'aqi-color-layer', opacity: 0.90 });
         aqiLayerRef.current = layer;
         addAqiLayers(rawMap, layer);
+        if (scannedGrid?.aqiImg) layer.updateData(scannedGrid.aqiImg);
       }
     };
 
@@ -352,6 +319,7 @@ function WeatherOverlay({
       rawMap.on('styledata', addAqiIfMissing);
     } else {
       removeAqiLayers(rawMap);
+      aqiLayerRef.current?.destroy?.();
       aqiLayerRef.current = null;
     }
 
@@ -365,29 +333,13 @@ function WeatherOverlay({
     };
   }, [map, isParticlesActive, particleFilters.aqi]);
 
-  // --- Forzar Sincronización de Unidades en Mapbox ---
-  useEffect(() => {
-    if (!map || !citiesTempGeoJSON) return;
-    const rawMap = map.getMap();
-    if (!rawMap) return;
-    updateCityTempLabels(rawMap, citiesTempGeoJSON, activeTempUnit);
-  }, [map, citiesTempGeoJSON, activeTempUnit]);
-
-  // --- Actualizar GeoJSON de ciudades cuando cambian los datos ---
-  useEffect(() => {
-    if (!map || !citiesWindGeoJSON) return;
-    const rawMap = map.getMap();
-    if (!rawMap) return;
-
-    updateCityWindLabels(rawMap, citiesWindGeoJSON);
-  }, [map, citiesWindGeoJSON]);
-
   if (!isParticlesActive) return null;
 
   return (
     <>
+      {/* GridRadarLayer ahora recibe las imágenes PNG decodificadas */}
       <GridRadarLayer
-        scannedGrid={protectedGrid}
+        scannedGrid={scannedGrid}
         currentZoom={currentZoom}
         particleFilters={{ ...particleFilters, fog: false, temp: false, aqi: false }}
       />

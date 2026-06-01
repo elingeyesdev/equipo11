@@ -1,8 +1,12 @@
-import { buildAqiColorRampTexture } from './colorRamps_aqi.js';
+/**
+ * AqiDataTexture.js — Gestor de texturas WebGL para datos de AQI.
+ *
+ * Pipeline PNG RGBA: Recibe HTMLImageElement directamente del backend.
+ * Grid: 360×180 (alineado con el resto de capas).
+ */
 
 const GRID_WIDTH = 360;
-const GRID_HEIGHT = 181; // Ajustado a 181 para resolución GEFS
-const MAX_AQI = 500;
+const GRID_HEIGHT = 180;
 
 export default class AqiDataTexture {
   constructor(gl) {
@@ -10,96 +14,53 @@ export default class AqiDataTexture {
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
 
-    // Textura de datos AQI (LUMINANCE, UNSIGNED_BYTE)
-    this.dataTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.dataTexture);
+    this.dataTextureCurrent = gl.createTexture();
+    this.dataTextureNext = gl.createTexture();
 
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+
+    // Init Current
+    gl.bindTexture(gl.TEXTURE_2D, this.dataTextureCurrent);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
-    // Inicializar vacía
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.LUMINANCE,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.LUMINANCE, gl.UNSIGNED_BYTE, emptyData
-    );
-
-    // Textura de la paleta de color
-    this.rampTexture = gl.createTexture();
-    this._uploadRamp();
-  }
-
-  _uploadRamp() {
-    const gl = this.gl;
-    const pixels = buildAqiColorRampTexture();
-
-    gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
+    // Init Next
+    gl.bindTexture(gl.TEXTURE_2D, this.dataTextureNext);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      256, 1, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, pixels
-    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
   }
 
-  async fetchDataAndUpdate() {
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/calidad-aire/global`);
-      if (!response.ok) throw new Error('No se pudo descargar la malla de AQI');
-      const gridData = await response.json();
-      
-      this.update(gridData);
-      return true;
-    } catch (error) {
-      console.error('[AqiDataTexture] Error fetching AQI:', error);
-      return false;
-    }
+  update(imgData) {
+    if (!imgData) return;
+    this.updateDual(imgData, imgData);
   }
 
-  update(gridData) {
-    if (!gridData || gridData.length === 0) return;
-
+  updateDual(currentData, nextData) {
     const gl = this.gl;
-    const pixels = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
 
-    for (const point of gridData) {
-      const lat = Number(point.lat);
-      const lon = Number(point.lon);
-      const aqiValue = Number(point.aqi);
-
-      if (isNaN(lat) || isNaN(lon) || isNaN(aqiValue) || point.aqi === null) continue;
-
-      // Mapear coordenadas a índices (0 a 359, 0 a 180)
-      const col = Math.round(lon + 179.5);
-      const row = Math.round(lat + 90.0); // De -90 a +90 (0 a 180)
-
-      if (col < 0 || col >= GRID_WIDTH || row < 0 || row >= GRID_HEIGHT) continue;
-
-      // Normalización 0-500 a byte (0-255)
-      const norm = Math.min(1.0, Math.max(0.0, aqiValue / MAX_AQI));
-      pixels[row * GRID_WIDTH + col] = Math.round(norm * 255);
+    if (currentData instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.dataTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
     }
 
-    gl.bindTexture(gl.TEXTURE_2D, this.dataTexture);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.LUMINANCE,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.LUMINANCE, gl.UNSIGNED_BYTE, pixels
-    );
+    const nextSource = nextData || currentData;
+    if (nextSource instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.dataTextureNext);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+    }
   }
 
   destroy() {
     const gl = this.gl;
-    if (this.dataTexture) gl.deleteTexture(this.dataTexture);
-    if (this.rampTexture) gl.deleteTexture(this.rampTexture);
-    this.dataTexture = null;
-    this.rampTexture = null;
+    if (this.dataTextureCurrent) gl.deleteTexture(this.dataTextureCurrent);
+    if (this.dataTextureNext) gl.deleteTexture(this.dataTextureNext);
+    this.dataTextureCurrent = null;
+    this.dataTextureNext = null;
   }
 }

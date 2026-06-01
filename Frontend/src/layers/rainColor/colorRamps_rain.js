@@ -43,11 +43,11 @@ export function buildRainColorRampTexture(ramp = DEFAULT_RAIN_RAMP) {
   for (let i = 0; i < size; i++) {
     // norm va de 0.0 a 1.0 a lo largo del canvas
     const norm = i / (size - 1);
-    
+
     // Mapear este norm de vuelta al espacio de índices fraccionales
     const virtualIndex = norm * (stopsCount - 1);
     const indexFloor = Math.floor(virtualIndex);
-    
+
     if (indexFloor >= stopsCount - 1) {
       const c = ramp[stopsCount - 1].color;
       pixels[i * 4 + 0] = c[0];
@@ -56,16 +56,16 @@ export function buildRainColorRampTexture(ramp = DEFAULT_RAIN_RAMP) {
       pixels[i * 4 + 3] = c[3];
       continue;
     }
-    
+
     const fraction = virtualIndex - indexFloor;
     const c1 = ramp[indexFloor].color;
     const c2 = ramp[indexFloor + 1].color;
-    
+
     pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * fraction;
     pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * fraction;
     pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * fraction;
     pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * fraction;
   }
-  
+
   return pixels;
 }
