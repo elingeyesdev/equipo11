@@ -18,7 +18,7 @@ const _loadPngFrame = (basePath, timestamp) => new Promise((resolve) => {
   img.src = `${httpClient.defaults.baseURL}${basePath}?time=${encodeURIComponent(timestamp)}`;
 });
 
-export default function useTimeBuffer(globalHistoryArray) {
+export default function useTimeBuffer(globalHistoryArray, setCorruptedDates) {
   const buffer = useRef(new Map()); // index -> { tempImg, visImg, rainImg, snowImg, windImg, aqiImg }
   const inFlight = useRef(false);
   const isPreloaded = useRef(false);
@@ -34,7 +34,7 @@ export default function useTimeBuffer(globalHistoryArray) {
     try {
       // Create an array of promises for all frames
       const promises = globalHistoryArray.map(async (entry, fetchIndex) => {
-        if (!entry || buffer.current.has(fetchIndex)) return;
+        if (!entry || buffer.current.has(fetchIndex)) return { fetchIndex, valid: true, timestamp: entry?.timestamp };
 
         const ts = entry.timestamp;
         
@@ -48,19 +48,40 @@ export default function useTimeBuffer(globalHistoryArray) {
           _loadPngFrame('/radar/bolivia/aqi/png', ts),
         ]);
 
+        const tempVal = temp.status === 'fulfilled' ? temp.value : null;
+
         buffer.current.set(fetchIndex, {
-          tempImg: temp.status === 'fulfilled' ? temp.value : null,
+          tempImg: tempVal,
           visImg: vis.status === 'fulfilled' ? vis.value : null,
           rainImg: rain.status === 'fulfilled' ? rain.value : null,
           snowImg: snow.status === 'fulfilled' ? snow.value : null,
           windImg: wind.status === 'fulfilled' ? wind.value : null,
           aqiImg: aqi.status === 'fulfilled' ? aqi.value : null,
         });
+
+        return { fetchIndex, valid: tempVal !== null, timestamp: ts };
       });
 
       // Esperar a que todos los frames se descarguen
-      await Promise.allSettled(promises);
+      const results = await Promise.allSettled(promises);
       
+      // Filtrar frames corruptos
+      if (setCorruptedDates) {
+        const corruptedTimestamps = [];
+        results.forEach(res => {
+          if (res.status === 'fulfilled' && res.value && !res.value.valid) {
+            corruptedTimestamps.push(res.value.timestamp);
+          }
+        });
+        if (corruptedTimestamps.length > 0) {
+          setCorruptedDates(prev => {
+            const nextSet = new Set(prev);
+            corruptedTimestamps.forEach(ts => nextSet.add(ts));
+            return nextSet;
+          });
+        }
+      }
+
       isPreloaded.current = true;
     } catch (e) {
       console.error('Error during mass preloading:', e);

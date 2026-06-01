@@ -134,7 +134,7 @@ function MapaMonitoreo() {
     availableRadarDates,
     globalHistoryArray, globalTimelineIndex, setGlobalTimelineIndex,
     scannedGrid, scannedGridA, scannedGridB,
-    isFetchingRadar
+    isFetchingRadar, setCorruptedDates
   } = useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode });
 
   const { iotSensors, iotLoading, dynamicWindLabels, citiesData } = useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters });
@@ -770,8 +770,9 @@ function MapaMonitoreo() {
           <TimePlayer 
             globalHistoryArray={globalHistoryArray}
             currentIndex={globalTimelineIndex}
-            onIndexChange={(idx) => setGlobalTimelineIndex(idx)}
+            onIndexChange={setGlobalTimelineIndex}
             isDynamicHistoricalMode={isDynamicHistoricalMode}
+            setCorruptedDates={setCorruptedDates}
           />
         </>
       )}

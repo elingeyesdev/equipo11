@@ -14,20 +14,26 @@ export default class SnowDataTexture {
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
 
-    this.snowTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.snowTexture);
+    this.snowTextureCurrent = gl.createTexture();
+    this.snowTextureNext = gl.createTexture();
 
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+
+    // Init Current
+    gl.bindTexture(gl.TEXTURE_2D, this.snowTextureCurrent);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
-    );
+    // Init Next
+    gl.bindTexture(gl.TEXTURE_2D, this.snowTextureNext);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
     this.rampTexture = gl.createTexture();
     this._uploadRamp(SNOW_ACCUMULATED_RAMP);
@@ -49,31 +55,36 @@ export default class SnowDataTexture {
     );
   }
 
-  /**
-   * Actualiza la textura de datos con un PNG RGBA del backend.
-   * @param {HTMLImageElement} gridData — Imagen PNG RGBA 360×180
-   * @param {number} snowType — 0: acumulada, 1: fresca
-   */
   update(gridData, snowType = 0) {
-    if (!gridData || !(gridData instanceof HTMLImageElement)) return;
+    if (!gridData) return;
+    this.updateDual(gridData, gridData, snowType);
+  }
 
+  updateDual(currentData, nextData, snowType = 0) {
     const gl = this.gl;
 
-    // Seleccionar rampa según el tipo (0: acumulada, 1: fresca)
     const activeRamp = snowType === 1 ? SNOW_FRESH_RAMP : SNOW_ACCUMULATED_RAMP;
     this._uploadRamp(activeRamp);
 
-    gl.bindTexture(gl.TEXTURE_2D, this.snowTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, gridData);
+    if (currentData instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.snowTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+    }
+
+    const nextSource = nextData || currentData;
+    if (nextSource instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.snowTextureNext);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+    }
   }
 
   destroy() {
     const gl = this.gl;
-    if (this.snowTexture) gl.deleteTexture(this.snowTexture);
+    if (this.snowTextureCurrent) gl.deleteTexture(this.snowTextureCurrent);
+    if (this.snowTextureNext) gl.deleteTexture(this.snowTextureNext);
     if (this.rampTexture) gl.deleteTexture(this.rampTexture);
-    this.snowTexture = null;
+    this.snowTextureCurrent = null;
+    this.snowTextureNext = null;
     this.rampTexture = null;
   }
 }

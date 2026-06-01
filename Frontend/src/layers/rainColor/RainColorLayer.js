@@ -51,9 +51,11 @@ export default class RainColorLayer {
     this._aPos = gl.getAttribLocation(this._program, 'a_pos');
     this._uMatrix = gl.getUniformLocation(this._program, 'u_matrix');
     this._uRainData = gl.getUniformLocation(this._program, 'u_rain_data');
+    this._uRainDataNext = gl.getUniformLocation(this._program, 'u_rain_data_next');
     this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
     this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
 
     // 3. Quad geográfico
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
@@ -96,12 +98,18 @@ export default class RainColorLayer {
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rainTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rainTextureCurrent);
     gl.uniform1i(this._uRainData, 0);
 
     gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.rainTextureNext);
+    gl.uniform1i(this._uRainDataNext, 1);
+
+    gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
-    gl.uniform1i(this._uColorRamp, 1);
+    gl.uniform1i(this._uColorRamp, 2);
+
+    gl.uniform1f(this._uMixFactor, this.mixFactor !== undefined ? this.mixFactor : 0.0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);
@@ -135,9 +143,18 @@ export default class RainColorLayer {
   updateData(gridData) {
     if (this._texManager) {
       this._texManager.update(gridData);
+      this.mixFactor = 0.0;
       if (this._map) this._map.triggerRepaint();
     } else {
       this._pendingData = gridData;
+    }
+  }
+
+  updateDataDual(currentData, nextData, mixFactor = 0.0) {
+    if (this._texManager) {
+      this._texManager.updateDual(currentData, nextData);
+      this.mixFactor = mixFactor;
+      if (this._map) this._map.triggerRepaint();
     }
   }
 

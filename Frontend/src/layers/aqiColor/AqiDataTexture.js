@@ -14,39 +14,53 @@ export default class AqiDataTexture {
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
 
-    // Textura de datos AQI (RGBA, UNSIGNED_BYTE)
-    this.dataTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.dataTexture);
+    this.dataTextureCurrent = gl.createTexture();
+    this.dataTextureNext = gl.createTexture();
 
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+
+    // Init Current
+    gl.bindTexture(gl.TEXTURE_2D, this.dataTextureCurrent);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
-    // Inicializar vacía (RGBA)
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
-    );
+    // Init Next
+    gl.bindTexture(gl.TEXTURE_2D, this.dataTextureNext);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
   }
 
-  /**
-   * Actualiza la textura con un PNG RGBA del backend.
-   * @param {HTMLImageElement} imgData — Imagen PNG RGBA 360×180
-   */
   update(imgData) {
-    if (!imgData || !(imgData instanceof HTMLImageElement)) return;
+    if (!imgData) return;
+    this.updateDual(imgData, imgData);
+  }
 
+  updateDual(currentData, nextData) {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.dataTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgData);
+
+    if (currentData instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.dataTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+    }
+
+    const nextSource = nextData || currentData;
+    if (nextSource instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.dataTextureNext);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+    }
   }
 
   destroy() {
     const gl = this.gl;
-    if (this.dataTexture) gl.deleteTexture(this.dataTexture);
-    this.dataTexture = null;
+    if (this.dataTextureCurrent) gl.deleteTexture(this.dataTextureCurrent);
+    if (this.dataTextureNext) gl.deleteTexture(this.dataTextureNext);
+    this.dataTextureCurrent = null;
+    this.dataTextureNext = null;
   }
 }

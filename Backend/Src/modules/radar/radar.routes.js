@@ -19,7 +19,7 @@ router.get('/test-db', async (req, res) => {
 
 router.get('/available-dates', async (req, res) => {
   try {
-    const result = await pool.query('SELECT DISTINCT forecast_time FROM radar_grid_cache ORDER BY forecast_time DESC');
+    const result = await pool.query('SELECT DISTINCT forecast_time FROM radar_grid_cache WHERE temperatura IS NOT NULL ORDER BY forecast_time DESC');
     const dates = result.rows.map(r => r.forecast_time);
     success(res, dates);
   } catch (err) {

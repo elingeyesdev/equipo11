@@ -72,13 +72,33 @@ function WeatherOverlay({
   // --- Escuchar updates a 60fps del TimePlayer (Crossfading) ---
   useEffect(() => {
     const handleTimeUpdate = (e) => {
-      const { currentTempImg, nextTempImg, mixFactor } = e.detail;
+      const {
+        currentTempImg, nextTempImg,
+        currentVisImg, nextVisImg,
+        currentRainImg, nextRainImg,
+        currentSnowImg, nextSnowImg,
+        currentWindImg, nextWindImg,
+        currentAqiImg, nextAqiImg,
+        mixFactor
+      } = e.detail;
 
-      // Temperatura: Pipeline PNG (HTMLImageElement → GPU directamente)
-      if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function') {
-        if (currentTempImg) {
-          tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
-        }
+      if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function' && currentTempImg) {
+        tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
+      }
+      if (visLayerRef.current && typeof visLayerRef.current.updateDataDual === 'function' && currentVisImg) {
+        visLayerRef.current.updateDataDual(currentVisImg, nextVisImg || currentVisImg, mixFactor);
+      }
+      if (rainLayerRef.current && typeof rainLayerRef.current.updateDataDual === 'function' && currentRainImg) {
+        rainLayerRef.current.updateDataDual(currentRainImg, nextRainImg || currentRainImg, mixFactor);
+      }
+      if (snowLayerRef.current && typeof snowLayerRef.current.updateDataDual === 'function' && currentSnowImg) {
+        snowLayerRef.current.updateDataDual(currentSnowImg, nextSnowImg || currentSnowImg, mixFactor);
+      }
+      if (windLayerRef.current && typeof windLayerRef.current.updateDataDual === 'function' && currentWindImg) {
+        windLayerRef.current.updateDataDual(currentWindImg, nextWindImg || currentWindImg, mixFactor);
+      }
+      if (aqiLayerRef.current && typeof aqiLayerRef.current.updateDataDual === 'function' && currentAqiImg) {
+        aqiLayerRef.current.updateDataDual(currentAqiImg, nextAqiImg || currentAqiImg, mixFactor);
       }
     };
     window.addEventListener('timeplayer-update', handleTimeUpdate);

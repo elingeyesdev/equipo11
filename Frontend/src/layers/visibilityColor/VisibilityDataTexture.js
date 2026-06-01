@@ -19,20 +19,26 @@ export default class VisibilityDataTexture {
     this.gridHeight = GRID_HEIGHT;
     this.colorRamp = colorRamp;
 
-    this.visTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.visTexture);
+    this.visTextureCurrent = gl.createTexture();
+    this.visTextureNext = gl.createTexture();
 
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+
+    // Init Current
+    gl.bindTexture(gl.TEXTURE_2D, this.visTextureCurrent);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
-    );
+    // Init Next
+    gl.bindTexture(gl.TEXTURE_2D, this.visTextureNext);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
     this.rampTexture = gl.createTexture();
     this._uploadRamp(this.colorRamp);
@@ -54,18 +60,24 @@ export default class VisibilityDataTexture {
     );
   }
 
-  /**
-   * Actualiza la textura de datos con un PNG RGBA del backend.
-   * @param {HTMLImageElement} gridData — Imagen PNG RGBA 360×180
-   */
   update(gridData) {
-    if (!gridData || !(gridData instanceof HTMLImageElement)) return;
+    if (!gridData) return;
+    this.updateDual(gridData, gridData);
+  }
 
+  updateDual(currentData, nextData) {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.visTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, gridData);
+
+    if (currentData instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.visTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+    }
+
+    const nextSource = nextData || currentData;
+    if (nextSource instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.visTextureNext);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+    }
   }
 
   setColorRamp(ramp) {
@@ -75,9 +87,11 @@ export default class VisibilityDataTexture {
 
   destroy() {
     const gl = this.gl;
-    if (this.visTexture) gl.deleteTexture(this.visTexture);
+    if (this.visTextureCurrent) gl.deleteTexture(this.visTextureCurrent);
+    if (this.visTextureNext) gl.deleteTexture(this.visTextureNext);
     if (this.rampTexture) gl.deleteTexture(this.rampTexture);
-    this.visTexture = null;
+    this.visTextureCurrent = null;
+    this.visTextureNext = null;
     this.rampTexture = null;
   }
 }

@@ -7,11 +7,12 @@ const TimePlayer = ({
   globalHistoryArray,
   currentIndex,
   onIndexChange,
-  isDynamicHistoricalMode
+  isDynamicHistoricalMode,
+  setCorruptedDates
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
-  const { preloadAll, getFrame, isFrameReady, isPreloading } = useTimeBuffer(globalHistoryArray);
+  const { preloadAll, getFrame, isFrameReady, isPreloading } = useTimeBuffer(globalHistoryArray, setCorruptedDates);
 
   // Start preloading when component mounts in historical mode
   useEffect(() => {
@@ -31,6 +32,16 @@ const TimePlayer = ({
           detail: {
             currentTempImg: frame.tempImg || null,
             nextTempImg: frame.tempImg || null,
+            currentVisImg: frame.visImg || null,
+            nextVisImg: frame.visImg || null,
+            currentRainImg: frame.rainImg || null,
+            nextRainImg: frame.rainImg || null,
+            currentSnowImg: frame.snowImg || null,
+            nextSnowImg: frame.snowImg || null,
+            currentWindImg: frame.windImg || null,
+            nextWindImg: frame.windImg || null,
+            currentAqiImg: frame.aqiImg || null,
+            nextAqiImg: frame.aqiImg || null,
             mixFactor: 0.0
           }
         }));
@@ -66,7 +77,7 @@ const TimePlayer = ({
       }
 
       setIsBuffering(false);
-      mixFactor += delta / 1500.0; // 1.5 seconds per frame transition for smoother effect
+      mixFactor += delta / 4500.0; // 4.5 seconds per frame transition for smoother effect
 
       if (mixFactor >= 1.0) {
         mixFactor -= 1.0;
@@ -82,6 +93,16 @@ const TimePlayer = ({
           detail: {
             currentTempImg: cFrame.tempImg || null,
             nextTempImg: nFrame.tempImg || null,
+            currentVisImg: cFrame.visImg || null,
+            nextVisImg: nFrame.visImg || null,
+            currentRainImg: cFrame.rainImg || null,
+            nextRainImg: nFrame.rainImg || null,
+            currentSnowImg: cFrame.snowImg || null,
+            nextSnowImg: nFrame.snowImg || null,
+            currentWindImg: cFrame.windImg || null,
+            nextWindImg: nFrame.windImg || null,
+            currentAqiImg: cFrame.aqiImg || null,
+            nextAqiImg: nFrame.aqiImg || null,
             mixFactor: Math.min(mixFactor, 1.0)
           }
         }));

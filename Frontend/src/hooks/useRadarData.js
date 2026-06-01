@@ -19,6 +19,7 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
   const [scannedGridA, setScannedGridA] = useState({ status: 'idle', data: null });
   const [scannedGridB, setScannedGridB] = useState({ status: 'idle', data: null });
   const [isFetchingRadar, setIsFetchingRadar] = useState(false);
+  const [corruptedDates, setCorruptedDates] = useState(new Set());
   const hasSetInitialIndex = useRef(false);
 
   // Fetch available dates from backend
@@ -55,29 +56,31 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
     let minDiff = Infinity;
 
     while (curr <= futureEnd) {
-      const ts = curr.getTime();
-      const diff = Math.abs(ts - nowTs);
-      if (diff < minDiff) { minDiff = diff; initialIndex = index; }
+      const tsStr = curr.toISOString();
+      if (!corruptedDates.has(tsStr)) {
+        const ts = curr.getTime();
+        const diff = Math.abs(ts - nowTs);
+        if (diff < minDiff) { minDiff = diff; initialIndex = index; }
 
-      const isAvailable = availableRadarDates.some(d => {
-        const d1 = new Date(d).getTime();
-        const d2 = curr.getTime();
-        return Math.abs(d1 - d2) < 1000 * 60 * 60;
-      });
+        const isAvailable = availableRadarDates.some(d => {
+          const d1 = new Date(d).getTime();
+          const d2 = curr.getTime();
+          return Math.abs(d1 - d2) < 1000 * 60 * 60;
+        });
 
-      arr.push({
-        index, timestamp: curr.toISOString(),
-        isPrediction: curr > now,
-        isAvailable: isAvailable || curr < now,
-        data: { temperatura: null }
-      });
-
+        arr.push({
+          index, timestamp: tsStr,
+          isPrediction: curr > now,
+          isAvailable: isAvailable || curr < now,
+          data: { temperatura: null }
+        });
+        index++;
+      }
       curr = new Date(curr.getTime() + 3 * 60 * 60 * 1000);
-      index++;
     }
     setGlobalHistoryArray(arr);
     setGlobalTimelineIndex(prev => prev === 0 ? initialIndex : prev);
-  }, [availableRadarDates]);
+  }, [availableRadarDates, corruptedDates]);
 
   // ─── Descarga de 6 PNGs RGBA (Arquitectura Data Texture) ─────────
   useEffect(() => {
@@ -140,6 +143,6 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
     availableRadarDates,
     globalHistoryArray, globalTimelineIndex, setGlobalTimelineIndex,
     scannedGrid, scannedGridA, scannedGridB,
-    isFetchingRadar
+    isFetchingRadar, setCorruptedDates
   };
 }

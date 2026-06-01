@@ -23,24 +23,27 @@ export default class WindDataTexture {
     this.maxSpeed = MAX_SPEED;
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
-    // --- Textura de datos de viento (360×180, LUMINANCE, UNSIGNED_BYTE) ---
-    this.windTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.windTexture);
 
-    // Forzamos NEAREST y CLAMP_TO_EDGE (KISS). 
-    // La interpolación bilineal con wrap del antimeridiano se hace SIEMPRE en el shader.
+    this.windTextureCurrent = gl.createTexture();
+    this.windTextureNext = gl.createTexture();
+
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+
+    // Init Current
+    gl.bindTexture(gl.TEXTURE_2D, this.windTextureCurrent);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
-    // Inicializar con ceros
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
-    gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA,
-      GRID_WIDTH, GRID_HEIGHT, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
-    );
+    // Init Next
+    gl.bindTexture(gl.TEXTURE_2D, this.windTextureNext);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
 
     // --- Textura de paleta de color (256×1, RGBA) ---
     this.rampTexture = gl.createTexture();
@@ -67,16 +70,24 @@ export default class WindDataTexture {
     );
   }
 
-  /**
-   * Actualiza la textura de datos con un PNG RGBA del backend.
-   * @param {HTMLImageElement} gridData — Imagen PNG RGBA 360×180
-   */
   update(gridData) {
-    if (!gridData || !(gridData instanceof HTMLImageElement)) return;
+    if (!gridData) return;
+    this.updateDual(gridData, gridData);
+  }
 
+  updateDual(currentData, nextData) {
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.windTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, gridData);
+
+    if (currentData instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.windTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+    }
+
+    const nextSource = nextData || currentData;
+    if (nextSource instanceof HTMLImageElement) {
+      gl.bindTexture(gl.TEXTURE_2D, this.windTextureNext);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+    }
   }
 
   /**
@@ -92,9 +103,11 @@ export default class WindDataTexture {
    */
   destroy() {
     const gl = this.gl;
-    if (this.windTexture) gl.deleteTexture(this.windTexture);
+    if (this.windTextureCurrent) gl.deleteTexture(this.windTextureCurrent);
+    if (this.windTextureNext) gl.deleteTexture(this.windTextureNext);
     if (this.rampTexture) gl.deleteTexture(this.rampTexture);
-    this.windTexture = null;
+    this.windTextureCurrent = null;
+    this.windTextureNext = null;
     this.rampTexture = null;
   }
 }

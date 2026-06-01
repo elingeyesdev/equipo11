@@ -35,9 +35,11 @@ export default class VisibilityColorLayer {
     this._aPos = gl.getAttribLocation(this._program, 'a_pos');
     this._uMatrix = gl.getUniformLocation(this._program, 'u_matrix');
     this._uVisData = gl.getUniformLocation(this._program, 'u_vis_data');
+    this._uVisDataNext = gl.getUniformLocation(this._program, 'u_vis_data_next');
     this._uColorRamp = gl.getUniformLocation(this._program, 'u_color_ramp');
     this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
+    this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
 
     // Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
     // Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
@@ -81,12 +83,18 @@ export default class VisibilityColorLayer {
     gl.uniform2f(this._uTexSize, this._texManager.gridWidth, this._texManager.gridHeight);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._texManager.visTexture);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.visTextureCurrent);
     gl.uniform1i(this._uVisData, 0);
 
     gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._texManager.visTextureNext);
+    gl.uniform1i(this._uVisDataNext, 1);
+
+    gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this._texManager.rampTexture);
-    gl.uniform1i(this._uColorRamp, 1);
+    gl.uniform1i(this._uColorRamp, 2);
+
+    gl.uniform1f(this._uMixFactor, this.mixFactor !== undefined ? this.mixFactor : 0.0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);
@@ -118,9 +126,18 @@ export default class VisibilityColorLayer {
   updateData(gridData) {
     if (this._texManager) {
       this._texManager.update(gridData);
+      this.mixFactor = 0.0;
       if (this._map) this._map.triggerRepaint();
     } else {
       this._pendingData = gridData;
+    }
+  }
+
+  updateDataDual(currentData, nextData, mixFactor = 0.0) {
+    if (this._texManager) {
+      this._texManager.updateDual(currentData, nextData);
+      this.mixFactor = mixFactor;
+      if (this._map) this._map.triggerRepaint();
     }
   }
 

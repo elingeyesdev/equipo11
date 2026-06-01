@@ -13,14 +13,16 @@ export const fragmentSource = `
   precision highp float;
 
   uniform sampler2D u_aqi_data;
+  uniform sampler2D u_aqi_data_next;
   uniform float u_opacity;
   uniform vec2 u_tex_size;
+  uniform float u_mix_factor;
 
   varying vec2 v_mercator;
 
   const float PI = 3.14159265359;
 
-  float sampleBilinear(vec2 uv) {
+  float sampleBilinear(vec2 uv, sampler2D tex) {
     vec2 texelCoord = uv * u_tex_size - 0.5;
     vec2 base = floor(texelCoord);
     vec2 f = fract(texelCoord);
@@ -36,10 +38,10 @@ export const fragmentSource = `
     vec2 uv01 = (vec2(x0, y1) + 0.5) / u_tex_size;
     vec2 uv11 = (vec2(x1, y1) + 0.5) / u_tex_size;
 
-    float s00 = texture2D(u_aqi_data, uv00).r;
-    float s10 = texture2D(u_aqi_data, uv10).r;
-    float s01 = texture2D(u_aqi_data, uv01).r;
-    float s11 = texture2D(u_aqi_data, uv11).r;
+    float s00 = texture2D(tex, uv00).r;
+    float s10 = texture2D(tex, uv10).r;
+    float s01 = texture2D(tex, uv01).r;
+    float s11 = texture2D(tex, uv11).r;
 
     return mix(mix(s00, s10, f.x), mix(s01, s11, f.x), f.y);
   }
@@ -56,7 +58,9 @@ export const fragmentSource = `
       (lat + 90.0) / 180.0
     );
 
-    float aqi_norm = sampleBilinear(uv);
+    float aqiNormCurrent = sampleBilinear(uv, u_aqi_data);
+    float aqiNormNext = sampleBilinear(uv, u_aqi_data_next);
+    float aqi_norm = mix(aqiNormCurrent, aqiNormNext, u_mix_factor);
 
     // aqi_norm corresponds to the byte value (0 to 1). The actual value was divided by 2.
     // So to get the real AQI value back, we do aqi_norm * 255.0 * 2.0
