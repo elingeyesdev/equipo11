@@ -44,6 +44,9 @@ router.get('/bolivia', async (req, res) => {
 // El frontend las inyecta directamente en la GPU vía gl.texImage2D(gl.RGBA).
 
 const _sendPng = (res, pngBuffer, layerName) => {
+  if (!pngBuffer) {
+    return error(res, `No data available for layer: ${layerName}`, 404);
+  }
   res.set({
     'Content-Type': 'image/png',
     'Cache-Control': 'public, max-age=1800',

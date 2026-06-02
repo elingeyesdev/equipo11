@@ -27,6 +27,7 @@ import { formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
 import GeocoderSearch from '../../components/MapaMonitoreo/GeocoderSearch';
 import ComparePanel from '../../components/MapaMonitoreo/ComparePanel';
+import CompareConfigMenu from '../../components/MapaMonitoreo/CompareConfigMenu';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
 import MapLayers from '../../components/MapaMonitoreo/MapLayers';
 import useRadarData from '../../hooks/useRadarData';
@@ -35,6 +36,7 @@ import useSensors from '../../hooks/useSensors';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
+import MapLegend from '../../components/MapaMonitoreo/MapLegend';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
 import { getImageDataArray, sampleWindBilinear, sampleRainBilinear, sampleSnowBilinear, sampleVisibilityBilinear, sampleTempBilinear, sampleAqiNearest } from '../../utils/windMath';
@@ -141,6 +143,7 @@ function MapaMonitoreo() {
 
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
+  const mapRefRight = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
   const containerRef = useRef(null); // ref para el ResizeObserver
 
@@ -265,6 +268,14 @@ function MapaMonitoreo() {
     latitude: -20.0,
     zoom: 3.5
   });
+
+  const [viewStateRight, setViewStateRight] = useState({
+    longitude: -60.0,
+    latitude: -20.0,
+    zoom: 3.5
+  });
+  
+  const [isCameraSynced, setIsCameraSynced] = useState(false);
 
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return '#00e400';
@@ -392,11 +403,18 @@ function MapaMonitoreo() {
       scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
     }
 
-    if (scalarMetrics.length > 0) {
-      setScalarPopup({ lng, lat, metrics: scalarMetrics });
-    } else {
-      setScalarPopup(null);
+    const hasScalarActive = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
+
+    if (hasScalarActive) {
+      if (scalarMetrics.length > 0) {
+        setScalarPopup({ lng, lat, metrics: scalarMetrics });
+      } else {
+        setScalarPopup(null);
+      }
+      return; // Bloqueamos el popup grande si hay una capa escalar
     }
+    
+    setScalarPopup(null);
 
     // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
     const nearest = citiesData.reduce(
@@ -416,7 +434,6 @@ function MapaMonitoreo() {
         subtitle: `Área de ${nearest.city.name} — ${sourceLabel}`,
         data: {
           ...nearest.city.data,
-          windSpeed: localWind ? localWind.speed : nearest.city.data?.windSpeed,
           rain: localRain !== null ? localRain : nearest.city.data?.rain,
         },
       });
@@ -429,8 +446,7 @@ function MapaMonitoreo() {
               ...prev,
               data: {
                 ...prev.data,
-                // Preservar viento y lluvia calculados localmente
-                windSpeed: prev.data.windSpeed ?? weather.current.wind_speed_10m,
+                // Preservar lluvia calculada localmente
                 rain: prev.data.rain ?? weather.current.rain,
               }
             } : null;
@@ -513,18 +529,17 @@ function MapaMonitoreo() {
   const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   const handleCityClick = useCallback(async (city) => {
+    const hasScalar = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
+    if (hasScalar) return; // Bloqueo crítico
+
     setSelectedCity(city);
     try {
       const weather = await getWeatherAtLocation(city.latitude, city.longitude);
       if (weather?.current) {
         setWeatherCode(weather.current.weather_code);
-        setSelectedCity(prev => prev ? {
-          ...prev,
-          data: { ...prev.data, windSpeed: weather.current.wind_speed_10m }
-        } : null);
       }
     } catch (err) { console.error(err); }
-  }, []);
+  }, [isHeatmapActive, isParticlesActive, particleFilters]);
 
   return (
     <div className="mapa-page-container" ref={containerRef}>
@@ -586,7 +601,10 @@ function MapaMonitoreo() {
             id="mapA"
             ref={mapRef}
             {...viewState}
-            onMove={evt => setViewState(evt.viewState)}
+            onMove={evt => {
+              setViewState(evt.viewState);
+              if (isCameraSynced) setViewStateRight(evt.viewState);
+            }}
             onMoveEnd={handleMapMoveEnd}
             onLoad={() => {
               if (pendingFlyTo.current) {
@@ -643,14 +661,14 @@ function MapaMonitoreo() {
                 offset={15}
                 className="premium-weather-popup"
               >
-                <div style={{ background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', padding: '8px', minWidth: '120px' }}>
+                <div className="scalar-popup-content">
                   {scalarPopup.metrics.map((m, idx) => (
-                    <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
+                    <div key={idx} className="scalar-popup-row" style={{ borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
+                      <span className="scalar-popup-label">{m.label}</span>
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         {m.color && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: m.color, marginRight: '6px', boxShadow: '0 0 4px rgba(0,0,0,0.5)' }}></div>}
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
-                        <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
+                        <span className="scalar-popup-value">{m.value}</span>
+                        <span className="scalar-popup-unit">{m.unit}</span>
                       </div>
                     </div>
                   ))}
@@ -660,6 +678,34 @@ function MapaMonitoreo() {
           </Map>
 
           {isCompareMode && (
+            <CompareConfigMenu
+              side="A"
+              globalHistoryArray={globalHistoryArray}
+              currentIndex={compareIndexA}
+              onTimeSelect={setCompareIndexA}
+              onBoundarySelect={(boundary) => {
+                if (boundary.bbox && mapRef.current) {
+                  mapRef.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
+                }
+              }}
+            />
+          )}
+
+          {isCompareMode && (
+            <CompareConfigMenu
+              side="B"
+              globalHistoryArray={globalHistoryArray}
+              currentIndex={compareIndexB}
+              onTimeSelect={setCompareIndexB}
+              onBoundarySelect={(boundary) => {
+                if (boundary.bbox && mapRefRight.current) {
+                  mapRefRight.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
+                }
+              }}
+            />
+          )}
+
+          {isCompareMode && (
             <ComparePanel
               swipePos={swipePos}
               setSwipePos={setSwipePos}
@@ -667,11 +713,17 @@ function MapaMonitoreo() {
               compareIndexB={compareIndexB}
               globalHistoryArray={globalHistoryArray}
               formatTime={formatTime}
+              isCameraSynced={isCameraSynced}
+              setIsCameraSynced={setIsCameraSynced}
             >
               <Map
                 id="mapB"
-                {...viewState}
-                onMove={evt => setViewState(evt.viewState)}
+                ref={mapRefRight}
+                {...viewStateRight}
+                onMove={evt => {
+                  setViewStateRight(evt.viewState);
+                  if (isCameraSynced) setViewState(evt.viewState);
+                }}
                 mapStyle={mapStyle}
                 mapboxAccessToken={MAPBOX_TOKEN}
                 projection="mercator"
@@ -743,11 +795,16 @@ function MapaMonitoreo() {
           globalTimelineIndex={globalTimelineIndex} globalHistoryArray={globalHistoryArray}
           particleFilters={particleFilters} setParticleFilters={setParticleFilters}
         />
+
+        <MapLegend 
+          isParticlesActive={isParticlesActive} 
+          particleFilters={particleFilters} 
+        />
       </div>
 
 
 
-      {isDynamicHistoricalMode && (
+      {isDynamicHistoricalMode && !isCompareMode && (
         <>
           <div className="historical-prompt">
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
@@ -777,14 +834,14 @@ function MapaMonitoreo() {
         </>
       )}
 
-      {isHistoricalMode && !activeCity && (
+      {isHistoricalMode && !activeCity && !isCompareMode && (
         <div className="historical-prompt">
           <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
           <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
         </div>
       )}
 
-      {isHistoricalMode && activeCity && (
+      {isHistoricalMode && activeCity && !isCompareMode && (
         <>
           {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
           <Timeline

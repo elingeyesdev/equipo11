@@ -1781,3 +1781,80 @@ input:checked+.slider:before {
 .city-info-panel-wrapper:active {
   cursor: default !important;
 }
+
+/* ==========================================================
+   Popup Escalar Específico (Mapbox Popup override)
+   ========================================================== */
+.premium-weather-popup .mapboxgl-popup-content {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+  padding: 10px 12px !important;
+  min-width: 130px;
+  color: #f8fafc !important;
+}
+
+.premium-weather-popup .mapboxgl-popup-tip {
+  border-top-color: rgba(15, 23, 42, 0.9) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.premium-weather-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.premium-weather-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip {
+  border-bottom-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.premium-weather-popup .mapboxgl-popup-close-button {
+  color: #94a3b8;
+  font-size: 16px;
+  top: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  transition: all 0.2s;
+}
+
+.premium-weather-popup .mapboxgl-popup-close-button:hover {
+  background-color: transparent !important;
+  color: #f8fafc;
+  transform: scale(1.1);
+}
+
+.scalar-popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scalar-popup-row {
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.scalar-popup-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.scalar-popup-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+  font-family: var(--font-mono);
+}
+
+.scalar-popup-unit {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin-left: 5px;
+}

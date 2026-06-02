@@ -8,6 +8,8 @@ function ComparePanel({
   compareIndexB,
   globalHistoryArray,
   formatTime,
+  isCameraSynced,
+  setIsCameraSynced,
   children
 }) {
   const handleSwipeMouseDown = useCallback((e) => {
@@ -50,11 +52,39 @@ function ComparePanel({
           ↔
         </div>
 
-        <div style={{ position: 'absolute', top: '20px', left: '-130px', background: 'rgba(0,0,0,0.8)', color: '#06b6d4', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #06b6d4' }}>
+        <div style={{ position: 'absolute', top: '20px', left: '-130px', background: 'rgba(0,0,0,0.8)', color: '#06b6d4', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #06b6d4', pointerEvents: 'none' }}>
           IZQ: {globalHistoryArray[compareIndexA]?.timestamp ? formatTime(globalHistoryArray[compareIndexA].timestamp) : '...'}
         </div>
-        <div style={{ position: 'absolute', top: '20px', right: '-130px', background: 'rgba(0,0,0,0.8)', color: '#f59e0b', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #f59e0b' }}>
+        <div style={{ position: 'absolute', top: '20px', right: '-130px', background: 'rgba(0,0,0,0.8)', color: '#f59e0b', padding: '5px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #f59e0b', pointerEvents: 'none' }}>
           DER: {globalHistoryArray[compareIndexB]?.timestamp ? formatTime(globalHistoryArray[compareIndexB].timestamp) : '...'}
+        </div>
+
+        {/* Sync Camera Toggle */}
+        <div 
+          style={{ 
+            position: 'absolute', 
+            top: '50%', 
+            transform: 'translateY(-50%)', 
+            background: isCameraSynced ? '#38bdf8' : 'white', 
+            color: isCameraSynced ? 'white' : '#333',
+            width: '40px', 
+            height: '40px', 
+            borderRadius: '50%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontSize: '18px', 
+            boxShadow: '0 2px 10px rgba(0,0,0,0.5)', 
+            cursor: 'pointer',
+            border: isCameraSynced ? '2px solid rgba(255,255,255,0.8)' : '1px solid #ccc'
+          }}
+          title={isCameraSynced ? 'Cámaras Vinculadas (Desvincular)' : 'Cámaras Independientes (Vincular)'}
+          onClick={(e) => {
+            e.stopPropagation(); // Evitar que el drag reciba el click
+            setIsCameraSynced(!isCameraSynced);
+          }}
+        >
+          {isCameraSynced ? '🔗' : '🔓'}
         </div>
       </div>
     </>

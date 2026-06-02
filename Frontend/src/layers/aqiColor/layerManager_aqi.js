@@ -1,14 +1,16 @@
 import { findOptimalInsertionPoint } from '../windColor/layerManager.js';
 
-export function addAqiLayers(map, aqiColorLayer) {
+export function addAqiLayers(map, aqiColorLayer, coastlineId) {
   const insertBefore = findOptimalInsertionPoint(map);
 
-  map.addLayer(aqiColorLayer, insertBefore);
+  if (!map.getLayer(aqiColorLayer.id)) {
+    map.addLayer(aqiColorLayer, insertBefore);
+  }
 
   // Capa de costas exclusiva para AQI
-  if (!map.getLayer('custom-coastline-aqi')) {
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline-aqi',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -20,12 +22,13 @@ export function addAqiLayers(map, aqiColorLayer) {
   }
 }
 
-export function removeAqiLayers(map) {
+export function removeAqiLayers(map, layerId, coastlineId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   if (!map) return;
   try {
     if (map.getStyle()) {
-      if (map.getLayer('aqi-color-layer')) map.removeLayer('aqi-color-layer');
-      if (map.getLayer('custom-coastline-aqi')) map.removeLayer('custom-coastline-aqi');
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getLayer(coastlineId)) map.removeLayer(coastlineId);
     }
   } catch (e) {
     console.warn('[layerManager_aqi] Error removiendo capas:', e.message);

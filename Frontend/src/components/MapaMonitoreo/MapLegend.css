@@ -1,0 +1,110 @@
+.map-legend-container {
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  animation: slideUpLegend 0.3s ease-out forwards;
+}
+
+@keyframes slideUpLegend {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.map-legend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.map-legend-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f8fafc;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.map-legend-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  transition: all 0.2s;
+}
+
+.map-legend-close:hover {
+  color: #f8fafc;
+  transform: scale(1.1);
+}
+
+.map-legend-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-legend-gradient {
+  width: 100%;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.map-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+
+.map-legend-collapsed-btn {
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8fafc;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+
+.map-legend-collapsed-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  transform: scale(1.05);
+}

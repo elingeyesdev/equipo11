@@ -1,15 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import httpClient from '../config/httpClient';
 
-// Helper: Carga un PNG como HTMLImageElement (0% CPU, nativo del navegador)
-const _loadPng = (path, params = {}) => new Promise((resolve) => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
-  img.onload = () => resolve(img);
-  img.onerror = () => resolve(null);
-  img.src = `${httpClient.defaults.baseURL}${path}${timeParam}`;
-});
+const _loadPng = async (path, params = {}) => {
+  try {
+    const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
+    const url = `${httpClient.defaults.baseURL}${path}${timeParam}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Bad status: ${response.status}`);
+    
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image decode error'));
+      img.src = objectUrl;
+    });
+    
+    return img;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export default function useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode }) {
   const [availableRadarDates, setAvailableRadarDates] = useState([]);
@@ -138,6 +152,63 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
 
     fetchRadar();
   }, [isParticlesActive, isDynamicHistoricalMode, globalTimelineIndex, globalHistoryArray]);
+
+  const fetchSingleGrid = async (index) => {
+    if (index === null || !globalHistoryArray[index]) return null;
+    const selectedEntry = globalHistoryArray[index];
+    const params = { time: selectedEntry.timestamp };
+    
+    const [tempResult, visResult, rainResult, snowResult, windResult, aqiResult] =
+      await Promise.allSettled([
+        _loadPng('/radar/bolivia/temp/png', params),
+        _loadPng('/radar/bolivia/vis/png', params),
+        _loadPng('/radar/bolivia/rain/png', params),
+        _loadPng('/radar/bolivia/snow/png', params),
+        _loadPng('/radar/bolivia/wind/png', params),
+        _loadPng('/radar/bolivia/aqi/png', params),
+      ]);
+
+    return {
+      tempImg: tempResult.status === 'fulfilled' ? tempResult.value : null,
+      visImg: visResult.status === 'fulfilled' ? visResult.value : null,
+      rainImg: rainResult.status === 'fulfilled' ? rainResult.value : null,
+      snowImg: snowResult.status === 'fulfilled' ? snowResult.value : null,
+      windImg: windResult.status === 'fulfilled' ? windResult.value : null,
+      aqiImg: aqiResult.status === 'fulfilled' ? aqiResult.value : null,
+    };
+  };
+
+  useEffect(() => {
+    if (!isParticlesActive || !isCompareMode) return;
+    let mounted = true;
+    const fetchA = async () => {
+      try {
+        setScannedGridA(prev => ({ ...prev, status: 'fetching' }));
+        const data = await fetchSingleGrid(compareIndexA);
+        if (mounted && data) setScannedGridA({ status: 'ready', data });
+      } catch (e) {
+        console.error('Error fetching A:', e);
+      }
+    };
+    fetchA();
+    return () => { mounted = false; };
+  }, [isParticlesActive, isCompareMode, compareIndexA, globalHistoryArray]);
+
+  useEffect(() => {
+    if (!isParticlesActive || !isCompareMode) return;
+    let mounted = true;
+    const fetchB = async () => {
+      try {
+        setScannedGridB(prev => ({ ...prev, status: 'fetching' }));
+        const data = await fetchSingleGrid(compareIndexB);
+        if (mounted && data) setScannedGridB({ status: 'ready', data });
+      } catch (e) {
+        console.error('Error fetching B:', e);
+      }
+    };
+    fetchB();
+    return () => { mounted = false; };
+  }, [isParticlesActive, isCompareMode, compareIndexB, globalHistoryArray]);
 
   return {
     availableRadarDates,

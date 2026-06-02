@@ -28,7 +28,6 @@ import { useUnidades } from '../../hooks/useUnidades';
  * Ya no existe transporte JSON masivo.
  */
 function WeatherOverlay({
-  idPrefix = 'global',
   scannedGrid,
   currentZoom,
   particleFilters,
@@ -45,28 +44,6 @@ function WeatherOverlay({
   const visLayerRef = useRef(null);
   const tempLayerRef = useRef(null);
   const aqiLayerRef = useRef(null);
-
-  const windLayerId = `wind-color-layer-${idPrefix}`;
-  const windCoastlineId = `custom-coastline-wind-${idPrefix}`;
-  const windLabelSourceId = `global-wind-cities-source-${idPrefix}`;
-  const windLabelLayerId = `global-wind-cities-label-${idPrefix}`;
-
-  const rainLayerId = `rain-color-layer-${idPrefix}`;
-  const rainCoastlineId = `custom-coastline-rain-${idPrefix}`;
-
-  const snowLayerId = `snow-color-layer-${idPrefix}`;
-  const snowCoastlineId = `custom-coastline-snow-${idPrefix}`;
-
-  const visLayerId = `visibility-color-layer-${idPrefix}`;
-  const visCoastlineId = `custom-coastline-vis-${idPrefix}`;
-
-  const tempLayerId = `temp-color-layer-${idPrefix}`;
-  const tempCoastlineId = `custom-coastline-temp-${idPrefix}`;
-  const tempLabelSourceId = `city-temp-source-${idPrefix}`;
-  const tempLabelLayerId = `city-temp-labels-${idPrefix}`;
-
-  const aqiLayerId = `aqi-color-layer-${idPrefix}`;
-  const aqiCoastlineId = `custom-coastline-aqi-${idPrefix}`;
 
   // --- Actualizar texturas cuando cambian las imágenes PNG ---
   useEffect(() => {
@@ -105,7 +82,9 @@ function WeatherOverlay({
         mixFactor
       } = e.detail;
 
-
+      if (currentRainImg || nextRainImg) {
+        console.log('[TimePlayer Update] mixFactor:', mixFactor.toFixed(2), '| currentRain === nextRain?', currentRainImg === nextRainImg);
+      }
 
       if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function' && currentTempImg) {
         tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
@@ -148,10 +127,10 @@ function WeatherOverlay({
     const addLayersIfMissing = () => {
       if (!shouldShow) return;
       const _add = () => {
-        if (!rawMap.getLayer(windLayerId)) {
-          const layer = new WindColorLayer({ id: windLayerId, opacity: 0.90 });
+        if (!rawMap.getLayer('wind-color-layer')) {
+          const layer = new WindColorLayer({ id: 'wind-color-layer', opacity: 0.90 });
           windLayerRef.current = layer;
-          addWindLayers(rawMap, layer, windCoastlineId);
+          addWindLayers(rawMap, layer);
           // Anti-FOUC: inyectar textura si ya está disponible
           if (scannedGrid?.windImg) layer.updateData(scannedGrid.windImg);
         }
@@ -163,14 +142,14 @@ function WeatherOverlay({
       addLayersIfMissing();
       rawMap.on('styledata', addLayersIfMissing);
     } else {
-      removeWindLayers(rawMap, windLayerId, windCoastlineId, windLabelSourceId, windLabelLayerId);
+      removeWindLayers(rawMap);
       windLayerRef.current?.destroy?.();
       windLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addLayersIfMissing);
-      removeWindLayers(rawMap, windLayerId, windCoastlineId, windLabelSourceId, windLabelLayerId);
+      removeWindLayers(rawMap);
       if (windLayerRef.current && typeof windLayerRef.current.destroy === 'function') {
         windLayerRef.current.destroy();
       }
@@ -189,10 +168,10 @@ function WeatherOverlay({
     const addRainIfMissing = () => {
       if (!shouldShowRain) return;
       const _add = () => {
-        if (!rawMap.getLayer(rainLayerId)) {
-          const layer = new RainColorLayer({ id: rainLayerId, opacity: 0.85 });
+        if (!rawMap.getLayer('rain-color-layer')) {
+          const layer = new RainColorLayer({ id: 'rain-color-layer', opacity: 0.85 });
           rainLayerRef.current = layer;
-          addRainLayers(rawMap, layer, rainCoastlineId);
+          addRainLayers(rawMap, layer);
           if (scannedGrid?.rainImg) layer.updateData(scannedGrid.rainImg);
         }
       };
@@ -203,14 +182,14 @@ function WeatherOverlay({
       addRainIfMissing();
       rawMap.on('styledata', addRainIfMissing);
     } else {
-      removeRainLayers(rawMap, rainLayerId, rainCoastlineId);
+      removeRainLayers(rawMap);
       rainLayerRef.current?.destroy?.();
       rainLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addRainIfMissing);
-      removeRainLayers(rawMap, rainLayerId, rainCoastlineId);
+      removeRainLayers(rawMap);
       if (rainLayerRef.current && typeof rainLayerRef.current.destroy === 'function') {
         rainLayerRef.current.destroy();
       }
@@ -229,13 +208,13 @@ function WeatherOverlay({
     const addSnowIfMissing = () => {
       if (!shouldShowSnow) return;
       const _add = () => {
-        if (!rawMap.getLayer(snowLayerId)) {
+        if (!rawMap.getLayer('snow-color-layer')) {
           const layer = new SnowColorLayer({
-            id: snowLayerId, opacity: 0.85,
+            id: 'snow-color-layer', opacity: 0.85,
             snowType: snowMapType === 'fresh' ? 1 : 0
           });
           snowLayerRef.current = layer;
-          addSnowLayers(rawMap, layer, snowCoastlineId);
+          addSnowLayers(rawMap, layer);
           if (scannedGrid?.snowImg) layer.updateData(scannedGrid.snowImg);
         } else if (snowLayerRef.current) {
           snowLayerRef.current.setSnowType(snowMapType === 'fresh' ? 1 : 0);
@@ -248,14 +227,14 @@ function WeatherOverlay({
       addSnowIfMissing();
       rawMap.on('styledata', addSnowIfMissing);
     } else {
-      removeSnowLayers(rawMap, snowLayerId, snowCoastlineId);
+      removeSnowLayers(rawMap);
       snowLayerRef.current?.destroy?.();
       snowLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addSnowIfMissing);
-      removeSnowLayers(rawMap, snowLayerId, snowCoastlineId);
+      removeSnowLayers(rawMap);
       if (snowLayerRef.current && typeof snowLayerRef.current.destroy === 'function') {
         snowLayerRef.current.destroy();
       }
@@ -274,10 +253,10 @@ function WeatherOverlay({
     const addVisIfMissing = () => {
       if (!shouldShowVis) return;
       const _add = () => {
-        if (!rawMap.getLayer(visLayerId)) {
-          const layer = new VisibilityColorLayer({ id: visLayerId, opacity: 0.85 });
+        if (!rawMap.getLayer('visibility-color-layer')) {
+          const layer = new VisibilityColorLayer({ id: 'visibility-color-layer', opacity: 0.85 });
           visLayerRef.current = layer;
-          addVisibilityLayers(rawMap, layer, visCoastlineId);
+          addVisibilityLayers(rawMap, layer);
           if (scannedGrid?.visImg) layer.updateData(scannedGrid.visImg);
         }
       };
@@ -288,14 +267,14 @@ function WeatherOverlay({
       addVisIfMissing();
       rawMap.on('styledata', addVisIfMissing);
     } else {
-      removeVisibilityLayers(rawMap, visLayerId, visCoastlineId);
+      removeVisibilityLayers(rawMap);
       visLayerRef.current?.destroy?.();
       visLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addVisIfMissing);
-      removeVisibilityLayers(rawMap, visLayerId, visCoastlineId);
+      removeVisibilityLayers(rawMap);
       if (visLayerRef.current && typeof visLayerRef.current.destroy === 'function') {
         visLayerRef.current.destroy();
       }
@@ -314,10 +293,10 @@ function WeatherOverlay({
     const addTempIfMissing = () => {
       if (!shouldShowTemp) return;
       const _add = () => {
-        if (!rawMap.getLayer(tempLayerId)) {
-          const layer = new TempColorLayer({ id: tempLayerId, opacity: 0.90 });
+        if (!rawMap.getLayer('temp-color-layer')) {
+          const layer = new TempColorLayer({ id: 'temp-color-layer', opacity: 0.90 });
           tempLayerRef.current = layer;
-          addTempLayers(rawMap, layer, tempCoastlineId);
+          addTempLayers(rawMap, layer);
           if (scannedGrid?.tempImg) layer.updateData(scannedGrid.tempImg);
         }
       };
@@ -328,14 +307,14 @@ function WeatherOverlay({
       addTempIfMissing();
       rawMap.on('styledata', addTempIfMissing);
     } else {
-      removeTempLayers(rawMap, tempLayerId, tempCoastlineId, tempLabelSourceId, tempLabelLayerId);
+      removeTempLayers(rawMap);
       tempLayerRef.current?.destroy?.();
       tempLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addTempIfMissing);
-      removeTempLayers(rawMap, tempLayerId, tempCoastlineId, tempLabelSourceId, tempLabelLayerId);
+      removeTempLayers(rawMap);
       if (tempLayerRef.current && typeof tempLayerRef.current.destroy === 'function') {
         tempLayerRef.current.destroy();
       }
@@ -354,10 +333,10 @@ function WeatherOverlay({
     const addAqiIfMissing = () => {
       if (!shouldShowAqi) return;
       const _add = () => {
-        if (!rawMap.getLayer(aqiLayerId)) {
-          const layer = new AqiColorLayer({ id: aqiLayerId, opacity: 0.90 });
+        if (!rawMap.getLayer('aqi-color-layer')) {
+          const layer = new AqiColorLayer({ id: 'aqi-color-layer', opacity: 0.90 });
           aqiLayerRef.current = layer;
-          addAqiLayers(rawMap, layer, aqiCoastlineId);
+          addAqiLayers(rawMap, layer);
           if (scannedGrid?.aqiImg) layer.updateData(scannedGrid.aqiImg);
         }
       };
@@ -368,14 +347,14 @@ function WeatherOverlay({
       addAqiIfMissing();
       rawMap.on('styledata', addAqiIfMissing);
     } else {
-      removeAqiLayers(rawMap, aqiLayerId, aqiCoastlineId);
+      removeAqiLayers(rawMap);
       aqiLayerRef.current?.destroy?.();
       aqiLayerRef.current = null;
     }
 
     return () => {
       rawMap.off('styledata', addAqiIfMissing);
-      removeAqiLayers(rawMap, aqiLayerId, aqiCoastlineId);
+      removeAqiLayers(rawMap);
       if (aqiLayerRef.current && typeof aqiLayerRef.current.destroy === 'function') {
         aqiLayerRef.current.destroy();
       }
@@ -391,21 +370,13 @@ function WeatherOverlay({
       <GridRadarLayer
         scannedGrid={scannedGrid}
         currentZoom={currentZoom}
-        particleFilters={{ 
-          ...particleFilters, 
-          wind: false,
-          rain: false,
-          snow: false,
-          fog: false, 
-          temp: false, 
-          aqi: false 
-        }}
+        particleFilters={{ ...particleFilters, fog: false, temp: false, aqi: false }}
       />
 
       {particleFilters.wind && dynamicWindLabels && (
-        <Source id={windLabelSourceId} type="geojson" data={dynamicWindLabels}>
+        <Source id="dynamic-wind-source" type="geojson" data={dynamicWindLabels}>
           <Layer
-            id={windLabelLayerId}
+            id="dynamic-wind-text-layer"
             type="symbol"
             layout={{
               'text-field': ['concat', ['get', 'name'], '\n', ['to-string', ['round', ['to-number', ['get', 'wind_speed']]]], ' km/h'],

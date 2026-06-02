@@ -65,15 +65,17 @@ export function findOptimalInsertionPoint(map) {
  * @param {Object} windColorLayer — Capa WebGL personalizada (CustomLayerInterface)
  * @param {Array|null} currentData — Datos del grid actual
  */
-export function addWindLayers(map, windColorLayer, currentData) {
+export function addWindLayers(map, windColorLayer, coastlineId, currentData) {
   const insertBefore = findOptimalInsertionPoint(map);
 
-  map.addLayer(windColorLayer, insertBefore);
+  if (!map.getLayer(windColorLayer.id)) {
+    map.addLayer(windColorLayer, insertBefore);
+  }
 
   // Capa de costas (fronteras hacia el mar)
-  if (!map.getLayer('custom-coastline')) {
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -92,14 +94,13 @@ export function addWindLayers(map, windColorLayer, currentData) {
 
 /**
  * Remueve las capas de viento del mapa de forma segura.
- *
- * @param {mapboxgl.Map} map
  */
-export function removeWindLayers(map) {
+export function removeWindLayers(map, layerId, coastlineId, sourceId, labelLayerId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
-    if (map.getLayer('wind-color-layer')) map.removeLayer('wind-color-layer');
-    if (map.getLayer('custom-coastline')) map.removeLayer('custom-coastline');
-    removeCityWindLabels(map);
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+    if (map.getLayer(coastlineId)) map.removeLayer(coastlineId);
+    removeCityWindLabels(map, sourceId, labelLayerId);
   } catch (e) {
     console.warn('[layerManager] Error removiendo capas:', e.message);
   }
@@ -107,30 +108,22 @@ export function removeWindLayers(map) {
 
 // ─── Capa de Etiquetas de Viento en Ciudades Globales ─────────────────────
 
-const CITY_SOURCE_ID = 'global-wind-cities-source';
-const CITY_LAYER_ID = 'global-wind-cities-label';
-
 /**
  * Inyecta la capa de símbolos de texto para ciudades globales.
- * Usa text-allow-overlap: false para que Mapbox resuelva colisiones nativamente.
- *
- * @param {mapboxgl.Map} map
- * @param {Object} geojson — FeatureCollection con properties { name, wind_speed }
  */
-export function addCityWindLabels(map, geojson) {
+export function addCityWindLabels(map, geojson, sourceId, labelLayerId) {
   try {
-    if (map.getSource(CITY_SOURCE_ID)) return; // Ya existe
+    if (map.getSource(sourceId)) return; // Ya existe
 
-    map.addSource(CITY_SOURCE_ID, {
+    map.addSource(sourceId, {
       type: 'geojson',
       data: geojson,
     });
 
-    // Esta capa se inserta SIN beforeId para que flote por encima de todo (incluido el heatmap)
     map.addLayer({
-      id: CITY_LAYER_ID,
+      id: labelLayerId,
       type: 'symbol',
-      source: CITY_SOURCE_ID,
+      source: sourceId,
       layout: {
         'text-field': [
           'concat',
@@ -147,7 +140,6 @@ export function addCityWindLabels(map, geojson) {
         ],
         'text-offset': [0, 0],
         'text-anchor': 'center',
-        // KISS: Mapbox gestiona colisiones automáticamente con estos dos flags
         'text-allow-overlap': false,
         'text-ignore-placement': false,
         'text-padding': 8,
@@ -167,13 +159,10 @@ export function addCityWindLabels(map, geojson) {
 
 /**
  * Actualiza los datos GeoJSON de la capa de ciudades sin destruirla/recrearla.
- *
- * @param {mapboxgl.Map} map
- * @param {Object} geojson — FeatureCollection actualizado
  */
-export function updateCityWindLabels(map, geojson) {
+export function updateCityWindLabels(map, geojson, sourceId) {
   try {
-    const source = map.getSource(CITY_SOURCE_ID);
+    const source = map.getSource(sourceId);
     if (source) {
       source.setData(geojson);
     }
@@ -184,12 +173,11 @@ export function updateCityWindLabels(map, geojson) {
 
 /**
  * Remueve la capa y fuente de etiquetas de ciudades.
- *
- * @param {mapboxgl.Map} map
  */
-export function removeCityWindLabels(map) {
+export function removeCityWindLabels(map, sourceId, labelLayerId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
-    if (map.getLayer(CITY_LAYER_ID)) map.removeLayer(CITY_LAYER_ID);
-    if (map.getSource(CITY_SOURCE_ID)) map.removeSource(CITY_SOURCE_ID);
+    if (map.getLayer(labelLayerId)) map.removeLayer(labelLayerId);
+    if (map.getSource(sourceId)) map.removeSource(sourceId);
   } catch (_) { /* ignore */ }
 }

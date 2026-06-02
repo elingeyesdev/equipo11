@@ -90,15 +90,25 @@ export default class TempColorLayer {
     // 4. Inicializar texturas
     this._texManager = new TempDataTexture(gl);
 
-    // Si ya teníamos datos pendientes, subirlos ahora
+    // Rescate de la sala de espera
     if (this._pendingData) {
-      this._texManager.update(this._pendingData);
+      if (this._pendingData.current !== undefined) {
+        // Es un objeto dual
+        this._texManager.updateDual(this._pendingData.current, this._pendingData.next);
+        this.mixFactor = this._pendingData.mix;
+      } else {
+        // Es data antigua/fallback
+        this._texManager.update(this._pendingData);
+      }
       this._pendingData = null;
+      if (this._map) this._map.triggerRepaint();
     }
   }
 
   render(gl, matrix) {
     if (!this._program || !this._texManager) return;
+
+    this._texManager.uploadPendingTextures();
 
     gl.useProgram(this._program);
 
@@ -168,7 +178,7 @@ export default class TempColorLayer {
       this.mixFactor = 0.0;
       if (this._map) this._map.triggerRepaint();
     } else {
-      // onAdd aún no fue llamado; guardar para después
+      // SALA DE ESPERA: Rescate para cuando se enciende el toggle y el mapa no está listo
       this._pendingData = gridData;
     }
   }
@@ -178,6 +188,9 @@ export default class TempColorLayer {
       this._texManager.updateDual(currentData, nextData);
       this.mixFactor = mixFactor;
       if (this._map) this._map.triggerRepaint();
+    } else {
+      // SALA DE ESPERA: Si el mapa aún no inicializa el manager, guardamos el frame
+      this._pendingData = { current: currentData, next: nextData, mix: mixFactor };
     }
   }
 
@@ -214,15 +227,17 @@ export default class TempColorLayer {
 
 // ─── Funciones de Gestión de Capa ────────────────────────────────────
 
-export function addTempLayers(map, customLayer, data) {
+export function addTempLayers(map, customLayer, coastlineId, data) {
   const insertBefore = findOptimalInsertionPoint(map);
 
-  map.addLayer(customLayer, insertBefore);
+  if (!map.getLayer(customLayer.id)) {
+    map.addLayer(customLayer, insertBefore);
+  }
 
   // Capa de costas (fronteras hacia el mar)
-  if (!map.getLayer('custom-coastline-temp')) {
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline-temp',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -238,13 +253,13 @@ export function addTempLayers(map, customLayer, data) {
   }
 }
 
-export function removeTempLayers(map) {
-  if (!map) return;
+export function removeTempLayers(map, layerId, coastlineId, sourceId, labelLayerId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
     if (map.getStyle()) {
-      if (map.getLayer('temp-color-layer')) map.removeLayer('temp-color-layer');
-      if (map.getLayer('custom-coastline-temp')) map.removeLayer('custom-coastline-temp');
-      removeCityTempLabels(map);
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getLayer(coastlineId)) map.removeLayer(coastlineId);
+      removeCityTempLabels(map, sourceId, labelLayerId);
     }
   } catch (e) {
     console.warn('[TempColorLayer] Error removiendo capas de temperatura:', e.message);
@@ -253,22 +268,19 @@ export function removeTempLayers(map) {
 
 // ─── Capa de Etiquetas de Temperatura en Ciudades Globales ─────────────────────
 
-const TEMP_CITY_SOURCE_ID = 'city-temp-source';
-const TEMP_CITY_LAYER_ID = 'city-temp-labels';
-
-export function addCityTempLabels(map, geojson, activeTempUnit) {
+export function addCityTempLabels(map, geojson, activeTempUnit, sourceId, labelLayerId) {
   try {
-    if (map.getSource(TEMP_CITY_SOURCE_ID)) return; // Ya existe
+    if (map.getSource(sourceId)) return; // Ya existe
 
-    map.addSource(TEMP_CITY_SOURCE_ID, {
+    map.addSource(sourceId, {
       type: 'geojson',
       data: geojson,
     });
 
     map.addLayer({
-      id: TEMP_CITY_LAYER_ID,
+      id: labelLayerId,
       type: 'symbol',
-      source: TEMP_CITY_SOURCE_ID,
+      source: sourceId,
       layout: {
         'text-field': [
           'concat',
@@ -302,13 +314,13 @@ export function addCityTempLabels(map, geojson, activeTempUnit) {
   }
 }
 
-export function updateCityTempLabels(map, geojson, activeTempUnit) {
+export function updateCityTempLabels(map, geojson, activeTempUnit, sourceId, labelLayerId) {
   try {
-    const source = map.getSource(TEMP_CITY_SOURCE_ID);
+    const source = map.getSource(sourceId);
     if (source) {
       source.setData(geojson);
-      if (map.getLayer(TEMP_CITY_LAYER_ID)) {
-        map.setLayoutProperty(TEMP_CITY_LAYER_ID, 'text-field', [
+      if (map.getLayer(labelLayerId)) {
+        map.setLayoutProperty(labelLayerId, 'text-field', [
           'concat',
           ['get', 'name'], '\n',
           ['to-string', ['round', ['to-number', ['get', 'temperatura']]]],
@@ -321,9 +333,10 @@ export function updateCityTempLabels(map, geojson, activeTempUnit) {
   }
 }
 
-export function removeCityTempLabels(map) {
+export function removeCityTempLabels(map, sourceId, labelLayerId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
-    if (map.getLayer(TEMP_CITY_LAYER_ID)) map.removeLayer(TEMP_CITY_LAYER_ID);
-    if (map.getSource(TEMP_CITY_SOURCE_ID)) map.removeSource(TEMP_CITY_SOURCE_ID);
+    if (map.getLayer(labelLayerId)) map.removeLayer(labelLayerId);
+    if (map.getSource(sourceId)) map.removeSource(sourceId);
   } catch (_) { /* ignore */ }
 }

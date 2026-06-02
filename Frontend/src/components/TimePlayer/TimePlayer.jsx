@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useTimeBuffer from '../../hooks/useTimeBuffer';
 import { formatTime, formatDate } from '../../utils/formatters';
 import './TimePlayer.css';
@@ -12,7 +12,55 @@ const TimePlayer = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  
+  // Drag-to-scroll state
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  
   const { preloadAll, getFrame, isFrameReady, isPreloading } = useTimeBuffer(globalHistoryArray, setCorruptedDates);
+  
+  // Refs for auto-scroll
+  const activeTickRef = useRef(null);
+  const timelineWrapperRef = useRef(null);
+
+  // Group globalHistoryArray by days
+  const groupedDays = useMemo(() => {
+    if (!globalHistoryArray || globalHistoryArray.length === 0) return [];
+    
+    const daysMap = new Map();
+    globalHistoryArray.forEach((entry, idx) => {
+      const d = new Date(entry.timestamp);
+      // Key format: YYYY-MM-DD to group reliably
+      const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      
+      if (!daysMap.has(dateKey)) {
+        daysMap.set(dateKey, {
+          dateObj: d,
+          hours: []
+        });
+      }
+      
+      daysMap.get(dateKey).hours.push({
+        idx,
+        hourStr: String(d.getHours()).padStart(2, '0') + 'h',
+        timestamp: entry.timestamp
+      });
+    });
+    
+    return Array.from(daysMap.values());
+  }, [globalHistoryArray]);
+
+  // Auto-scroll to active tick when currentIndex changes
+  useEffect(() => {
+    if (activeTickRef.current && timelineWrapperRef.current) {
+      activeTickRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [currentIndex]);
 
   // Start preloading when component mounts in historical mode
   useEffect(() => {
@@ -77,13 +125,11 @@ const TimePlayer = ({
       }
 
       setIsBuffering(false);
-      mixFactor += delta / 4500.0; // 4.5 seconds per frame transition for smoother effect
+      mixFactor += delta / 3500.0; // 4.5 seconds per frame transition for smoother effect
 
       if (mixFactor >= 1.0) {
         mixFactor -= 1.0;
         onIndexChange(nextIdx);
-        // El padre actualizará currentIndex y currentIndexRef,
-        // el ciclo continúa con el residuo del mixFactor para ser exactos.
       }
 
       const cFrame = getFrame(idx);
@@ -119,20 +165,44 @@ const TimePlayer = ({
     setIsPlaying(!isPlaying);
   };
 
-  const handleSliderChange = (e) => {
-    const newIndex = parseInt(e.target.value, 10);
+  const handleHourClick = (newIndex, e) => {
+    // Prevent click if user was dragging (threshold > 5px)
+    if (timelineWrapperRef.current) {
+      const currentX = e.pageX - timelineWrapperRef.current.offsetLeft;
+      if (Math.abs(currentX - startX) > 5) return;
+    }
+    
     onIndexChange(newIndex);
-
-    // Stop playing when user manually seeks
     if (isPlaying) {
       setIsPlaying(false);
     }
   };
 
-  if (!globalHistoryArray || globalHistoryArray.length === 0) return null;
+  // Drag-to-scroll handlers
+  const handleMouseDown = (e) => {
+    if (!timelineWrapperRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - timelineWrapperRef.current.offsetLeft);
+    setScrollLeft(timelineWrapperRef.current.scrollLeft);
+  };
 
-  const currentEntry = globalHistoryArray[currentIndex];
-  if (!currentEntry) return null;
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !timelineWrapperRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - timelineWrapperRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // scroll speed multiplier
+    timelineWrapperRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  if (!globalHistoryArray || globalHistoryArray.length === 0) return null;
 
   return (
     <div className="timeplayer-container">
@@ -154,61 +224,52 @@ const TimePlayer = ({
             </svg>
           )}
         </button>
-
-        <div className="timeplayer-info">
-          <span className="timeplayer-date">
-            {new Date(currentEntry.timestamp).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' })}
-          </span>
-          <span className="timeplayer-time">- {formatTime(currentEntry.timestamp)}</span>
-          {isBuffering && !isPreloading && <span className="timeplayer-buffering-indicator">Buffering...</span>}
-        </div>
+        {isBuffering && !isPreloading && <span className="timeplayer-buffering-indicator">Buffering...</span>}
       </div>
 
       {isPreloading && (
-        <div className="timeplayer-preloading-overlay" style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.8)', zIndex: 10,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          color: '#38bdf8', backdropFilter: 'blur(4px)', borderRadius: '12px'
-        }}>
-          <div className="spinner" style={{
-            border: '3px solid rgba(56, 189, 248, 0.3)', borderTop: '3px solid #38bdf8',
-            borderRadius: '50%', width: '24px', height: '24px', animation: 'spin 1s linear infinite',
-            marginBottom: '8px'
-          }}></div>
+        <div className="timeplayer-preloading-overlay">
+          <div className="spinner"></div>
           <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Cargando historial (0 FPS lag)...</span>
         </div>
       )}
 
-      <div className="timeplayer-slider-wrapper" style={{ opacity: isPreloading ? 0.3 : 1, pointerEvents: isPreloading ? 'none' : 'auto' }}>
-        <input
-          type="range"
-          min="0"
-          max={globalHistoryArray.length - 1}
-          step="1"
-          value={currentIndex}
-          onChange={handleSliderChange}
-          className="timeplayer-slider"
-        />
-
-        {/* Marcadores visuales opcionales para la línea de tiempo */}
-        <div className="timeplayer-ticks">
-          {globalHistoryArray.map((entry, idx) => {
-            // Mostrar un tick cada ciertas horas o al cambiar de día
-            const showTick = idx === 0 || idx === globalHistoryArray.length - 1 ||
-              new Date(entry.timestamp).getHours() === 0;
-            if (!showTick) return null;
-
-            return (
-              <div
-                key={idx}
-                className="timeplayer-tick"
-                style={{ left: `${(idx / (globalHistoryArray.length - 1)) * 100}%` }}
-              >
-                {new Date(entry.timestamp).getHours() === 0 ? formatDate(entry.timestamp).split(' ')[0] : ''}
+      <div 
+        className={`timeplayer-timeline-wrapper ${isDragging ? 'dragging' : ''}`}
+        ref={timelineWrapperRef}
+        style={{ 
+          opacity: isPreloading ? 0.3 : 1, 
+          pointerEvents: isPreloading ? 'none' : 'auto',
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+      >
+        <div className="timeline-days-container">
+          {groupedDays.map((dayData, dayIdx) => (
+            <div className="timeline-day-block" key={dayIdx}>
+              <div className="timeline-day-header">
+                {dayData.dateObj.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' })}
               </div>
-            );
-          })}
+              <div className="timeline-hours-row">
+                {dayData.hours.map((hour) => {
+                  const isActive = hour.idx === currentIndex;
+                  return (
+                    <div
+                      key={hour.idx}
+                      ref={isActive ? activeTickRef : null}
+                      className={`timeline-hour-tick ${isActive ? 'active' : ''}`}
+                      onClick={(e) => handleHourClick(hour.idx, e)}
+                    >
+                      {hour.hourStr}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

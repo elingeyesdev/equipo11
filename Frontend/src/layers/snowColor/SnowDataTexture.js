@@ -61,20 +61,36 @@ export default class SnowDataTexture {
   }
 
   updateDual(currentData, nextData, snowType = 0) {
-    const gl = this.gl;
-
-    const activeRamp = snowType === 1 ? SNOW_FRESH_RAMP : SNOW_ACCUMULATED_RAMP;
-    this._uploadRamp(activeRamp);
-
+    this.pendingSnowType = snowType;
     if (currentData instanceof HTMLImageElement) {
-      gl.bindTexture(gl.TEXTURE_2D, this.snowTextureCurrent);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+      this.pendingCurrentImg = currentData;
     }
-
     const nextSource = nextData || currentData;
     if (nextSource instanceof HTMLImageElement) {
+      this.pendingNextImg = nextSource;
+    }
+  }
+
+  uploadPendingTextures() {
+    const gl = this.gl;
+
+    if (this.pendingSnowType !== undefined) {
+      const activeRamp = this.pendingSnowType === 1 ? SNOW_FRESH_RAMP : SNOW_ACCUMULATED_RAMP;
+      this._uploadRamp(activeRamp);
+      this.pendingSnowType = undefined;
+    }
+
+    if (this.pendingCurrentImg && this.pendingCurrentImg !== this.lastCurrentImg) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.snowTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingCurrentImg);
+      this.lastCurrentImg = this.pendingCurrentImg;
+    }
+    if (this.pendingNextImg && this.pendingNextImg !== this.lastNextImg) {
+      gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.snowTextureNext);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingNextImg);
+      this.lastNextImg = this.pendingNextImg;
     }
   }
 

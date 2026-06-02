@@ -1,4 +1,4 @@
-export const addSnowLayers = (map, layerInstance, data) => {
+export const addSnowLayers = (map, layerInstance, coastlineId, data) => {
   if (data && data.length > 0) {
     layerInstance.updateData(data);
   }
@@ -13,9 +13,9 @@ export const addSnowLayers = (map, layerInstance, data) => {
   }
 
   // Capa de costas aislada para nieve
-  if (!map.getLayer('custom-coastline-snow')) {
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline-snow',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -27,11 +27,12 @@ export const addSnowLayers = (map, layerInstance, data) => {
   }
 };
 
-export const removeSnowLayers = (map) => {
+export const removeSnowLayers = (map, layerId, coastlineId) => {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
     if (map && map.getStyle()) {
-      if (map.getLayer('snow-color-layer')) map.removeLayer('snow-color-layer');
-      if (map.getLayer('custom-coastline-snow')) map.removeLayer('custom-coastline-snow');
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getLayer(coastlineId)) map.removeLayer(coastlineId);
     }
   } catch (err) {
     console.warn('[layerManager_snow] Error removiendo capas de nieve:', err.message);
