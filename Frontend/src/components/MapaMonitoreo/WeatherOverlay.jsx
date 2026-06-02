@@ -105,9 +105,7 @@ function WeatherOverlay({
         mixFactor
       } = e.detail;
 
-      if (currentRainImg || nextRainImg) {
-        console.log('[TimePlayer Update] mixFactor:', mixFactor.toFixed(2), '| currentRain === nextRain?', currentRainImg === nextRainImg);
-      }
+
 
       if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function' && currentTempImg) {
         tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
@@ -393,7 +391,15 @@ function WeatherOverlay({
       <GridRadarLayer
         scannedGrid={scannedGrid}
         currentZoom={currentZoom}
-        particleFilters={{ ...particleFilters, fog: false, temp: false, aqi: false }}
+        particleFilters={{ 
+          ...particleFilters, 
+          wind: false,
+          rain: false,
+          snow: false,
+          fog: false, 
+          temp: false, 
+          aqi: false 
+        }}
       />
 
       {particleFilters.wind && dynamicWindLabels && (

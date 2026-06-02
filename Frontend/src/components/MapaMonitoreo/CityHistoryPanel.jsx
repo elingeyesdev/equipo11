@@ -38,7 +38,6 @@ function CityHistoryPanel({
             { icon: '💧', label: 'Calidad del Agua', key: 'ica', unit: unidades.ica },
             { icon: '🔊', label: 'Nivel de Ruido', key: 'ruido', unit: unidades.ruido },
             { icon: '💦', label: 'Humedad', key: 'humedad', unit: unidades.humedad },
-            { icon: '💨', label: 'Viento', key: 'windSpeed', unit: 'km/h' },
           ].map(({ icon, label, key, unit }) => (
             <div key={key} className="data-item">
               <div className="data-icon">{icon}</div>

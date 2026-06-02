@@ -67,9 +67,18 @@ export default class VisibilityColorLayer {
 
     this._texManager = new VisibilityDataTexture(gl);
 
+    // Rescate de la sala de espera
     if (this._pendingData) {
-      this._texManager.update(this._pendingData);
+      if (this._pendingData.current !== undefined) {
+        // Es un objeto dual
+        this._texManager.updateDual(this._pendingData.current, this._pendingData.next);
+        this.mixFactor = this._pendingData.mix;
+      } else {
+        // Es data antigua/fallback
+        this._texManager.update(this._pendingData);
+      }
       this._pendingData = null;
+      if (this._map) this._map.triggerRepaint();
     }
   }
 
@@ -131,6 +140,7 @@ export default class VisibilityColorLayer {
       this.mixFactor = 0.0;
       if (this._map) this._map.triggerRepaint();
     } else {
+      // SALA DE ESPERA: Rescate para cuando se enciende el toggle y el mapa no está listo
       this._pendingData = gridData;
     }
   }
@@ -140,6 +150,9 @@ export default class VisibilityColorLayer {
       this._texManager.updateDual(currentData, nextData);
       this.mixFactor = mixFactor;
       if (this._map) this._map.triggerRepaint();
+    } else {
+      // SALA DE ESPERA: Si el mapa aún no inicializa el manager, guardamos el frame
+      this._pendingData = { current: currentData, next: nextData, mix: mixFactor };
     }
   }
 

@@ -36,6 +36,7 @@ import useSensors from '../../hooks/useSensors';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
+import MapLegend from '../../components/MapaMonitoreo/MapLegend';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
 import { getImageDataArray, sampleWindBilinear, sampleRainBilinear, sampleSnowBilinear, sampleVisibilityBilinear, sampleTempBilinear, sampleAqiNearest } from '../../utils/windMath';
@@ -402,11 +403,18 @@ function MapaMonitoreo() {
       scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
     }
 
-    if (scalarMetrics.length > 0) {
-      setScalarPopup({ lng, lat, metrics: scalarMetrics });
-    } else {
-      setScalarPopup(null);
+    const hasScalarActive = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
+
+    if (hasScalarActive) {
+      if (scalarMetrics.length > 0) {
+        setScalarPopup({ lng, lat, metrics: scalarMetrics });
+      } else {
+        setScalarPopup(null);
+      }
+      return; // Bloqueamos el popup grande si hay una capa escalar
     }
+    
+    setScalarPopup(null);
 
     // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
     const nearest = citiesData.reduce(
@@ -426,7 +434,6 @@ function MapaMonitoreo() {
         subtitle: `Área de ${nearest.city.name} — ${sourceLabel}`,
         data: {
           ...nearest.city.data,
-          windSpeed: localWind ? localWind.speed : nearest.city.data?.windSpeed,
           rain: localRain !== null ? localRain : nearest.city.data?.rain,
         },
       });
@@ -439,8 +446,7 @@ function MapaMonitoreo() {
               ...prev,
               data: {
                 ...prev.data,
-                // Preservar viento y lluvia calculados localmente
-                windSpeed: prev.data.windSpeed ?? weather.current.wind_speed_10m,
+                // Preservar lluvia calculada localmente
                 rain: prev.data.rain ?? weather.current.rain,
               }
             } : null;
@@ -523,18 +529,17 @@ function MapaMonitoreo() {
   const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   const handleCityClick = useCallback(async (city) => {
+    const hasScalar = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
+    if (hasScalar) return; // Bloqueo crítico
+
     setSelectedCity(city);
     try {
       const weather = await getWeatherAtLocation(city.latitude, city.longitude);
       if (weather?.current) {
         setWeatherCode(weather.current.weather_code);
-        setSelectedCity(prev => prev ? {
-          ...prev,
-          data: { ...prev.data, windSpeed: weather.current.wind_speed_10m }
-        } : null);
       }
     } catch (err) { console.error(err); }
-  }, []);
+  }, [isHeatmapActive, isParticlesActive, particleFilters]);
 
   return (
     <div className="mapa-page-container" ref={containerRef}>
@@ -656,14 +661,14 @@ function MapaMonitoreo() {
                 offset={15}
                 className="premium-weather-popup"
               >
-                <div style={{ background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', padding: '8px', minWidth: '120px' }}>
+                <div className="scalar-popup-content">
                   {scalarPopup.metrics.map((m, idx) => (
-                    <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
+                    <div key={idx} className="scalar-popup-row" style={{ borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
+                      <span className="scalar-popup-label">{m.label}</span>
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         {m.color && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: m.color, marginRight: '6px', boxShadow: '0 0 4px rgba(0,0,0,0.5)' }}></div>}
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
-                        <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
+                        <span className="scalar-popup-value">{m.value}</span>
+                        <span className="scalar-popup-unit">{m.unit}</span>
                       </div>
                     </div>
                   ))}
@@ -789,6 +794,11 @@ function MapaMonitoreo() {
           setCompareIndexA={setCompareIndexA} setCompareIndexB={setCompareIndexB}
           globalTimelineIndex={globalTimelineIndex} globalHistoryArray={globalHistoryArray}
           particleFilters={particleFilters} setParticleFilters={setParticleFilters}
+        />
+
+        <MapLegend 
+          isParticlesActive={isParticlesActive} 
+          particleFilters={particleFilters} 
         />
       </div>
 

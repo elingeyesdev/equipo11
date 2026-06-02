@@ -259,38 +259,6 @@ export default function ControlPanel({
                   <span className="slider round"></span>
                 </label>
               </div>
-
-              <div className="controls-divider"></div>
-
-              <div className="control-row" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('leyenda_clima_dinamico')}>
-                <div className="control-row-label">
-                  <span className="control-icon">📖</span>
-                  <span className="control-text">Leyenda de Clima</span>
-                </div>
-                <span style={{ color: 'var(--sage)', opacity: 0.8, fontSize: '1.2rem', paddingRight: '5px' }}>›</span>
-              </div>
-            </div>
-          ) : activeTab === 'leyenda_clima_dinamico' ? (
-            <div className="controls-tab-content">
-              <div className="controls-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('clima_dinamico')}>
-                <span style={{ fontSize: '1.2rem', color: 'var(--sage)' }}>‹</span>
-                Leyenda de Partículas
-              </div>
-
-              <div className="legend-dynamic-clima">
-                <div className="legend-item"><span className="legend-icon">🌧️</span><div className="legend-text"><strong>Lluvia</strong><p>Gotas azules cayendo con inclinación según viento.</p></div></div>
-                <div className="legend-item"><span className="legend-icon">❄️</span><div className="legend-text"><strong>Nieve</strong><p>Puntos blancos con movimiento suave y oscilante.</p></div></div>
-                <div className="legend-item"><span className="legend-icon">🌫️</span><div className="legend-text"><strong>Visibilidad</strong><p>Mapa de grises mapeando la claridad atmosférica.</p></div></div>
-                <div className="legend-item"><span className="legend-icon" style={{ color: '#fbbf24', textShadow: '0 0 5px #fbbf24' }}>⚡</span><div className="legend-text"><strong>Tormenta Eléctrica</strong><p>Relámpagos brillantes y destellos de luz amarilla rápida.</p></div></div>
-                <div className="legend-item"><span className="legend-icon" style={{ color: '#9333ea', textShadow: '0 0 5px #9333ea' }}>🌪️</span><div className="legend-text"><strong>Alerta de Tornado</strong><p>Vórtices púrpuras girando agresivamente en espiral.</p></div></div>
-
-                <div className="controls-divider"></div>
-                <div className="legend-section-title">Niveles de Viento</div>
-
-                <div className="legend-item"><div className="legend-line" style={{ background: 'rgba(180, 230, 255, 0.7)' }}></div><div className="legend-text"><strong>Viento Normal</strong><p>Velocidad &gt; 15 km/h. Brisas y vientos estándar.</p></div></div>
-                <div className="legend-item"><div className="legend-line" style={{ background: 'rgba(255, 140, 0, 0.7)' }}></div><div className="legend-text"><strong>Viento Fuerte / Tormenta</strong><p>Ráfagas &gt; 60 km/h o Presión &lt; 1005 hPa.</p></div></div>
-                <div className="legend-item"><div className="legend-line" style={{ background: 'rgba(220, 20, 150, 0.7)' }}></div><div className="legend-text"><strong>Huracán / Severo</strong><p>Ráfagas &gt; 90 km/h o Presión &lt; 990 hPa.</p></div></div>
-              </div>
             </div>
           ) : null}
         </div>

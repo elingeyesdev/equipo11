@@ -59,7 +59,7 @@
 .cc-header {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #38bdf8;
+  color: #f8fafc;
   margin-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 8px;
@@ -84,7 +84,7 @@
 .cc-section select {
   appearance: none;
   background: #1e293b;
-  border: 1px solid rgba(51, 65, 85, 0.8);
+  border: 1px solid #334155;
   color: #f8fafc;
   padding: 8px 12px;
   border-radius: 6px;
@@ -95,14 +95,14 @@
 }
 
 .cc-section select:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  border-color: #64748b;
+  box-shadow: 0 0 0 2px #334155;
 }
 
 .cc-apply-btn {
-  background: #0284c7;
-  color: white;
-  border: none;
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid #334155;
   padding: 8px 14px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -115,12 +115,12 @@
 }
 
 .cc-apply-btn:hover:not(:disabled) {
-  background: #0369a1;
+  background: #334155;
   transform: translateY(-1px);
 }
 
 .cc-apply-btn:disabled {
-  background: #475569;
+  background: #1e293b;
   cursor: not-allowed;
   opacity: 0.5;
 }
