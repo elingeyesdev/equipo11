@@ -51,17 +51,17 @@ export function findOptimalInsertionPoint(map) {
  * @param {Object} rainColorLayer — Capa WebGL personalizada (CustomLayerInterface)
  * @param {Array|null} currentData — Datos del grid actual
  */
-export function addRainLayers(map, rainColorLayer, currentData) {
+export function addRainLayers(map, rainColorLayer, coastlineId, currentData) {
   const insertBefore = findOptimalInsertionPoint(map);
 
   if (!map.getLayer(rainColorLayer.id)) {
     map.addLayer(rainColorLayer, insertBefore);
   }
 
-  // Capa de costas (fronteras hacia el mar) aislada para lluvia
-  if (!map.getLayer('custom-coastline-rain')) {
+  // Capa de costas aislada para lluvia
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline-rain',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -81,11 +81,14 @@ export function addRainLayers(map, rainColorLayer, currentData) {
  * Remueve la capa de lluvia del mapa de forma segura.
  *
  * @param {mapboxgl.Map} map
+ * @param {string} layerId
+ * @param {string} coastlineId
  */
-export function removeRainLayers(map) {
+export function removeRainLayers(map, layerId, coastlineId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   try {
-    if (map.getLayer('rain-color-layer')) map.removeLayer('rain-color-layer');
-    if (map.getLayer('custom-coastline-rain')) map.removeLayer('custom-coastline-rain');
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+    if (map.getLayer(coastlineId)) map.removeLayer(coastlineId);
   } catch (e) {
     console.warn('[layerManager_rain] Error removiendo capas de lluvia:', e.message);
   }

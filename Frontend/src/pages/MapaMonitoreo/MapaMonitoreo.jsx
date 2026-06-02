@@ -27,6 +27,7 @@ import { formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
 import GeocoderSearch from '../../components/MapaMonitoreo/GeocoderSearch';
 import ComparePanel from '../../components/MapaMonitoreo/ComparePanel';
+import CompareConfigMenu from '../../components/MapaMonitoreo/CompareConfigMenu';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
 import MapLayers from '../../components/MapaMonitoreo/MapLayers';
 import useRadarData from '../../hooks/useRadarData';
@@ -141,6 +142,7 @@ function MapaMonitoreo() {
 
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
+  const mapRefRight = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
   const containerRef = useRef(null); // ref para el ResizeObserver
 
@@ -265,6 +267,14 @@ function MapaMonitoreo() {
     latitude: -20.0,
     zoom: 3.5
   });
+
+  const [viewStateRight, setViewStateRight] = useState({
+    longitude: -60.0,
+    latitude: -20.0,
+    zoom: 3.5
+  });
+  
+  const [isCameraSynced, setIsCameraSynced] = useState(false);
 
   const getAqiColor = (aqi) => {
     if (aqi <= 50) return '#00e400';
@@ -586,7 +596,10 @@ function MapaMonitoreo() {
             id="mapA"
             ref={mapRef}
             {...viewState}
-            onMove={evt => setViewState(evt.viewState)}
+            onMove={evt => {
+              setViewState(evt.viewState);
+              if (isCameraSynced) setViewStateRight(evt.viewState);
+            }}
             onMoveEnd={handleMapMoveEnd}
             onLoad={() => {
               if (pendingFlyTo.current) {
@@ -660,6 +673,34 @@ function MapaMonitoreo() {
           </Map>
 
           {isCompareMode && (
+            <CompareConfigMenu
+              side="A"
+              globalHistoryArray={globalHistoryArray}
+              currentIndex={compareIndexA}
+              onTimeSelect={setCompareIndexA}
+              onBoundarySelect={(boundary) => {
+                if (boundary.bbox && mapRef.current) {
+                  mapRef.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
+                }
+              }}
+            />
+          )}
+
+          {isCompareMode && (
+            <CompareConfigMenu
+              side="B"
+              globalHistoryArray={globalHistoryArray}
+              currentIndex={compareIndexB}
+              onTimeSelect={setCompareIndexB}
+              onBoundarySelect={(boundary) => {
+                if (boundary.bbox && mapRefRight.current) {
+                  mapRefRight.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
+                }
+              }}
+            />
+          )}
+
+          {isCompareMode && (
             <ComparePanel
               swipePos={swipePos}
               setSwipePos={setSwipePos}
@@ -667,11 +708,17 @@ function MapaMonitoreo() {
               compareIndexB={compareIndexB}
               globalHistoryArray={globalHistoryArray}
               formatTime={formatTime}
+              isCameraSynced={isCameraSynced}
+              setIsCameraSynced={setIsCameraSynced}
             >
               <Map
                 id="mapB"
-                {...viewState}
-                onMove={evt => setViewState(evt.viewState)}
+                ref={mapRefRight}
+                {...viewStateRight}
+                onMove={evt => {
+                  setViewStateRight(evt.viewState);
+                  if (isCameraSynced) setViewState(evt.viewState);
+                }}
                 mapStyle={mapStyle}
                 mapboxAccessToken={MAPBOX_TOKEN}
                 projection="mercator"
@@ -747,7 +794,7 @@ function MapaMonitoreo() {
 
 
 
-      {isDynamicHistoricalMode && (
+      {isDynamicHistoricalMode && !isCompareMode && (
         <>
           <div className="historical-prompt">
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
@@ -777,14 +824,14 @@ function MapaMonitoreo() {
         </>
       )}
 
-      {isHistoricalMode && !activeCity && (
+      {isHistoricalMode && !activeCity && !isCompareMode && (
         <div className="historical-prompt">
           <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
           <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
         </div>
       )}
 
-      {isHistoricalMode && activeCity && (
+      {isHistoricalMode && activeCity && !isCompareMode && (
         <>
           {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
           <Timeline

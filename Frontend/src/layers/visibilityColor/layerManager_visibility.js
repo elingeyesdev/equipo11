@@ -1,4 +1,4 @@
-export function addVisibilityLayers(map, customLayer, data) {
+export function addVisibilityLayers(map, customLayer, coastlineId, data) {
   if (!map || !customLayer) return;
 
   let firstSymbolId = null;
@@ -15,9 +15,9 @@ export function addVisibilityLayers(map, customLayer, data) {
   }
 
   // Capa de costas aislada para visibilidad
-  if (!map.getLayer('custom-coastline-vis')) {
+  if (!map.getLayer(coastlineId)) {
     map.addLayer({
-      id: 'custom-coastline-vis',
+      id: coastlineId,
       type: 'line',
       source: 'composite',
       'source-layer': 'water',
@@ -33,16 +33,17 @@ export function addVisibilityLayers(map, customLayer, data) {
   }
 }
 
-export function removeVisibilityLayers(map) {
+export function removeVisibilityLayers(map, layerId, coastlineId) {
+  if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
   if (!map) return;
   try {
-    if (map.getStyle() && map.getLayer('visibility-color-layer')) {
-      map.removeLayer('visibility-color-layer');
+    if (map.getStyle() && map.getLayer(layerId)) {
+      map.removeLayer(layerId);
     }
   } catch (err) {
     console.warn('[layerManager_visibility] Error removiendo capa de neblina:', err.message);
   }
-  if (map.getLayer('custom-coastline-vis')) {
-    map.removeLayer('custom-coastline-vis');
+  if (map.getLayer(coastlineId)) {
+    map.removeLayer(coastlineId);
   }
 }

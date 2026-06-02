@@ -242,7 +242,7 @@ export default function ControlPanel({
                 </label>
               </div>
 
-              <div className="control-row" style={{ opacity: isParticlesActive && isDynamicHistoricalMode ? 1 : 0.5, pointerEvents: isParticlesActive && isDynamicHistoricalMode ? 'auto' : 'none' }}>
+              <div className="control-row" style={{ opacity: 1, pointerEvents: 'auto' }}>
                 <div className="control-row-label">
                   <span className="control-icon">⚖️</span>
                   <span className="control-text">Modo Comparar</span>

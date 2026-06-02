@@ -153,6 +153,63 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
     fetchRadar();
   }, [isParticlesActive, isDynamicHistoricalMode, globalTimelineIndex, globalHistoryArray]);
 
+  const fetchSingleGrid = async (index) => {
+    if (index === null || !globalHistoryArray[index]) return null;
+    const selectedEntry = globalHistoryArray[index];
+    const params = { time: selectedEntry.timestamp };
+    
+    const [tempResult, visResult, rainResult, snowResult, windResult, aqiResult] =
+      await Promise.allSettled([
+        _loadPng('/radar/bolivia/temp/png', params),
+        _loadPng('/radar/bolivia/vis/png', params),
+        _loadPng('/radar/bolivia/rain/png', params),
+        _loadPng('/radar/bolivia/snow/png', params),
+        _loadPng('/radar/bolivia/wind/png', params),
+        _loadPng('/radar/bolivia/aqi/png', params),
+      ]);
+
+    return {
+      tempImg: tempResult.status === 'fulfilled' ? tempResult.value : null,
+      visImg: visResult.status === 'fulfilled' ? visResult.value : null,
+      rainImg: rainResult.status === 'fulfilled' ? rainResult.value : null,
+      snowImg: snowResult.status === 'fulfilled' ? snowResult.value : null,
+      windImg: windResult.status === 'fulfilled' ? windResult.value : null,
+      aqiImg: aqiResult.status === 'fulfilled' ? aqiResult.value : null,
+    };
+  };
+
+  useEffect(() => {
+    if (!isParticlesActive || !isCompareMode) return;
+    let mounted = true;
+    const fetchA = async () => {
+      try {
+        setScannedGridA(prev => ({ ...prev, status: 'fetching' }));
+        const data = await fetchSingleGrid(compareIndexA);
+        if (mounted && data) setScannedGridA({ status: 'ready', data });
+      } catch (e) {
+        console.error('Error fetching A:', e);
+      }
+    };
+    fetchA();
+    return () => { mounted = false; };
+  }, [isParticlesActive, isCompareMode, compareIndexA, globalHistoryArray]);
+
+  useEffect(() => {
+    if (!isParticlesActive || !isCompareMode) return;
+    let mounted = true;
+    const fetchB = async () => {
+      try {
+        setScannedGridB(prev => ({ ...prev, status: 'fetching' }));
+        const data = await fetchSingleGrid(compareIndexB);
+        if (mounted && data) setScannedGridB({ status: 'ready', data });
+      } catch (e) {
+        console.error('Error fetching B:', e);
+      }
+    };
+    fetchB();
+    return () => { mounted = false; };
+  }, [isParticlesActive, isCompareMode, compareIndexB, globalHistoryArray]);
+
   return {
     availableRadarDates,
     globalHistoryArray, globalTimelineIndex, setGlobalTimelineIndex,
