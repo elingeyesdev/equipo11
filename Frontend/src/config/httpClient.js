@@ -1,88 +1,84 @@
 import axios from 'axios';
 import { clearSession } from '../utils/auth';
-import { openDB } from 'idb';
-
+import { get, set, del } from 'idb-keyval';
 import { API_BASE } from './api';
-
-const DB_NAME = 'envirosense-offline';
-const STORE_NAME = 'api-cache';
-
-// Helper para obtener la BD
-async function getDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    }
-  });
-}
 
 const httpClient = axios.create({
   baseURL: API_BASE,
   timeout: 15000,
-  headers: { 'Content-Type': 'application/json' }
-});
-
-httpClient.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-httpClient.interceptors.response.use(
-  async res => {
-    // Si la petición es exitosa y es GET, la guardamos en la caché offline
-    if (res.config.method?.toLowerCase() === 'get') {
-      try {
-        const db = await getDB();
-        // Usamos la URL (ej. '/sensores') como llave en IDB
-        await db.put(STORE_NAME, res.data, res.config.url);
-      } catch (err) {
-        console.warn('[EnviroSense] No se pudo guardar caché offline:', err);
-      }
-    }
-    return res;
+  headers: {
+    'Content-Type': 'application/json',
   },
-  async err => {
-    if (err.response?.status === 401) {
-      clearSession();
-      window.location.href = '/login';
-      return Promise.reject(err);
-    }
+});
 
-    // Intercepción de errores de red (offline) para peticiones GET
-    if (!err.response && err.config?.method?.toLowerCase() === 'get') {
-      try {
-        const db = await getDB();
-        const cachedData = await db.get(STORE_NAME, err.config.url);
-        
-        if (cachedData) {
-          console.log(`[EnviroSense] Sirviendo datos offline para: ${err.config.url}`);
-          // Devolver una "falsa" respuesta Axios para mantener el contrato (OCP)
-          return Promise.resolve({
-            data: cachedData,
-            status: 200,
-            statusText: 'OK',
-            headers: {},
-            config: err.config,
-            request: {}
-          });
-        }
-      } catch (dbErr) {
-        console.warn('[EnviroSense] Error leyendo caché local:', dbErr);
-      }
-    }
+// TTL por defecto para peticiones cacheadas (5 minutos)
+const DEFAULT_TTL = 5 * 60 * 1000;
 
-    return Promise.reject(err);
+// Interceptor de Request: Retornar caché en IndexedDB si estamos offline
+httpClient.interceptors.request.use(async (config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', () => {
-    // Aquí podemos disparar un evento custom o limpiar cachés temporales si es necesario
-    console.log('[EnviroSense] Conexión recuperada. Los próximos fetch serán datos frescos.');
-  });
-}
+  // Solo cacheamos llamadas GET
+  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false) {
+    const cacheKey = `http_cache:${config.url}:${JSON.stringify(config.params || {})}`;
+    
+    try {
+      const cached = await get(cacheKey);
+      const isOnline = navigator.onLine;
+
+      if (cached) {
+        const { data, expiresAt } = cached;
+        const now = Date.now();
+
+        // Si estamos offline o la caché no ha expirado, resolvemos la petición con la caché
+        if (!isOnline || now < expiresAt) {
+          config.adapter = () => {
+            return Promise.resolve({
+              data,
+              status: 200,
+              statusText: 'OK',
+              headers: config.headers,
+              config,
+            });
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Error accediendo a IndexedDB Cache:', err);
+    }
+  }
+
+  return config;
+}, (error) => Promise.reject(error));
+
+// Interceptor de Response: Guardar en caché si la llamada fue exitosa
+httpClient.interceptors.response.use(async (response) => {
+  const { config } = response;
+  
+  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false) {
+    const cacheKey = `http_cache:${config.url}:${JSON.stringify(config.params || {})}`;
+    const ttl = config.cacheTTL || DEFAULT_TTL;
+    
+    try {
+      await set(cacheKey, {
+        data: response.data,
+        expiresAt: Date.now() + ttl,
+      });
+    } catch (err) {
+      console.warn('Error guardando en IndexedDB Cache:', err);
+    }
+  }
+  return response;
+}, (error) => {
+  // Manejo global del 401 para expiración de sesión
+  if (error.response?.status === 401) {
+    clearSession();
+    window.location.href = '/login';
+  }
+  return Promise.reject(error);
+});
 
 export default httpClient;
