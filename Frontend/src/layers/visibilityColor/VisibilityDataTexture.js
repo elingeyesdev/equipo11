@@ -66,17 +66,28 @@ export default class VisibilityDataTexture {
   }
 
   updateDual(currentData, nextData) {
-    const gl = this.gl;
-
     if (currentData instanceof HTMLImageElement) {
-      gl.bindTexture(gl.TEXTURE_2D, this.visTextureCurrent);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, currentData);
+      this.pendingCurrentImg = currentData;
     }
-
     const nextSource = nextData || currentData;
     if (nextSource instanceof HTMLImageElement) {
+      this.pendingNextImg = nextSource;
+    }
+  }
+
+  uploadPendingTextures() {
+    const gl = this.gl;
+    if (this.pendingCurrentImg && this.pendingCurrentImg !== this.lastCurrentImg) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.visTextureCurrent);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingCurrentImg);
+      this.lastCurrentImg = this.pendingCurrentImg;
+    }
+    if (this.pendingNextImg && this.pendingNextImg !== this.lastNextImg) {
+      gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.visTextureNext);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextSource);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingNextImg);
+      this.lastNextImg = this.pendingNextImg;
     }
   }
 

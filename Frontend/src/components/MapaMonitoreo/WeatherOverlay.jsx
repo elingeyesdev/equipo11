@@ -82,6 +82,10 @@ function WeatherOverlay({
         mixFactor
       } = e.detail;
 
+      if (currentRainImg || nextRainImg) {
+        console.log('[TimePlayer Update] mixFactor:', mixFactor.toFixed(2), '| currentRain === nextRain?', currentRainImg === nextRainImg);
+      }
+
       if (tempLayerRef.current && typeof tempLayerRef.current.updateDataDual === 'function' && currentTempImg) {
         tempLayerRef.current.updateDataDual(currentTempImg, nextTempImg || currentTempImg, mixFactor);
       }
@@ -100,10 +104,17 @@ function WeatherOverlay({
       if (aqiLayerRef.current && typeof aqiLayerRef.current.updateDataDual === 'function' && currentAqiImg) {
         aqiLayerRef.current.updateDataDual(currentAqiImg, nextAqiImg || currentAqiImg, mixFactor);
       }
+
+      if (map) {
+        const rawMap = typeof map.getMap === 'function' ? map.getMap() : map;
+        if (rawMap && typeof rawMap.triggerRepaint === 'function') {
+          rawMap.triggerRepaint();
+        }
+      }
     };
     window.addEventListener('timeplayer-update', handleTimeUpdate);
     return () => window.removeEventListener('timeplayer-update', handleTimeUpdate);
-  }, []);
+  }, [map]);
 
   // --- Ciclo de vida del WindColorLayer (WebGL) ---
   useEffect(() => {

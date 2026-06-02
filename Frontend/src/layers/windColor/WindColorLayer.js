@@ -100,6 +100,8 @@ export default class WindColorLayer {
   render(gl, matrix) {
     if (!this._program || !this._texManager) return;
 
+    this._texManager.uploadPendingTextures();
+
     gl.useProgram(this._program);
 
     // Uniform: matriz de proyección y opacidad

@@ -9,14 +9,28 @@ import httpClient from '../config/httpClient';
  *  Las guarda en un Map permanente. No hay desalojo (LRU) para asegurar 60FPS.
  */
 
-// Helper: carga un PNG como HTMLImageElement (Sin cache buster _cb para aprovechar la caché del navegador)
-const _loadPngFrame = (basePath, timestamp) => new Promise((resolve) => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => resolve(img);
-  img.onerror = () => resolve(null);
-  img.src = `${httpClient.defaults.baseURL}${basePath}?time=${encodeURIComponent(timestamp)}`;
-});
+const _loadPngFrame = async (basePath, timestamp) => {
+  try {
+    const url = `${httpClient.defaults.baseURL}${basePath}?time=${encodeURIComponent(timestamp)}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Bad status: ${response.status}`);
+    
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image decode error'));
+      img.src = objectUrl;
+    });
+    
+    return img;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export default function useTimeBuffer(globalHistoryArray, setCorruptedDates) {
   const buffer = useRef(new Map()); // index -> { tempImg, visImg, rainImg, snowImg, windImg, aqiImg }

@@ -76,6 +76,8 @@ export default class VisibilityColorLayer {
   render(gl, matrix) {
     if (!this._program || !this._texManager) return;
 
+    this._texManager.uploadPendingTextures();
+
     gl.useProgram(this._program);
 
     gl.uniformMatrix4fv(this._uMatrix, false, matrix);

@@ -608,15 +608,6 @@ const _buildForecastWhere = (targetTime, params) => {
   )`;
 };
 
-// Helper: crea un PNG RGBA vacío (todos los píxeles con alfa=0)
-const _createEmptyRGBA = () => {
-  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
-  // Inicializar a 0 (R=0, G=0, B=0, A=0 → sin dato)
-  for (let i = 0; i < png.data.length; i++) {
-    png.data[i] = 0;
-  }
-  return png;
-};
 
 // Helper: convierte coordenadas geográficas a índice de píxel
 const _geoToPixel = (lat, lon) => {
@@ -631,8 +622,13 @@ const getRadarTempPng = async (targetTime = null) => {
   const params = [];
   const where = _buildForecastWhere(targetTime, params);
   const result = await pool.query(`SELECT latitud, longitud, temperatura FROM radar_grid_cache${where}`, params);
+  
+  if (!result.rows || result.rows.length === 0) return null;
 
-  const png = _createEmptyRGBA();
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const row of result.rows) {
     const lat = parseFloat(row.latitud);
@@ -643,6 +639,8 @@ const getRadarTempPng = async (targetTime = null) => {
 
     const idx = _geoToPixel(lat, lon);
     if (idx < 0) continue;
+    
+    hasValidData = true;
 
     const tempC = tempK - 273.15;
     const norm = Math.max(0, Math.min(1, (tempC - MIN_TEMP_C) / TEMP_RANGE_C));
@@ -654,6 +652,7 @@ const getRadarTempPng = async (targetTime = null) => {
     png.data[idx + 3] = 255;     // A = dato presente
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 
@@ -666,7 +665,12 @@ const getRadarVisPng = async (targetTime = null) => {
   const where = _buildForecastWhere(targetTime, params);
   const result = await pool.query(`SELECT latitud, longitud, vis FROM radar_grid_cache${where}`, params);
 
-  const png = _createEmptyRGBA();
+  if (!result.rows || result.rows.length === 0) return null;
+
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const row of result.rows) {
     const lat = parseFloat(row.latitud);
@@ -678,6 +682,8 @@ const getRadarVisPng = async (targetTime = null) => {
     const idx = _geoToPixel(lat, lon);
     if (idx < 0) continue;
 
+    hasValidData = true;
+
     const norm = Math.max(0, Math.min(1, vis / MAX_VIS_M));
     const byteVal = Math.round(norm * 255);
 
@@ -687,6 +693,7 @@ const getRadarVisPng = async (targetTime = null) => {
     png.data[idx + 3] = 255;
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 
@@ -719,7 +726,12 @@ const getRadarRainPng = async (targetTime = null) => {
   const where = _buildForecastWhere(targetTime, params);
   const result = await pool.query(`SELECT latitud, longitud, rain FROM radar_grid_cache${where}`, params);
 
-  const png = _createEmptyRGBA();
+  if (!result.rows || result.rows.length === 0) return null;
+
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const row of result.rows) {
     const lat = parseFloat(row.latitud);
@@ -732,6 +744,8 @@ const getRadarRainPng = async (targetTime = null) => {
     const idx = _geoToPixel(lat, lon);
     if (idx < 0) continue;
 
+    hasValidData = true;
+
     const byteVal = _encodeRain(rain);
 
     png.data[idx]     = byteVal;
@@ -740,6 +754,7 @@ const getRadarRainPng = async (targetTime = null) => {
     png.data[idx + 3] = 255;
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 
@@ -748,15 +763,20 @@ const getRadarRainPng = async (targetTime = null) => {
 const AQI_FILE_PATH = path.join(process.cwd(), 'data', 'aqi', 'aqi_global.json');
 
 const getRadarAqiPng = async () => {
-  const png = _createEmptyRGBA();
-
   if (!fs.existsSync(AQI_FILE_PATH)) {
     logger.warn('[AQI PNG] Archivo aqi_global.json no encontrado.');
-    return PNG.sync.write(png, { deflateLevel: 9 });
+    return null;
   }
 
   const rawJson = fs.readFileSync(AQI_FILE_PATH, 'utf8');
   const gridData = JSON.parse(rawJson);
+
+  if (!gridData || gridData.length === 0) return null;
+
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const point of gridData) {
     const lat = parseFloat(point.lat);
@@ -768,6 +788,8 @@ const getRadarAqiPng = async () => {
     const idx = _geoToPixel(lat, lon);
     if (idx < 0) continue;
 
+    hasValidData = true;
+
     const byteVal = Math.min(255, Math.max(0, Math.round(aqi / 2.0)));
 
     png.data[idx]     = byteVal;
@@ -776,6 +798,7 @@ const getRadarAqiPng = async () => {
     png.data[idx + 3] = 255;
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 
@@ -790,7 +813,12 @@ const getRadarSnowPng = async (targetTime = null) => {
   const where = _buildForecastWhere(targetTime, params);
   const result = await pool.query(`SELECT latitud, longitud, snow, snow_fresh FROM radar_grid_cache${where}`, params);
 
-  const png = _createEmptyRGBA();
+  if (!result.rows || result.rows.length === 0) return null;
+
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const row of result.rows) {
     const lat = parseFloat(row.latitud);
@@ -807,6 +835,7 @@ const getRadarSnowPng = async (targetTime = null) => {
 
     // Solo marcar como "con dato" si al menos una variable tiene valor > 0
     const hasData = snowAcc > 0 || snowFresh > 0;
+    if (hasData) hasValidData = true;
 
     const rVal = Math.round(Math.max(0, Math.min(1, snowAcc / MAX_SNOW_ACC)) * 255);
     const gVal = Math.round(Math.max(0, Math.min(1, snowFresh / MAX_SNOW_FRESH)) * 255);
@@ -817,6 +846,7 @@ const getRadarSnowPng = async (targetTime = null) => {
     png.data[idx + 3] = hasData ? 255 : 0; // A
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 
@@ -833,7 +863,12 @@ const getRadarWindPng = async (targetTime = null) => {
   const where = _buildForecastWhere(targetTime, params);
   const result = await pool.query(`SELECT latitud, longitud, wind_speed, wind_direction, rafagas FROM radar_grid_cache${where}`, params);
 
-  const png = _createEmptyRGBA();
+  if (!result.rows || result.rows.length === 0) return null;
+
+  const png = new PNG({ width: GRID_W, height: GRID_H, colorType: 6 });
+  for (let i = 0; i < png.data.length; i++) png.data[i] = 0;
+  
+  let hasValidData = false;
 
   for (const row of result.rows) {
     const lat = parseFloat(row.latitud);
@@ -846,9 +881,14 @@ const getRadarWindPng = async (targetTime = null) => {
     if (isNaN(speed)) speed = 0;
     if (isNaN(dir)) dir = 0;
     if (isNaN(gust)) gust = 0;
+    
+    // Si todos son cero, asumimos que no hay viento o es dato inválido
+    if (speed === 0 && dir === 0 && gust === 0) continue;
 
     const idx = _geoToPixel(lat, lon);
     if (idx < 0) continue;
+
+    hasValidData = true;
 
     const rVal = Math.round(Math.max(0, Math.min(1, speed / MAX_WIND_SPEED)) * 255);
     const gVal = Math.round(Math.max(0, Math.min(1, dir / MAX_WIND_DIR)) * 255);
@@ -860,6 +900,7 @@ const getRadarWindPng = async (targetTime = null) => {
     png.data[idx + 3] = 255;    // A = dato presente
   }
 
+  if (!hasValidData) return null;
   return PNG.sync.write(png, { deflateLevel: 9 });
 };
 

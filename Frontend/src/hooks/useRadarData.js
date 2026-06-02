@@ -1,15 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import httpClient from '../config/httpClient';
 
-// Helper: Carga un PNG como HTMLImageElement (0% CPU, nativo del navegador)
-const _loadPng = (path, params = {}) => new Promise((resolve) => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
-  img.onload = () => resolve(img);
-  img.onerror = () => resolve(null);
-  img.src = `${httpClient.defaults.baseURL}${path}${timeParam}`;
-});
+const _loadPng = async (path, params = {}) => {
+  try {
+    const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
+    const url = `${httpClient.defaults.baseURL}${path}${timeParam}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Bad status: ${response.status}`);
+    
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image decode error'));
+      img.src = objectUrl;
+    });
+    
+    return img;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export default function useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode }) {
   const [availableRadarDates, setAvailableRadarDates] = useState([]);
