@@ -6,6 +6,7 @@ import { ZonaSimProvider } from './context/ZonaSimContext'
 import { MapVisualsProvider } from './context/MapVisualsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { ToastProvider } from './components/Toast/Toast'
+import { PwaProvider } from './context/PwaContext'
 import './index.css'
 import App from './App.jsx'
 
@@ -20,13 +21,15 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <ToastProvider>
-        <SimulacionProvider>
-          <ZonaSimProvider>
-            <MapVisualsProvider>
-              <RouterProvider router={router} />
-            </MapVisualsProvider>
-          </ZonaSimProvider>
-        </SimulacionProvider>
+        <PwaProvider>
+          <SimulacionProvider>
+            <ZonaSimProvider>
+              <MapVisualsProvider>
+                <RouterProvider router={router} />
+              </MapVisualsProvider>
+            </ZonaSimProvider>
+          </SimulacionProvider>
+        </PwaProvider>
       </ToastProvider>
     </ThemeProvider>
   </StrictMode>,

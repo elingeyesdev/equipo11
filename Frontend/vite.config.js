@@ -7,12 +7,18 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,json}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       manifest: {
         name: 'EnviroSense - Monitoreo Ambiental',
         short_name: 'EnviroSense',
-        description: 'Plataforma de simulación y captura de datos ambientales en Sudamérica',
+        description: 'Plataforma PWA de monitoreo ambiental y alertas en tiempo real para Sudamérica.',
         theme_color: '#2a5a35',
         background_color: '#f4f2ea',
         display: 'standalone',
@@ -38,48 +44,8 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
-      },
-      workbox: {
-        maximumFileSizeToCacheInBytes: 4000000,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /\/api\/(historial|sensores|alertas)/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'api-data-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 3600 }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/api\.mapbox\.com/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'mapbox-cache',
-              expiration: { maxEntries: 30, maxAgeSeconds: 86400 }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
-      },
-    }),
+      }
+    })
   ],
   server: {
     host: '0.0.0.0',

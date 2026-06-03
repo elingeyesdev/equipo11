@@ -11,7 +11,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import { isAuthenticated } from './utils/auth'
 
-import useIsPWA from './hooks/useIsPWA'
+import { usePwa } from './context/PwaContext'
 import MobileLayout from './components/MobileLayout/MobileLayout'
 import LocationDashboard from './pages/mobile/LocationDashboard'
 import MobileMapView from './pages/mobile/MobileMapView'
@@ -19,7 +19,7 @@ import AlertHistoryView from './pages/mobile/AlertHistoryView'
 import MobileProfile from './pages/mobile/MobileProfile'
 
 function RootRedirect() {
-  const isPWA = useIsPWA()
+  const { isPWA } = usePwa()
   if (!isAuthenticated()) return <Navigate to="/login" replace />
   return <Navigate to={isPWA ? '/mobile' : '/mapa'} replace />
 }
@@ -30,19 +30,19 @@ function ProtectedRoute({ children }) {
 }
 
 function GuestRoute({ children }) {
-  const isPWA = useIsPWA()
+  const { isPWA } = usePwa()
   if (isAuthenticated()) return <Navigate to={isPWA ? '/mobile' : '/mapa'} replace />
   return children
 }
 
 function DesktopRoute({ children }) {
-  const isPWA = useIsPWA()
+  const { isPWA } = usePwa()
   if (isPWA) return <Navigate to="/mobile" replace />
   return children
 }
 
 function MobileRoute({ children }) {
-  const isPWA = useIsPWA()
+  const { isPWA } = usePwa()
   if (!isPWA) return <Navigate to="/mapa" replace />
   return children
 }

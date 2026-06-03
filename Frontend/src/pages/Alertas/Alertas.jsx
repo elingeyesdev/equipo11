@@ -8,10 +8,11 @@
  *  - Badge de color por severidad
  *  - Paginación simple (anterior / siguiente)
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useToast } from '../../components/Toast/Toast'
 import { formatDateTime } from '../../utils/formatters'
 import httpClient from '../../config/httpClient'
+import { usePwa } from '../../context/PwaContext'
 import './Alertas.css'
 import '../PagePlaceholder.css'
 
@@ -33,6 +34,13 @@ const SEVERIDADES = [
 
 export default function Alertas() {
   const { addToast } = useToast()
+  const { isOnline } = usePwa()
+  
+  // ─── Lógica Pull-to-refresh ───────────────────────────────────────────────
+  const [refreshing, setRefreshing] = useState(false)
+  const containerRef = useRef(null)
+  const touchStartY = useRef(0)
+
   // ─── Filtros ──────────────────────────────────────────────────────────────
   const [desde,     setDesde]     = useState('')
   const [hasta,     setHasta]     = useState('')
@@ -60,7 +68,10 @@ export default function Alertas() {
       if (severidad) params.severidad = severidad
       if (soloNoReconocidas) params.reconocida = 'false'
 
-      const res = await httpClient.get('/alertas', { params })
+      const res = await httpClient.get('/alertas', { 
+        params,
+        cacheTTL: isOnline ? 30000 : undefined 
+      })
       const data = res.data.data
       setAlertas(data.alertas)
       setTotal(data.total)
@@ -68,8 +79,9 @@ export default function Alertas() {
       setError(err.message)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }, [desde, hasta, metrica, severidad, soloNoReconocidas, page])
+  }, [desde, hasta, metrica, severidad, soloNoReconocidas, page, isOnline])
 
   // Re-fetch cuando cambian filtros o página
   useEffect(() => { fetchAlertas() }, [fetchAlertas])
@@ -93,8 +105,38 @@ export default function Alertas() {
 
   const totalPaginas = Math.ceil(total / LIMIT)
 
+  // Handlers para Pull-to-refresh
+  const handleTouchStart = (e) => {
+    if (containerRef.current && containerRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    } else {
+      touchStartY.current = 0;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStartY.current === 0) return;
+    const currentY = e.touches[0].clientY;
+    const distance = currentY - touchStartY.current;
+
+    if (distance > 80 && !refreshing && !loading) {
+      setRefreshing(true);
+      fetchAlertas();
+    }
+  };
+
   return (
-    <div className="page alertas-page">
+    <div 
+      className="page alertas-page overflow-y-auto" 
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
+      {refreshing && (
+        <div className="flex justify-center items-center py-2 bg-teal-900 text-teal-100 text-sm font-bold transition-all animate-bounce">
+          <span>Actualizando datos...</span>
+        </div>
+      )}
       {/* ─── Cabecera ──────────────────────────────────────────────────── */}
       <div className="page-header">
         <div>
