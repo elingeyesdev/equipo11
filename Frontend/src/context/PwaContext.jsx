@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import logger from '../utils/logger';
 
 const PwaContext = createContext(null);
 
@@ -26,7 +27,7 @@ export const PwaProvider = ({ children }) => {
       // SW Registrado
     },
     onRegisterError(error) {
-      // Error al registrar SW
+      logger.error('Error al registrar Service Worker:', error);
     }
   });
 

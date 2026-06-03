@@ -1,12 +1,10 @@
 import React from 'react';
-import useOfflineData from '../../hooks/useOfflineData';
+import { usePwa } from '../../context/PwaContext';
 
 export default function OfflineIndicator() {
-  // Consumimos el hook para obtener el estado isOffline
-  // (Pasamos un string vacío ya que aquí solo nos interesa el estado de red, no hacer fetch)
-  const { isOffline } = useOfflineData('');
+  const { isOnline } = usePwa();
 
-  if (!isOffline) return null;
+  if (isOnline) return null;
 
   return (
     <div 
