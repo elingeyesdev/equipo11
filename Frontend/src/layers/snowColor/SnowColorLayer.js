@@ -41,6 +41,7 @@ export default class SnowColorLayer {
     this._uOpacity = gl.getUniformLocation(this._program, 'u_opacity');
     this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
     this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
+    this._uSnowType = gl.getUniformLocation(this._program, 'u_snow_type');
 
     const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
     const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
@@ -106,6 +107,7 @@ export default class SnowColorLayer {
     gl.uniform1i(this._uColorRamp, 2);
 
     gl.uniform1f(this._uMixFactor, this.mixFactor !== undefined ? this.mixFactor : 0.0);
+    gl.uniform1f(this._uSnowType, this.snowType !== undefined ? this.snowType : 0.0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
     gl.enableVertexAttribArray(this._aPos);

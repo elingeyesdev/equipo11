@@ -4,51 +4,42 @@
  */
 
 export const VISIBILITY_RAMP_8 = [
-  { val: 0.1, color: [160, 58, 0, 255] },       // 0/7: Naranja Óxido/Marrón cálido (#A03A00)
-  { val: 0.5, color: [230, 92, 0, 255] },       // 1/7: Naranja Intenso (#E65C00)
-  { val: 1.0, color: [255, 148, 77, 255] },     // 2/7: Naranja Claro/Brillante (#FF944D)
-  { val: 2.0, color: [255, 170, 102, 255] },    // 3/7: Melocotón/Dorado suave (#FFAA66)
-  { val: 3.0, color: [255, 204, 153, 255] },    // 4/7: Crema/Carioca claro (#FFCC99)
-  { val: 5.0, color: [255, 230, 204, 255] },    // 5/7: Arena muy clara/Hueso (#FFE6CC)
-  { val: 10.0, color: [240, 240, 240, 127] },   // 6/7: Blanco Grisáceo Translúcido (rgba(240, 240, 240, 0.5))
-  { val: 20.0, color: [255, 255, 255, 0] }      // 7/7: Completamente Transparente (rgba(255, 255, 255, 0.0))
+  { val: 0.0, color: [139, 69, 19, 255] },      // #8b4513
+  { val: 1.0, color: [210, 105, 30, 255] },     // #d2691e
+  { val: 2.0, color: [244, 164, 96, 255] },     // #f4a460
+  { val: 5.0, color: [245, 222, 179, 255] },    // #f5deb3
+  { val: 10.0, color: [240, 240, 240, 128] },   // Gris pálido translúcido
+  { val: 20.0, color: [255, 255, 255, 0] },     // 100% transparente
+  { val: 24.0, color: [255, 255, 255, 0] }
 ];
 
 export const DEFAULT_VIS_RAMP = VISIBILITY_RAMP_8;
 
-/**
- * Genera la textura de paleta 1D uniformemente distribuida según los índices,
- * permitiendo una transición sedosa en la textura de 256 píxeles.
- */
-export function buildVisibilityColorRampTexture(ramp = DEFAULT_VIS_RAMP) {
+export function buildVisibilityColorRampTexture(ramp = DEFAULT_VIS_RAMP, maxVis = 24.0) {
   const size = 256;
   const pixels = new Uint8Array(size * 4);
-  const stopsCount = ramp.length;
 
   for (let i = 0; i < size; i++) {
-    const norm = i / (size - 1);
+    const vis = (i / (size - 1)) * maxVis;
 
-    // Mapear este norm de vuelta al espacio de índices fraccionales
-    const virtualIndex = norm * (stopsCount - 1);
-    const indexFloor = Math.floor(virtualIndex);
+    let lo = ramp[0];
+    let hi = ramp[ramp.length - 1];
 
-    if (indexFloor >= stopsCount - 1) {
-      const c = ramp[stopsCount - 1].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
+    for (let j = 0; j < ramp.length - 1; j++) {
+      if (vis >= ramp[j].val && vis <= ramp[j + 1].val) {
+        lo = ramp[j];
+        hi = ramp[j + 1];
+        break;
+      }
     }
 
-    const fraction = virtualIndex - indexFloor;
-    const c1 = ramp[indexFloor].color;
-    const c2 = ramp[indexFloor + 1].color;
+    const range = hi.val - lo.val;
+    const t = range > 0 ? Math.min(1, Math.max(0, (vis - lo.val) / range)) : 0;
 
-    pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * fraction;
-    pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * fraction;
-    pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * fraction;
-    pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * fraction;
+    pixels[i * 4 + 0] = Math.round(lo.color[0] + t * (hi.color[0] - lo.color[0]));
+    pixels[i * 4 + 1] = Math.round(lo.color[1] + t * (hi.color[1] - lo.color[1]));
+    pixels[i * 4 + 2] = Math.round(lo.color[2] + t * (hi.color[2] - lo.color[2]));
+    pixels[i * 4 + 3] = Math.round(lo.color[3] + t * (hi.color[3] - lo.color[3]));
   }
 
   return pixels;
