@@ -70,6 +70,11 @@ export const fragmentSource = `
 
     float finalVal = mix(valCurrent, valNext, u_mix_factor);
 
+    if (finalVal >= (20.0 / 24.0)) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+      return;
+    }
+
     vec4 color = texture2D(u_color_ramp, vec2(finalVal, 0.5));
     gl_FragColor = vec4(color.rgb, color.a * u_opacity);
   }

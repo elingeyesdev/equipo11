@@ -278,10 +278,14 @@ function MapaMonitoreo() {
   const [isCameraSynced, setIsCameraSynced] = useState(false);
 
   const getAqiColor = (aqi) => {
-    if (aqi <= 50) return '#00e400';
-    if (aqi <= 100) return '#ffff00';
-    if (aqi <= 150) return '#ff7e00';
-    return '#ff0000';
+    if (aqi >= 300) return '#7e0023';
+    if (aqi >= 200) return '#8f3f97';
+    if (aqi >= 150) return '#ff0000';
+    if (aqi >= 100) return '#ff7e00';
+    if (aqi >= 50) return '#ffff00';
+    if (aqi >= 30) return '#00e400';
+    if (aqi >= 10) return '#7dd3ff';
+    return '#e0f2ff';
   };
 
   const getDynamicColor = (metricKey, value) => {
@@ -368,37 +372,96 @@ function MapaMonitoreo() {
     }
 
     const scalarMetrics = [];
+    
+    // 1. VIENTO
     if (isParticlesActive && particleFilters.wind && localWind) {
-      scalarMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h' });
+      let cWind = '#3333ff'; 
+      if (localWind.speed >= 140) cWind = '#ffb6c1';
+      else if (localWind.speed >= 120) cWind = '#ff00ff';
+      else if (localWind.speed >= 100) cWind = '#8b0000';
+      else if (localWind.speed >= 80) cWind = '#ff4500';
+      else if (localWind.speed >= 70) cWind = '#ff8800';
+      else if (localWind.speed >= 60) cWind = '#ffcc00';
+      else if (localWind.speed >= 50) cWind = '#ffff00';
+      else if (localWind.speed >= 40) cWind = '#adff2f';
+      else if (localWind.speed >= 30) cWind = '#00ff00';
+      else if (localWind.speed >= 20) cWind = '#2e8b57';
+      else if (localWind.speed >= 10) cWind = '#4682b4';
+      scalarMetrics.push({ label: 'Viento', value: localWind.speed.toFixed(1), unit: 'km/h', color: cWind });
     }
+
+    // 2. LLUVIA
     if (isParticlesActive && particleFilters.rain && localRain !== null) {
-      scalarMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm' });
+      let cRain = 'rgba(0,255,255,0.3)'; // Sin/Poca lluvia
+      if (localRain > 20) cRain = '#ff00ff'; // Magenta (Torrencial)
+      else if (localRain > 10) cRain = '#800080'; // Púrpura
+      else if (localRain > 2) cRain = '#0000ff'; // Azul puro
+      else if (localRain > 0.1) cRain = '#00ffff'; // Celeste
+      scalarMetrics.push({ label: 'Precipitación', value: localRain.toFixed(1), unit: 'mm', color: cRain });
     }
+
+    // 3. NIEVE
     if (isParticlesActive && particleFilters.snow && localSnow !== null) {
-      scalarMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm' });
-      scalarMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm' });
+      const getSnowColor = (val) => {
+        if (val >= 150) return '#400c70';
+        if (val >= 135) return '#2b4ea2';
+        if (val >= 120) return '#136cb5';
+        if (val >= 100) return '#1793d1';
+        if (val >= 75) return '#1cb8e7';
+        if (val >= 50) return '#3fd4f5';
+        if (val >= 30) return '#72e3ff';
+        if (val >= 15) return '#aeefff';
+        if (val >= 5) return '#ddfbff';
+        return '#ffffff';
+      };
+      
+      scalarMetrics.push({ label: 'Nieve Acumulada', value: localSnow.accumulated.toFixed(1), unit: 'cm', color: getSnowColor(localSnow.accumulated) });
+      scalarMetrics.push({ label: 'Nieve Fresca', value: localSnow.fresh.toFixed(1), unit: 'cm', color: getSnowColor(localSnow.fresh) });
     }
+
+    // 4. VISIBILIDAD
     if (isParticlesActive && particleFilters.fog && displayVis !== null) {
-      scalarMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km' });
+      let cVis = 'rgba(255,255,255,0)'; // 20+ km
+      const visNumber = parseFloat(displayVis);
+      if (!isNaN(visNumber)) {
+        if (visNumber < 1) cVis = '#8b4513';
+        else if (visNumber < 2) cVis = '#d2691e';
+        else if (visNumber < 5) cVis = '#f4a460';
+        else if (visNumber < 10) cVis = '#f5deb3';
+        else if (visNumber < 20) cVis = 'rgba(240,240,240,0.5)';
+      }
+      scalarMetrics.push({ label: 'Visibilidad', value: displayVis, unit: 'km', color: cVis });
     }
+
+    // 5. TEMPERATURA
     if (isParticlesActive && particleFilters.temp && localTempK !== null && !isNaN(localTempK) && isFinite(localTempK)) {
       const baseTempC = localTempK - 273.15;
+      let cTemp = '#00ffff'; 
+      if (baseTempC >= 45) cTemp = '#800000'; // Burdeos
+      else if (baseTempC >= 35) cTemp = '#ff0000'; // Rojo
+      else if (baseTempC >= 25) cTemp = '#ff8800'; // Naranja
+      else if (baseTempC >= 15) cTemp = '#ffff00'; // Amarillo
+      else if (baseTempC >= 0) cTemp = '#00ff00'; // Verde
+      else if (baseTempC >= -10) cTemp = '#4a0080'; // Morado oscuro
+      else if (baseTempC >= -30) cTemp = '#9999ff'; // Azul hielo
+      else cTemp = '#e6e6fa'; // Lavanda hielo
+      
       const unitDef = METRICAS_UNIDADES['temperatura'].unidades.find(u => u.key === unidades['temperatura']) || METRICAS_UNIDADES['temperatura'].unidades[0];
       const formattedValue = unitDef.convertir(baseTempC).toFixed(unitDef.precision);
-      const suffix = unitDef.sufijo.trim();
-      scalarMetrics.push({ label: 'Temperatura', value: formattedValue, unit: suffix });
+      scalarMetrics.push({ label: 'Temperatura', value: formattedValue, unit: unitDef.sufijo.trim(), color: cTemp });
     }
 
     const aqiActive = (isParticlesActive && particleFilters.aqi) || (isHeatmapActive && heatmapMetric === 'aqi');
     if (aqiActive && localAqi !== null) {
-      let catLabel = 'Buena';
-      let catColor = '#00d0ff';
-      if (localAqi >= 400) { catLabel = 'Peligrosa (Extrema)'; catColor = '#800080'; }
-      else if (localAqi >= 300) { catLabel = 'Peligrosa'; catColor = '#990000'; }
-      else if (localAqi >= 200) { catLabel = 'Muy Dañina'; catColor = '#ff0000'; }
-      else if (localAqi >= 150) { catLabel = 'Dañina'; catColor = '#ff9933'; }
-      else if (localAqi >= 100) { catLabel = 'Dañina (Grupos Sensibles)'; catColor = '#ffff00'; }
-      else if (localAqi >= 50) { catLabel = 'Moderada'; catColor = '#00e600'; }
+      let catLabel = 'Excelente';
+      let catColor = '#e0f2ff';
+      if (localAqi >= 300) { catLabel = 'Peligrosa'; catColor = '#7e0023'; }
+      else if (localAqi >= 200) { catLabel = 'Muy Dañina'; catColor = '#8f3f97'; }
+      else if (localAqi >= 150) { catLabel = 'Dañina'; catColor = '#ff0000'; }
+      else if (localAqi >= 100) { catLabel = 'Dañina (Grupos Sensibles)'; catColor = '#ff7e00'; }
+      else if (localAqi >= 50) { catLabel = 'Moderada'; catColor = '#ffff00'; }
+      else if (localAqi >= 30) { catLabel = 'Buena'; catColor = '#00e400'; }
+      else if (localAqi >= 10) { catLabel = 'Muy Buena'; catColor = '#7dd3ff'; }
       
       scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
     }

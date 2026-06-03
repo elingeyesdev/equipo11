@@ -90,10 +90,16 @@ export const fragmentSource = `
     // Interpolación bilineal manual SIEMPRE activa (KISS + Garantiza antimeridiano)
     float speedCurrent = sampleBilinear(uv, u_wind_data);
     float speedNext = sampleBilinear(uv, u_wind_data_next);
-    float speed = mix(speedCurrent, speedNext, u_mix_factor);
+    float speedNorm = mix(speedCurrent, speedNext, u_mix_factor);
+
+    // El backend codifica el viento con MAX_SPEED = 150.0
+    float realSpeed = speedNorm * 150.0;
+    
+    // La rampa de color está escalada matemáticamente a 140.0
+    float rampNorm = clamp(realSpeed / 140.0, 0.0, 1.0);
 
     // Muestrear la paleta de color (textura 1D de 256 px)
-    vec4 color = texture2D(u_color_ramp, vec2(speed, 0.5));
+    vec4 color = texture2D(u_color_ramp, vec2(rampNorm, 0.5));
 
     gl_FragColor = vec4(color.rgb, color.a * u_opacity);
   }

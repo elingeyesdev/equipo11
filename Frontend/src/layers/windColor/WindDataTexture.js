@@ -11,7 +11,7 @@ import { buildColorRampTexture, DEFAULT_RAMP } from './colorRamps.js';
 // Constantes del grid global (1° resolución, centros en ±0.5)
 const GRID_WIDTH = 360;
 const GRID_HEIGHT = 180;
-const MAX_SPEED = 150; // km/h — para normalizar a [0, 1]
+const MAX_SPEED = 140.0; // km/h — para normalizar a [0, 1]
 
 export default class WindDataTexture {
   /**

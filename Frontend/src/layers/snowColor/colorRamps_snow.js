@@ -2,65 +2,47 @@
  * colorRamps_snow.js — Paletas de colores para Nieve (Fresca y Acumulada).
  */
 
-// --- NIEVE FRESCA (12 Segmentos / 13 Stops) ---
 export const SNOW_FRESH_RAMP = [
-  { val: 0.1, color: [0, 0, 0, 0] },          // 0/12: Transparente
-  { val: 1.0, color: [0, 255, 0, 255] },      // 1/12: Verde Lima
-  { val: 3.0, color: [0, 230, 0, 255] },      // 2/12: Verde Claro
-  { val: 5.0, color: [0, 204, 0, 255] },      // 3/12: Verde Medio
-  { val: 10.0, color: [0, 153, 0, 255] },     // 4/12: Verde Oscuro
-  { val: 20.0, color: [0, 102, 0, 255] },     // 5/12: Verde Bosque
-  { val: 30.0, color: [0, 51, 0, 255] },      // 6/12: Verde Muy Oscuro
-  { val: 40.0, color: [255, 255, 0, 255] },   // 7/12: Amarillo
-  { val: 50.0, color: [255, 153, 0, 255] },   // 8/12: Naranja
-  { val: 100.0, color: [255, 102, 0, 255] },  // 9/12: Naranja Oscuro
-  { val: 150.0, color: [255, 0, 0, 255] },    // 10/12: Rojo
-  { val: 225.0, color: [204, 0, 0, 255] },    // 11/12: Rojo Oscuro
-  { val: 300.0, color: [153, 0, 0, 255] }     // 12/12: Granate/Maroon
+  { val: 0.0, color: [255, 255, 255, 255] }, // #FFFFFF (Blanco)
+  { val: 5.0, color: [221, 251, 255, 255] }, // #DDFBFF (Celeste hielo)
+  { val: 15.0, color: [174, 239, 255, 255] }, // #AEEFFF (Celeste suave)
+  { val: 30.0, color: [114, 227, 255, 255] }, // #72E3FF (Cyan frío)
+  { val: 50.0, color: [63, 212, 245, 255] }, // #3FD4F5 (Turquesa brillante)
+  { val: 75.0, color: [28, 184, 231, 255] }, // #1CB8E7 (Azul tropical)
+  { val: 100.0, color: [23, 147, 209, 255] }, // #1793D1 (Azul medio)
+  { val: 120.0, color: [19, 108, 181, 255] }, // #136CB5 (Azul profundo)
+  { val: 135.0, color: [43, 78, 162, 255] }, // #2B4EA2 (Índigo frío)
+  { val: 150.0, color: [64, 12, 112, 255] }  // #400C70 (Púrpura tormenta)
 ];
 
-// --- NIEVE ACUMULADA (8 Segmentos) ---
-// Conservamos los colores actuales pero los mapeamos por índices.
-export const SNOW_ACCUMULATED_RAMP = [
-  { val: 0.2, color: [0, 0, 0, 0] },             // Transparente
-  { val: 1.0, color: [150, 255, 150, 128] },     // Verde muy claro
-  { val: 5.0, color: [0, 200, 0, 160] },         // Verde oscuro
-  { val: 20.0, color: [255, 200, 0, 200] },      // Amarillo
-  { val: 40.0, color: [200, 100, 0, 230] },      // Naranja oscuro
-  { val: 70.0, color: [255, 150, 255, 255] },    // Rosa claro / Lila
-  { val: 100.0, color: [150, 50, 200, 255] },    // Púrpura
-  { val: 150.0, color: [50, 0, 100, 255] }       // Púrpura oscuro
-];
+export const SNOW_ACCUMULATED_RAMP = SNOW_FRESH_RAMP;
 
 export function buildSnowColorRampTexture(ramp) {
+  const maxSnow = 150.0;
   const size = 256;
   const pixels = new Uint8Array(size * 4);
-  const stopsCount = ramp.length;
 
   for (let i = 0; i < size; i++) {
-    const norm = i / (size - 1);
+    const snow = (i / (size - 1)) * maxSnow;
 
-    // Mapear este norm de vuelta al espacio de índices fraccionales
-    const virtualIndex = norm * (stopsCount - 1);
-    const indexFloor = Math.floor(virtualIndex);
+    let lo = ramp[0];
+    let hi = ramp[ramp.length - 1];
 
-    if (indexFloor >= stopsCount - 1) {
-      const c = ramp[stopsCount - 1].color;
-      pixels[i * 4 + 0] = c[0];
-      pixels[i * 4 + 1] = c[1];
-      pixels[i * 4 + 2] = c[2];
-      pixels[i * 4 + 3] = c[3];
-      continue;
+    for (let j = 0; j < ramp.length - 1; j++) {
+      if (snow >= ramp[j].val && snow <= ramp[j + 1].val) {
+        lo = ramp[j];
+        hi = ramp[j + 1];
+        break;
+      }
     }
 
-    const fraction = virtualIndex - indexFloor;
-    const c1 = ramp[indexFloor].color;
-    const c2 = ramp[indexFloor + 1].color;
+    const range = hi.val - lo.val;
+    const t = range > 0 ? Math.min(1, Math.max(0, (snow - lo.val) / range)) : 0;
 
-    pixels[i * 4 + 0] = c1[0] + (c2[0] - c1[0]) * fraction;
-    pixels[i * 4 + 1] = c1[1] + (c2[1] - c1[1]) * fraction;
-    pixels[i * 4 + 2] = c1[2] + (c2[2] - c1[2]) * fraction;
-    pixels[i * 4 + 3] = c1[3] + (c2[3] - c1[3]) * fraction;
+    pixels[i * 4 + 0] = Math.round(lo.color[0] + t * (hi.color[0] - lo.color[0]));
+    pixels[i * 4 + 1] = Math.round(lo.color[1] + t * (hi.color[1] - lo.color[1]));
+    pixels[i * 4 + 2] = Math.round(lo.color[2] + t * (hi.color[2] - lo.color[2]));
+    pixels[i * 4 + 3] = Math.round(lo.color[3] + t * (hi.color[3] - lo.color[3]));
   }
 
   return pixels;

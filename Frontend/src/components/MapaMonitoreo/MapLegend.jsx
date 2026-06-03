@@ -4,39 +4,33 @@ import './MapLegend.css';
 const LEGENDS = {
   temp: {
     label: 'Temperatura',
-    min: '-50°C',
-    max: '50°C',
-    gradient: 'linear-gradient(to right, #4a0080, #0000ff, #00ffff, #00ff00, #ffff00, #ff8800, #ff0000, #800000)'
+    labels: ['-50°', '-30°', '-10°', '0°', '15°', '35°', '45°'],
+    gradient: 'linear-gradient(to right, #e6e6fa, #9999ff, #4a0080, #00ff00, #ffff00, #ff0000, #800000)'
   },
   rain: {
     label: 'Precipitación',
-    min: '0 mm/h',
-    max: '50+ mm/h',
+    labels: ['0', '0.1', '2', '10', '20+ mm/h'],
     gradient: 'linear-gradient(to right, rgba(0,255,255,0.3), #00ffff, #0000ff, #800080, #ff00ff)'
   },
   snow: {
     label: 'Nieve',
-    min: '0 cm',
-    max: '50+ cm',
-    gradient: 'linear-gradient(to right, rgba(255,255,255,0.2), #ffffff, #00ffff)'
+    labels: ['0', '15', '50', '100', '150+ cm'],
+    gradient: 'linear-gradient(to right, #ffffff, #aeefff, #3fd4f5, #1793d1, #400c70)'
   },
   wind: {
     label: 'Viento',
-    min: '0 km/h',
-    max: '250 km/h',
-    gradient: 'linear-gradient(to right, rgba(255,255,255,0.1), #ffff00, #ff8800, #ff0000, #800080)'
+    labels: ['0', '30', '60', '100', '140+ km/h'],
+    gradient: 'linear-gradient(to right, #3333ff, #00ff00, #ffcc00, #8b0000, #ffb6c1)'
   },
   fog: {
     label: 'Visibilidad',
-    min: '0 km (Mala)',
-    max: '20+ km (Buena)',
-    gradient: 'linear-gradient(to right, #8b4513, #808080, rgba(255,255,255,0.1))'
+    labels: ['0', '1', '2', '5', '10', '20+ km'],
+    gradient: 'linear-gradient(to right, #8b4513, #d2691e, #f4a460, #f5deb3, rgba(240,240,240,0.5), transparent)'
   },
   aqi: {
     label: 'Calidad del Aire (AQI)',
-    min: '0 (Bueno)',
-    max: '500 (Peligroso)',
-    gradient: 'linear-gradient(to right, #00e600, #ffff00, #ff9933, #ff0000, #990000, #800080)'
+    labels: ['0', '50', '100', '150', '200', '300', '500'],
+    gradient: 'linear-gradient(to right, #e0f2ff, #7dd3ff, #00e400, #ffff00, #ff7e00, #ff0000, #8f3f97, #7e0023)'
   }
 };
 
@@ -90,8 +84,9 @@ export default function MapLegend({ isParticlesActive, particleFilters }) {
           style={{ background: legend.gradient }} 
         />
         <div className="map-legend-labels">
-          <span>{legend.min}</span>
-          <span>{legend.max}</span>
+          {legend.labels.map((lbl, idx) => (
+            <span key={idx}>{lbl}</span>
+          ))}
         </div>
       </div>
     </div>
