@@ -8,7 +8,7 @@
  *  - Badge de color por severidad
  *  - Paginación simple (anterior / siguiente)
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useToast } from '../../components/Toast/Toast'
 import { formatDateTime } from '../../utils/formatters'
 import httpClient from '../../config/httpClient'

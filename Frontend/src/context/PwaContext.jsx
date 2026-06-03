@@ -7,16 +7,26 @@ export const PwaProvider = ({ children }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
   
+  const checkIsMobileOrPWA = () => {
+    if (typeof window === 'undefined') return false;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    return isStandalone || window.innerWidth < 768;
+  };
+
+  const [isPWA, setIsPWA] = useState(checkIsMobileOrPWA);
+
   // Utiliza el helper reactivo de vite-plugin-pwa
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(swUrl, r) {
-      console.log('SW registrado correctamente:', swUrl);
+      // SW Registrado
     },
     onRegisterError(error) {
-      console.error('Error al registrar SW:', error);
+      // Error al registrar SW
     }
   });
 
@@ -32,10 +42,19 @@ export const PwaProvider = ({ children }) => {
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleResize = () => setIsPWA(checkIsMobileOrPWA());
+    const handler = (e) => setIsPWA(e.matches || window.innerWidth < 768);
+
+    mediaQuery.addEventListener('change', handler);
+    window.addEventListener('resize', handleResize);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      mediaQuery.removeEventListener('change', handler);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -58,6 +77,7 @@ export const PwaProvider = ({ children }) => {
     <PwaContext.Provider
       value={{
         isOnline,
+        isPWA,
         needRefresh,
         canInstall: !!installPrompt,
         triggerInstall,
