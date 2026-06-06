@@ -55,6 +55,7 @@ previo.md
 /implementaciones
 # Datos de clima persistentes
 data/
+ETL/data/
 
 # WhatsApp Web JS
 .wwebjs_auth/
