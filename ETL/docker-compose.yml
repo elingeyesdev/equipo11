@@ -9,6 +9,7 @@ services:
       - ../data:/app/data
       # Montar las credenciales de Copernicus
       - ~/.cdsapirc:/root/.cdsapirc:ro
+      - ~/.adsapirc:/root/.adsapirc:ro
     environment:
       - PYTHONUNBUFFERED=1
     # Mantener el contenedor vivo para poder ejecutar scripts
