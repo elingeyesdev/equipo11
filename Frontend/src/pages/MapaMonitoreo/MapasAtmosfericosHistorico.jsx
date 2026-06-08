@@ -159,6 +159,17 @@ const COLOR_RAMPS = {
     { t: 0.857, r: 255, g: 0,   b: 255, a: 210 },
     { t: 1.000, r: 255, g: 182, b: 193, a: 210 },
   ],
+  evaporacion: [
+    { t: 0.000, r: 0,   g: 0,   b: 0,   a: 0   },   // 0 W/m² = transparente
+    { t: 0.020, r: 0,   g: 0,   b: 0,   a: 0   },   // ruido = invisible
+    { t: 0.050, r: 200, g: 220, b: 255, a: 120 },   // azul muy claro
+    { t: 0.150, r: 160, g: 200, b: 240, a: 160 },   // azul cielo
+    { t: 0.300, r: 130, g: 170, b: 220, a: 190 },   // azul medio
+    { t: 0.500, r: 180, g: 190, b: 200, a: 200 },   // gris azulado
+    { t: 0.700, r: 210, g: 210, b: 215, a: 210 },   // gris claro
+    { t: 0.850, r: 235, g: 235, b: 240, a: 220 },   // casi blanco
+    { t: 1.000, r: 255, g: 255, b: 255, a: 230 },   // blanco puro (500 W/m²)
+  ],
 };
 
 function buildRampPixels(stops, activeLayer) {
@@ -428,6 +439,7 @@ function MapasAtmosfericosHistorico() {
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
       canvasCtxRef.current = ctx;
       canvasSizeRef.current = { width: img.width, height: img.height };
@@ -454,9 +466,9 @@ function MapasAtmosfericosHistorico() {
       isCancelled = true;
       img.onload = null;
       img.src = '';
-      if (canvasCtxRef.current) {
-        canvasCtxRef.current.clearRect(0, 0, canvasSizeRef.current.width, canvasSizeRef.current.height);
-      }
+      // NO hacer clearRect aquí: el canvas debe retener los datos del último
+      // frame válido hasta que img.onload del siguiente frame lo reemplace.
+      // Si limpiamos aquí, hay una ventana asíncrona donde getImageData → 0.
     };
   }, [imageUrl, activeLayer]);
 
@@ -468,6 +480,14 @@ function MapasAtmosfericosHistorico() {
     if (activeLayer === 'aqi') return; // AQI no usa paleta WebGL
 
     const gl = customLayerRef.current._gl;
+
+    // Limpieza Inmediata de Textura (Evitar Flash de Color Sólido)
+    // Borramos los datos rasterizados de la variable anterior para que no se
+    // pinten con la nueva paleta de colores mientras esperamos la descarga de red.
+    const emptyPixels = new Uint8Array([0, 0, 0, 0]);
+    gl.bindTexture(gl.TEXTURE_2D, customLayerRef.current._dataTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyPixels);
+
     const stops = COLOR_RAMPS[activeLayer] || COLOR_RAMPS.visibilidad;
     const pixels = buildRampPixels(stops, activeLayer);
     gl.bindTexture(gl.TEXTURE_2D, customLayerRef.current._rampTex);
@@ -551,7 +571,8 @@ function MapasAtmosfericosHistorico() {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        const initRamp = buildRampPixels(COLOR_RAMPS.visibilidad);
+        const initStops = COLOR_RAMPS[activeLayerRef.current] || COLOR_RAMPS.lluvia;
+        const initRamp = buildRampPixels(initStops, activeLayerRef.current);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, initRamp);
 
         // Si ya había una imagen esperando, subirla
@@ -676,6 +697,8 @@ function MapasAtmosfericosHistorico() {
       displayValue = ((rawValue / 255.0) * 20.0).toFixed(1); displayUnit = 'mm/h';
     } else if (activeLayer === 'nieve') {
       displayValue = ((rawValue / 255.0) * 150.0).toFixed(1); displayUnit = 'cm';
+    } else if (activeLayer === 'evaporacion') {
+      displayValue = ((rawValue / 255.0) * 500.0).toFixed(1); displayUnit = 'W/m²';
     } else if (activeLayer === 'viento') {
       const u_norm = pixelData[0] / 255.0;
       const v_norm = pixelData[1] / 255.0;
@@ -703,6 +726,7 @@ function MapasAtmosfericosHistorico() {
       lluvia: { gradient: 'linear-gradient(to right, rgba(0,255,255,0) 0%, rgba(0,255,255,1) 5%, rgba(0,100,255,1) 10%, rgba(0,0,255,1) 25%, rgba(100,0,200,1) 50%, rgba(180,0,180,1) 75%, rgba(255,0,255,1) 100%)', labels: ['0', '2', '5', '10', '20+ mm/h'] },
       nieve: { gradient: 'linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 5%, rgba(174,239,255,1) 10%, rgba(114,227,255,1) 20%, rgba(63,212,245,1) 33%, rgba(28,184,231,1) 50%, rgba(19,108,181,1) 80%, rgba(64,12,112,1) 100%)', labels: ['0', '15', '30', '75', '150+ cm'] },
       viento: { gradient: 'linear-gradient(to right, rgba(51,51,255,0) 0%, rgba(51,51,255,1) 5%, rgba(46,139,87,1) 15%, rgba(173,255,47,1) 30%, rgba(255,255,0,1) 40%, rgba(255,136,0,1) 50%, rgba(255,69,0,1) 60%, rgba(139,0,0,1) 75%, rgba(255,0,255,1) 90%, rgba(255,182,193,1) 100%)', labels: ['0', '20', '50', '80', '100', '140 km/h'] },
+      evaporacion: { gradient: 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(200,220,255,0.5) 10%, rgba(160,200,240,0.6) 25%, rgba(130,170,220,0.75) 40%, rgba(180,190,200,0.8) 55%, rgba(210,210,215,0.85) 70%, rgba(235,235,240,0.9) 85%, rgba(255,255,255,0.95) 100%)', labels: ['0', '50', '125', '200', '275', '350', '425', '500 W/m²'] },
     };
     const leg = legends[activeLayer];
     if (!leg) return null;
@@ -880,6 +904,7 @@ function MapasAtmosfericosHistorico() {
                 <option value="temperatura" style={{ color: 'black' }}>Temperatura</option>
                 <option value="lluvia" style={{ color: 'black' }}>Precipitación (Lluvia)</option>
                 <option value="nieve" style={{ color: 'black' }}>Acumulación de Nieve</option>
+                <option value="evaporacion" style={{ color: 'black' }}>Evaporación (Calor Latente)</option>
               </select>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
