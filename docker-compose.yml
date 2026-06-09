@@ -37,6 +37,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    tty: true
+    stdin_open: true
     command: pnpm run dev
     # Sincroniza tu código local con el contenedor (hot-reload)
     volumes:
