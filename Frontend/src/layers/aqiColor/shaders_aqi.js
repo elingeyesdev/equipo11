@@ -66,31 +66,34 @@ export const fragmentSource = `
     // So to get the real AQI value back, we do aqi_norm * 255.0 * 2.0
     float aqi_val = aqi_norm * 510.0;
 
-    vec3 c0 = vec3(0.867, 1.0, 1.0);     // 0: #ddffff
-    vec3 c1 = vec3(0.0, 0.816, 1.0);     // 50: #00d0ff
-    vec3 c2 = vec3(0.0, 0.902, 0.0);     // 100: #00e600
-    vec3 c3 = vec3(1.0, 1.0, 0.0);       // 150: #ffff00
-    vec3 c4 = vec3(1.0, 0.6, 0.2);       // 200: #ff9933
-    vec3 c5 = vec3(1.0, 0.0, 0.0);       // 300: #ff0000
-    vec3 c6 = vec3(0.6, 0.0, 0.0);       // 400: #990000
-    vec3 c7 = vec3(0.502, 0.0, 0.502);   // 500: #800080
+    // EPA Standard AQI Colors with new custom light blues
+    vec3 c0 = vec3(0.878, 0.949, 1.0);     // 0-10: Celeste muy suave [224, 242, 255]
+    vec3 c1 = vec3(0.490, 0.827, 1.0);     // 11-30: Celeste claro [125, 211, 255]
+    vec3 c2 = vec3(0.0, 0.894, 0.0);       // 50: Verde [0, 228, 0]
+    vec3 c3 = vec3(1.0, 1.0, 0.0);         // 100: Amarillo [255, 255, 0]
+    vec3 c4 = vec3(1.0, 0.494, 0.0);       // 150: Naranja [255, 126, 0]
+    vec3 c5 = vec3(1.0, 0.0, 0.0);         // 200: Rojo [255, 0, 0]
+    vec3 c6 = vec3(0.561, 0.247, 0.592);   // 300: Púrpura [143, 63, 151]
+    vec3 c7 = vec3(0.494, 0.0, 0.137);     // 500: Burdeos [126, 0, 35]
 
-    vec3 finalColor = c0;
+    vec3 finalColor;
     
-    if (aqi_val < 50.0) {
-      finalColor = mix(c0, c1, aqi_val / 50.0);
-    } else if (aqi_val < 100.0) {
-      finalColor = mix(c1, c2, (aqi_val - 50.0) / 50.0);
-    } else if (aqi_val < 150.0) {
-      finalColor = mix(c2, c3, (aqi_val - 100.0) / 50.0);
-    } else if (aqi_val < 200.0) {
-      finalColor = mix(c3, c4, (aqi_val - 150.0) / 50.0);
-    } else if (aqi_val < 300.0) {
-      finalColor = mix(c4, c5, (aqi_val - 200.0) / 100.0);
-    } else if (aqi_val < 400.0) {
-      finalColor = mix(c5, c6, (aqi_val - 300.0) / 100.0);
+    if (aqi_val <= 10.0) {
+      finalColor = c0;
+    } else if (aqi_val <= 30.0) {
+      finalColor = mix(c0, c1, (aqi_val - 10.0) / 20.0);
+    } else if (aqi_val <= 50.0) {
+      finalColor = mix(c1, c2, (aqi_val - 30.0) / 20.0);
+    } else if (aqi_val <= 100.0) {
+      finalColor = mix(c2, c3, (aqi_val - 50.0) / 50.0);
+    } else if (aqi_val <= 150.0) {
+      finalColor = mix(c3, c4, (aqi_val - 100.0) / 50.0);
+    } else if (aqi_val <= 200.0) {
+      finalColor = mix(c4, c5, (aqi_val - 150.0) / 50.0);
+    } else if (aqi_val <= 300.0) {
+      finalColor = mix(c5, c6, (aqi_val - 200.0) / 100.0);
     } else {
-      finalColor = mix(c6, c7, clamp((aqi_val - 400.0) / 100.0, 0.0, 1.0));
+      finalColor = mix(c6, c7, clamp((aqi_val - 300.0) / 200.0, 0.0, 1.0));
     }
 
     gl_FragColor = vec4(finalColor, u_opacity);

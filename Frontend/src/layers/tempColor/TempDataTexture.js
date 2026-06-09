@@ -32,16 +32,16 @@ function buildTempColorRampTexture() {
   // Cada stop: { t: posición normalizada [0,1], color: [R, G, B] en 0-255 }
   // Rango: 0.0 = -60°C, 1.0 = +60°C (120° de amplitud)
   const stops = [
-    { t: 0.00, color: [255, 255, 255] },  // -60°C  Blanco puro
-    { t: 0.08, color: [255, 255, 255] },  // -50.4°C Blanco puro
-    { t: 0.20, color: [128, 0, 128] },  // -36°C  Violeta/Magenta oscuro
-    { t: 0.40, color: [0, 0, 255] },  // -12°C  Azul
-    { t: 0.50, color: [0, 255, 255] },  //   0°C  Cian
-    { t: 0.60, color: [0, 255, 0] },  //  12°C  Verde
-    { t: 0.75, color: [255, 165, 0] },  //  30°C  Naranja
-    { t: 0.79, color: [255, 0, 0] },  //  35°C  Rojo Puro
-    { t: 0.85, color: [178, 34, 34] },  //  42°C  Rojo Carmesí
-    { t: 1.00, color: [59, 0, 0] },  //  60°C  Granate casi negro
+    { t: 0.00, color: [230, 230, 250] },  // -60°C  Lavanda hielo (#e6e6fa)
+    { t: 10/120, color: [230, 230, 250] },// -50°C  Lavanda hielo
+    { t: 30/120, color: [153, 153, 255] },// -30°C  Azul hielo (#9999ff)
+    { t: 50/120, color: [74, 0, 128] },   // -10°C  Morado oscuro
+    { t: 60/120, color: [0, 255, 0] },    //   0°C  Verde
+    { t: 75/120, color: [255, 255, 0] },  //  15°C  Amarillo
+    { t: 85/120, color: [255, 136, 0] },  //  25°C  Naranja
+    { t: 95/120, color: [255, 0, 0] },    //  35°C  Rojo
+    { t: 105/120, color: [128, 0, 0] },   //  45°C  Burdeos
+    { t: 1.00, color: [128, 0, 0] },      //  60°C  Burdeos
   ];
 
   for (let i = 0; i < size; i++) {

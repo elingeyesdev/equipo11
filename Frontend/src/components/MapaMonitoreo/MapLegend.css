@@ -9,8 +9,8 @@
   border: 1px solid rgba(51, 65, 85, 0.5);
   border-radius: 10px;
   padding: 12px 14px;
-  min-width: 200px;
-  max-width: 280px;
+  min-width: 350px;
+  max-width: 450px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   pointer-events: auto;
   animation: slideUpLegend 0.3s ease-out forwards;
@@ -75,6 +75,7 @@
 .map-legend-labels {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.7rem;
   color: #cbd5e1;
   font-weight: 500;
