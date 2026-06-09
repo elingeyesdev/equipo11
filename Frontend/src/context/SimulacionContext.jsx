@@ -25,8 +25,9 @@ export function SimulacionProvider({ children }) {
 
   const [fronterasSeleccionadas, setFronterasSeleccionadas] = useState([])
   const [isComparing, setIsComparing] = useState(false)
-  const [zona1Cfg, setZona1Cfg] = useState({ pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null })
-  const [zona2Cfg, setZona2Cfg] = useState({ pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null })
+  const [zona1Cfg, setZona1Cfg] = useState({ selectionMode: 'country', pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null, manualPoints: [], manualName: '' })
+  const [zona2Cfg, setZona2Cfg] = useState({ selectionMode: 'country', pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null, manualPoints: [], manualName: '' })
+  const [activeDrawingZone, setActiveDrawingZone] = useState(null)
   const [isSimMode, setIsSimMode] = useState(false)
 
   useEffect(() => {
@@ -89,9 +90,11 @@ export function SimulacionProvider({ children }) {
     iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
     fronterasSeleccionadas, setFronterasSeleccionadas, isComparing, setIsComparing,
     zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, isSimMode, setIsSimMode,
+    activeDrawingZone, setActiveDrawingZone,
   }), [isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas,
       iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
-      fronterasSeleccionadas, isComparing, zona1Cfg, zona2Cfg, isSimMode])
+      fronterasSeleccionadas, isComparing, zona1Cfg, zona2Cfg, isSimMode,
+      activeDrawingZone])
 
   return (
     <SimulacionContext.Provider value={value}>

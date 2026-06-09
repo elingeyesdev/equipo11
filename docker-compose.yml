@@ -1,7 +1,7 @@
 services:
   # ─── Base de datos PostgreSQL ───
   db:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:2.14.2-pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: sistema_ambiental
@@ -33,6 +33,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    command: pnpm run dev
     # Sincroniza tu código local con el contenedor (hot-reload)
     volumes:
       - ./Backend:/app

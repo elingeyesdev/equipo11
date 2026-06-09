@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Map, { NavigationControl, FullscreenControl, Popup, Layer, Source } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -566,6 +567,7 @@ const createHistoricalLayer = (id, activeLayerRefInner) => ({
 
 function MapasAtmosfericosHistorico() {
   const { theme } = useTheme();
+  const navigate = useNavigate();
 
   const [isComparing, setIsComparing] = useState(false);
   const globalIsDraggingRef = useRef(false);
@@ -1369,6 +1371,17 @@ function MapasAtmosfericosHistorico() {
               }}
             >
               {isComparing ? 'Desactivar Comparación' : 'Comparar Mapas'}
+            </button>
+            <button
+              onClick={() => navigate('/test-report')}
+              style={{
+                padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white', fontWeight: 'bold', cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Ir a Reportes
             </button>
             
             {isComparing && (

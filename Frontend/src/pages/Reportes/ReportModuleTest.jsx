@@ -1,5 +1,6 @@
 // Frontend/src/pages/Reportes/ReportModuleTest.jsx
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import Map, { Marker, Source, Layer, useControl } from 'react-map-gl/mapbox';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -43,6 +44,8 @@ const geojsonStyle = {
 };
 
 const ReportModuleTest = () => {
+  const navigate = useNavigate();
+  
   // Coordenadas y Previsualización
   const [lat, setLat] = useState(-16.5000);
   const [lon, setLon] = useState(-68.1193); // Default La Paz
@@ -369,7 +372,7 @@ const ReportModuleTest = () => {
   const disablePDF = ['polygon', 'country', 'department'].includes(selectionType);
 
   return (
-    <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto', fontFamily: 'Poppins, sans-serif', color: textColor, background: bgColor, minHeight: '100vh', transition: 'all 0.3s' }}>
+    <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto', fontFamily: 'Poppins, sans-serif', color: textColor, background: 'transparent', minHeight: '100vh', transition: 'all 0.3s' }}>
       <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '30px', borderBottom: `1px solid ${borderColor}`, paddingBottom: '10px' }}>
         Reportes <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', color: accentColor, fontWeight: 400 }}>Ambientales</span>
       </h2>
@@ -489,6 +492,18 @@ const ReportModuleTest = () => {
           </Map>
         </div>
 
+      </div>
+
+      {/* Botón de Regreso */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}>
+        <button 
+          onClick={() => navigate('/mapa-historico')} 
+          style={{ padding: '12px 24px', background: cardColor, color: textColor, border: `1px solid ${borderColor}`, borderRadius: '8px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '10px' }}
+          onMouseOver={(e) => e.target.style.background = '#27272a'}
+          onMouseOut={(e) => e.target.style.background = cardColor}
+        >
+          ← Volver al Mapa Histórico
+        </button>
       </div>
     </div>
   );

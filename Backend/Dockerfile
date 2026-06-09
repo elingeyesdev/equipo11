@@ -1,33 +1,60 @@
-# Imagen base: Node.js 20 versión ligera
-FROM node:20-alpine
+# ==========================================
+# ETAPA 1: Compilación de Dependencias (Builder)
+# ==========================================
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Instalar dependencias para Puppeteer/Chromium y eccodes para archivos GRIB2
-RUN apk add --no-cache \
-    chromium nss freetype harfbuzz ca-certificates ttf-freefont curl && \
-    apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+# Instalar herramientas esenciales de compilación nativa de Node
+RUN apk add --no-cache python3 make g++ gcc musl-dev git
 
-# Configurar variables de entorno para Puppeteer y Corepack
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    CHROME_BIN=/usr/bin/chromium-browser \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-
-# Habilitar pnpm vía Corepack
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
-# Copiar manifiestos
+# Copiar archivos de dependencias
 COPY package.json pnpm-lock.yaml ./
 
-# Instalar dependencias con pnpm
-RUN pnpm install
+# Instalar pnpm globalmente e instalar dependencias omitiendo devDependencies
+RUN npm install -g pnpm && \
+    pnpm install --prod
 
-# Copiar el resto del código fuente
+# ==========================================
+# ETAPA 2: Entorno de Ejecución (Runner)
+# ==========================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Instalar dependencias de sistema mínimas requeridas para producción
+# - Chromium: Para automatización de WhatsApp Web (Puppeteer)
+# - eccodes: Para decodificación de GRIB2 NOAA
+# - ca-certificates: Para conexiones TLS seguras
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    curl && \
+    apk add --no-cache eccodes --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+
+# Variables de entorno para Puppeteer y Chromium integrado de Alpine
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production
+
+# Copiar dependencias ya resueltas de la etapa builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copiar el código fuente de la aplicación
 COPY . .
 
-# Puerto que expone la API
+# Exponer el puerto del Backend de Express
 EXPOSE 3000
 
-# Comando para iniciar en desarrollo (con nodemon para hot-reload)
-CMD ["pnpm", "run", "dev"]
+# Añadir Healthcheck nativo de Docker
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Comando de arranque por defecto en producción
+CMD ["node", "index.js"]

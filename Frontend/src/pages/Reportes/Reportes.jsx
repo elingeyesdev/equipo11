@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useUnidades } from '../../hooks/useUnidades'
 import { formatearValor } from '../../utils/unidades'
 import { useToast } from '../../components/Toast/Toast'
-import { formatDateTime } from '../../utils/formatters'
+import { formatDateTime, formatCityName } from '../../utils/formatters'
+import { useZonaSim } from '../../context/ZonaSimContext'
 import httpClient from '../../config/httpClient'
 import LineChart from './LineChart'
 import BarChart from './BarChart'
@@ -13,43 +14,78 @@ import '../PagePlaceholder.css'
 
 export default function Reportes() {
   const { addToast } = useToast()
-  const [historial, setHistorial]           = useState([])
-  const [loading, setLoading]               = useState(true)
-  const [ciudadFiltro, setCiudadFiltro]     = useState('')
-  const [ciudadFiltro2, setCiudadFiltro2]   = useState('')
-  const [fechaInicio, setFechaInicio]       = useState('')
-  const [fechaFin, setFechaFin]             = useState('')
+  const [historial, setHistorial] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [ciudadFiltro, setCiudadFiltro] = useState('')
+  const [ciudadFiltro2, setCiudadFiltro2] = useState('')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
   const [metricaGrafico, setMetricaGrafico] = useState('temperatura')
-  const [page, setPage]                     = useState(1)
+  const [page, setPage] = useState(1)
   const { unidades } = useUnidades()
 
-  useEffect(() => {
-    httpClient.get('/historial')
+  // ─── Zona sim context: auto-refresh cuando termina una simulación ───
+  const { zonaSimActiva, zonaSimSesionId } = useZonaSim()
+  const prevActivaRef = useRef(zonaSimActiva)
+
+  const fetchHistorial = useCallback(() => {
+    console.log('🔄 [Reportes] Solicitando historial fresco al servidor...');
+    setLoading(true)
+    httpClient.get('/historial', { 
+      cacheTTL: false,
+      params: { _t: Date.now() }, // Cache buster absoluto
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
       .then(res => res.data.data)
       .then(data => {
         const flat = []
         data.forEach(t => {
           t.cities.forEach(c => {
             flat.push({
-              fecha:       t.timestamp,
-              ciudad:      c.name,
+              fecha: t.timestamp,
+              ciudad: c.name,
               temperatura: c.data.temperatura,
-              aqi:         c.data.aqi,
-              humedad:     c.data.humedad,
-              ruido:       c.data.ruido,
-              ica:         c.data.ica,
+              aqi: c.data.aqi,
+              humedad: c.data.humedad,
+              ruido: c.data.ruido,
+              ica: c.data.ica,
             })
           })
         })
+        console.log(`✅ [Reportes] Historial cargado. Total ciudades en historial:`, new Set(flat.map(x => x.ciudad)).size);
         setHistorial(flat.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
       })
+      .catch((err) => {
+        console.error('❌ [Reportes] Error cargando historial:', err);
+        addToast('Error cargando historial', 'error');
+      })
       .finally(() => setLoading(false))
-  }, [])
+  }, [addToast])
+
+  // Carga inicial al montar el componente
+  useEffect(() => { fetchHistorial() }, [fetchHistorial])
+
+  // Auto-refresh cuando una simulación de zona termina (activa pasa de true→false)
+  useEffect(() => {
+    if (prevActivaRef.current === true && zonaSimActiva === false) {
+      // Pequeño delay para que la BD termine de escribir
+      const timer = setTimeout(() => {
+        fetchHistorial()
+        addToast('Datos de simulación actualizados', 'success')
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+    prevActivaRef.current = zonaSimActiva
+  }, [zonaSimActiva, fetchHistorial, addToast])
 
   const ciudadesDisponibles = useMemo(() => {
     const s = new Set(CIUDADES)
     historial.forEach(d => s.add(d.ciudad))
-    return Array.from(s).sort()
+    return Array.from(s).sort((a, b) => formatCityName(a).localeCompare(formatCityName(b)))
   }, [historial])
 
   const aplicarRango = dias => {
@@ -57,7 +93,7 @@ export default function Reportes() {
       setFechaInicio('')
       setFechaFin('')
     } else {
-      const now  = new Date()
+      const now = new Date()
       const from = new Date(now)
       from.setDate(from.getDate() - dias)
       setFechaInicio(from.toISOString().split('T')[0])
@@ -68,11 +104,16 @@ export default function Reportes() {
 
   const datosFiltrados = useMemo(() =>
     historial.filter(row => {
+      const esSimulacion = row.ciudad.startsWith('Zona Sim.');
+      const esSimulacionSeleccionada = esSimulacion && (row.ciudad === ciudadFiltro || row.ciudad === ciudadFiltro2);
+
       if (ciudadFiltro || ciudadFiltro2) {
         if (row.ciudad !== ciudadFiltro && row.ciudad !== ciudadFiltro2) return false
       }
-      if (fechaInicio && new Date(row.fecha) < new Date(fechaInicio)) return false
-      if (fechaFin && new Date(row.fecha) > new Date(fechaFin + 'T23:59:59')) return false
+      if (!esSimulacionSeleccionada) {
+        if (fechaInicio && new Date(row.fecha) < new Date(fechaInicio)) return false
+        if (fechaFin && new Date(row.fecha) > new Date(fechaFin + 'T23:59:59')) return false
+      }
       return true
     }),
     [historial, ciudadFiltro, ciudadFiltro2, fechaInicio, fechaFin]
@@ -83,18 +124,18 @@ export default function Reportes() {
   const seriesLinea = useMemo(() => {
     const s = []
     if (ciudadFiltro) {
-       s.push({
-         name: ciudadFiltro,
-         datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro),
-         colorVar: metricaActual.color
-       })
+      s.push({
+        name: formatCityName(ciudadFiltro),
+        datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro),
+        colorVar: metricaActual.color
+      })
     }
     if (ciudadFiltro2) {
-       s.push({
-         name: ciudadFiltro2,
-         datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro2),
-         colorVar: metricaActual.color === 'river' ? 'moss' : 'river'
-       })
+      s.push({
+        name: formatCityName(ciudadFiltro2),
+        datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro2),
+        colorVar: metricaActual.color === 'river' ? 'moss' : 'river'
+      })
     }
     if (s.length === 0) {
       const byTime = {}
@@ -108,7 +149,7 @@ export default function Reportes() {
       })
       const prom = Object.values(byTime)
         .map(t => ({ fecha: t.fecha, [metricaGrafico]: t._n ? t.v / t._n : null }))
-        .sort((a,b) => new Date(a.fecha) - new Date(b.fecha))
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
       s.push({ name: 'Promedio general', datos: prom, colorVar: metricaActual.color })
     }
     return s
@@ -116,13 +157,13 @@ export default function Reportes() {
 
   const stats = useMemo(() => ({
     temperatura: calcStats(datosFiltrados, 'temperatura'),
-    aqi:         calcStats(datosFiltrados, 'aqi'),
-    humedad:     calcStats(datosFiltrados, 'humedad'),
-    ruido:       calcStats(datosFiltrados, 'ruido'),
+    aqi: calcStats(datosFiltrados, 'aqi'),
+    humedad: calcStats(datosFiltrados, 'humedad'),
+    ruido: calcStats(datosFiltrados, 'ruido'),
   }), [datosFiltrados])
 
   const totalPaginas = Math.ceil(datosFiltrados.length / PAGE_SIZE)
-  const datosPagina  = datosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const datosPagina = datosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const descargarReporte = async formato => {
     const getReportFilename = (c1, c2) => {
@@ -132,20 +173,20 @@ export default function Reportes() {
         let clean = name.replace(/Zona Sim\.\s*/i, '');
         // Quitar números
         clean = clean.replace(/\d+/g, '').trim();
-        
+
         // Normalizar a minúsculas y caracteres ascii simples
         clean = clean.toLowerCase()
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-z\s]/g, '')
           .trim();
-          
+
         const hasDept = clean.includes('department') || clean.includes('departamento');
         if (hasDept) {
           clean = clean.replace(/department|departamento/g, '').trim();
           clean = clean.replace(/\s+/g, '_');
           return `department_${clean}`;
         }
-        
+
         return clean.replace(/\s+/g, '_');
       };
 
@@ -167,34 +208,34 @@ export default function Reportes() {
     try {
       const payload = {
         formato,
-        titulo: `Reporte Ambiental${ciudadFiltro ? (ciudadFiltro2 ? ` — ${ciudadFiltro} vs ${ciudadFiltro2}` : ` — ${ciudadFiltro}`) : ' — Todas las ciudades'}`,
+        titulo: `Reporte Ambiental${ciudadFiltro ? (ciudadFiltro2 ? ` — ${formatCityName(ciudadFiltro)} vs ${formatCityName(ciudadFiltro2)}` : ` — ${formatCityName(ciudadFiltro)}`) : ' — Todas las ciudades'}`,
         columnas: [
-          { header: 'Fecha y Hora',  key: 'fechaFmt' },
-          { header: 'Ciudad',        key: 'ciudad' },
-          { header: 'Temp (°C)',     key: 'temperaturaFmt' },
-          { header: 'AQI',           key: 'aqiFmt' },
-          { header: 'Humedad (%)',   key: 'humedadFmt' },
-          { header: 'Ruido (dB)',    key: 'ruidoFmt' },
-          { header: 'ICA',           key: 'icaFmt' },
+          { header: 'Fecha y Hora', key: 'fechaFmt' },
+          { header: 'Ciudad', key: 'ciudad' },
+          { header: 'Temp (°C)', key: 'temperaturaFmt' },
+          { header: 'AQI', key: 'aqiFmt' },
+          { header: 'Humedad (%)', key: 'humedadFmt' },
+          { header: 'Ruido (dB)', key: 'ruidoFmt' },
+          { header: 'ICA', key: 'icaFmt' },
         ],
         datos: datosFiltrados.map(d => ({
-          fechaFmt:       formatDateTime(d.fecha),
-          ciudad:         d.ciudad,
+          fechaFmt: formatDateTime(d.fecha),
+          ciudad: formatCityName(d.ciudad),
           temperaturaFmt: formatearValor('temperatura', d.temperatura, unidades.temperatura),
-          aqiFmt:         formatearValor('aqi',         d.aqi,         unidades.aqi),
-          humedadFmt:     formatearValor('humedad',     d.humedad,     unidades.humedad),
-          ruidoFmt:       formatearValor('ruido',       d.ruido,       unidades.ruido),
-          icaFmt:         d.ica != null ? `${Number(d.ica).toFixed(0)} ICA` : '—',
+          aqiFmt: formatearValor('aqi', d.aqi, unidades.aqi),
+          humedadFmt: formatearValor('humedad', d.humedad, unidades.humedad),
+          ruidoFmt: formatearValor('ruido', d.ruido, unidades.ruido),
+          icaFmt: d.ica != null ? `${Number(d.ica).toFixed(0)} ICA` : '—',
         })),
       }
 
       const res = await httpClient.post('/reportes/generar', payload, { responseType: 'blob' })
       const blob = res.data
-      const url  = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(blob)
       const filename = `${getReportFilename(ciudadFiltro, ciudadFiltro2)}.${formato === 'excel' ? 'xlsx' : 'pdf'}`
-      
-      const a    = Object.assign(document.createElement('a'), {
-        href:     url,
+
+      const a = Object.assign(document.createElement('a'), {
+        href: url,
         download: filename,
       })
       document.body.appendChild(a)
@@ -219,15 +260,31 @@ export default function Reportes() {
             estadísticas y exporta los datos en PDF o Excel.
           </p>
         </div>
-        <span className="page-tag">{datosFiltrados.length} registros</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {zonaSimActiva && (
+            <span className="page-tag" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#fb923c', borderColor: 'rgba(251, 146, 60, 0.3)' }}>
+              ⏳ Simulación en curso…
+            </span>
+          )}
+          <button
+            className="rep-rango-btn"
+            onClick={fetchHistorial}
+            disabled={loading}
+            title="Recargar datos del historial"
+            style={{ padding: '6px 14px', fontSize: '13px', cursor: loading ? 'wait' : 'pointer' }}
+          >
+            {loading ? '⏳' : '🔄'} Actualizar
+          </button>
+          <span className="page-tag">{datosFiltrados.length} registros</span>
+        </div>
       </div>
 
       {/* ─── KPI Cards ──────────────────────────────────────── */}
       <div className="rep-kpi-grid">
-        <KpiCard label="Temperatura"      sufijo="°C"   colorVar="violet" icon="🌡" stats={stats.temperatura} />
-        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust"   icon="🌫" stats={stats.aqi} />
-        <KpiCard label="Humedad"          sufijo="%"    colorVar="river"  icon="💧" stats={stats.humedad} />
-        <KpiCard label="Ruido"            sufijo=" dB"  colorVar="amber"  icon="🔊" stats={stats.ruido} />
+        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" icon="🌡" stats={stats.temperatura} />
+        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" icon="🌫" stats={stats.aqi} />
+        <KpiCard label="Humedad" sufijo="%" colorVar="river" icon="💧" stats={stats.humedad} />
+        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" icon="🔊" stats={stats.ruido} />
       </div>
 
       {/* ─── Filtros ────────────────────────────────────────── */}
@@ -239,14 +296,14 @@ export default function Reportes() {
             <select
               className="rep-select"
               value={ciudadFiltro}
-              onChange={e => { 
+              onChange={e => {
                 setCiudadFiltro(e.target.value)
                 if (!e.target.value) setCiudadFiltro2('')
-                setPage(1) 
+                setPage(1)
               }}
             >
               <option value="">Todas las ciudades</option>
-              {ciudadesDisponibles.map(c => <option key={c} value={c}>{c}</option>)}
+              {ciudadesDisponibles.map(c => <option key={c} value={c}>{formatCityName(c)}</option>)}
             </select>
           </label>
 
@@ -259,7 +316,7 @@ export default function Reportes() {
                 onChange={e => { setCiudadFiltro2(e.target.value); setPage(1) }}
               >
                 <option value="">Ninguna</option>
-                {ciudadesDisponibles.map(c => (c !== ciudadFiltro) && <option key={c} value={c}>{c}</option>)}
+                {ciudadesDisponibles.map(c => (c !== ciudadFiltro) && <option key={c} value={c}>{formatCityName(c)}</option>)}
               </select>
             </label>
           )}
@@ -294,15 +351,15 @@ export default function Reportes() {
           <div className="rep-actions">
             <button className="rep-export-btn rep-export-pdf" onClick={() => descargarReporte('pdf')}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
               PDF
             </button>
             <button className="rep-export-btn rep-export-xl" onClick={() => descargarReporte('excel')}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <path d="M3 9h18M3 15h18M9 3v18"/>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M3 15h18M9 3v18" />
               </svg>
               Excel
             </button>
@@ -332,7 +389,7 @@ export default function Reportes() {
             <div className="rep-chart-title">
               Evolución temporal
               <span className="rep-chart-sub">
-                {ciudadFiltro ? (ciudadFiltro2 ? `${ciudadFiltro} vs ${ciudadFiltro2}` : ciudadFiltro) : 'promedio · todas las ciudades'}
+                {ciudadFiltro ? (ciudadFiltro2 ? `${formatCityName(ciudadFiltro)} vs ${formatCityName(ciudadFiltro2)}` : formatCityName(ciudadFiltro)) : 'promedio · todas las ciudades'}
               </span>
             </div>
             {loading
@@ -379,11 +436,11 @@ export default function Reportes() {
                   <td className="rep-td-fecha">
                     {formatDateTime(row.fecha)}
                   </td>
-                  <td className="rep-td-ciudad">{row.ciudad}</td>
+                  <td className="rep-td-ciudad">{formatCityName(row.ciudad)}</td>
                   <td className="rep-td-valor">{formatearValor('temperatura', row.temperatura, unidades.temperatura)}</td>
-                  <td className="rep-td-valor">{formatearValor('aqi',         row.aqi,         unidades.aqi)}</td>
-                  <td className="rep-td-valor">{formatearValor('humedad',     row.humedad,     unidades.humedad)}</td>
-                  <td className="rep-td-valor">{formatearValor('ruido',       row.ruido,       unidades.ruido)}</td>
+                  <td className="rep-td-valor">{formatearValor('aqi', row.aqi, unidades.aqi)}</td>
+                  <td className="rep-td-valor">{formatearValor('humedad', row.humedad, unidades.humedad)}</td>
+                  <td className="rep-td-valor">{formatearValor('ruido', row.ruido, unidades.ruido)}</td>
                   <td className="rep-td-valor">
                     {row.ica != null ? `${Number(row.ica).toFixed(0)} ICA` : '—'}
                   </td>

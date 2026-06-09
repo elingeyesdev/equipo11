@@ -81,6 +81,11 @@ function registerZonaSocketEvents(io) {
                 }
               });
             }
+          },
+          // onComplete: emitir estado cuando la simulación termina automáticamente
+          () => {
+            logger.info('📡 Emitiendo zona:estado { running: false } (auto-complete)');
+            io.emit('zona:estado', { running: false });
           }
         );
 
