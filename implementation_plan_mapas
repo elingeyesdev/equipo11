@@ -1,0 +1,52 @@
+# Implementación de Mapas de Coropletas por Localidad
+
+Este plan detalla cómo implementar mapas de coropletas (áreas coloreadas) que funcionen de manera similar a los actuales mapas de calor (Voronoi), pero utilizando las divisiones administrativas (departamentos/localidades) reales.
+
+## User Review Required
+
+> [!IMPORTANT]
+> Para que el mapa se pinte, necesitamos los polígonos (GeoJSON) de las áreas. Actualmente la base de datos tiene la columna `geojson` en la tabla `regiones`, pero parece estar vacía.
+> 
+> Propongo dos opciones:
+> 1.  **Cargar los GeoJSON en la base de datos**: Puedo generar un script de "seed" con los polígonos simplificados de los 9 departamentos de Bolivia.
+> 2.  **Usar un archivo estático en el Frontend**: Menos "limpio" pero más rápido de implementar.
+>
+> ¿Cuál prefieres? Asumiré la **Opción 1** para el plan técnico ya que es la más escalable según la arquitectura del proyecto.
+
+## Proposed Changes
+
+### Backend
+
+#### [MODIFY] [geografia.routes.js](file:///c:/Users/ASUS%20TUF/Documents/5Semestre/ProSistemas2/SistemaDatosAmbientales/equipo11/Backend/Src/modules/geografia/geografia.routes.js)
+- Añadir un nuevo endpoint `GET /api/geografia/regiones-geojson` que devuelva un `FeatureCollection` de GeoJSON con los departamentos que tengan polígonos definidos.
+- Asegurar que incluya el `id` y `nombre` en las propiedades de cada feature.
+
+#### [NEW] [03_bolivia_geojson.sql](file:///c:/Users/ASUS%20TUF/Documents/5Semestre/ProSistemas2/SistemaDatosAmbientales/equipo11/database/seeds/03_bolivia_geojson.sql)
+- Crear un script para actualizar la tabla `regiones` con los polígonos GeoJSON de los 9 departamentos de Bolivia.
+
+---
+
+### Frontend
+
+#### [MODIFY] [ChoroplethLayer.jsx](file:///c:/Users/ASUS%20TUF/Documents/5Semestre/ProSistemas2/SistemaDatosAmbientales/equipo11/Frontend/src/pages/MapaMonitoreo/layers/ChoroplethLayer.jsx)
+- Refactorizar para que consuma el nuevo endpoint del backend `/api/geografia/regiones-geojson`.
+- Implementar la lógica de "enriquecimiento" de datos consumiendo OpenMeteo para cada departamento (usando el centroide del polígono).
+- Integrar con `useUmbrales` para aplicar la paleta de colores dinámica de la misma forma que el `VoronoiLayer`.
+
+#### [MODIFY] [MapaMonitoreo.jsx](file:///c:/Users/ASUS%20TUF/Documents/5Semestre/ProSistemas2/SistemaDatosAmbientales/equipo11/Frontend/src/pages/MapaMonitoreo/MapaMonitoreo.jsx)
+- Importar e incluir el `ChoroplethLayer` en el mapa.
+- Añadir un toggle en el panel de "Ajustes > Capas" para activar/desactivar el Mapa de Coropletas (o integrarlo como una opción dentro de Mapa de Calor).
+
+#### [MODIFY] [weatherApi.js](file:///c:/Users/ASUS%20TUF/Documents/5Semestre/ProSistemas2/SistemaDatosAmbientales/equipo11/Frontend/src/utils/weatherApi.js)
+- Añadir una función `getBulkWeatherForCoords` (si no existe) para optimizar el fetch de datos de OpenMeteo para múltiples departamentos en una sola llamada.
+
+## Verification Plan
+
+### Automated Tests
+- Verificar que el endpoint `/api/geografia/regiones-geojson` retorne un GeoJSON válido.
+- Verificar que `ChoroplethLayer` renderice sin errores en la consola.
+
+### Manual Verification
+1.  Activar la capa de coropletas desde los ajustes del mapa.
+2.  Cambiar la métrica (AQI, Temperatura, etc.) y verificar que los colores de los departamentos cambien según la paleta.
+3.  Comparar los valores mostrados en la coropleta con los datos de OpenMeteo para confirmar precisión.

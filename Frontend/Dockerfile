@@ -9,8 +9,8 @@ WORKDIR /app
 # Copiar solo manifiestos para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml ./
 
-# Instalar dependencias (frozen-lockfile garantiza reproducibilidad exacta)
-RUN pnpm install --frozen-lockfile
+# Instalar dependencias
+RUN pnpm install
 
 # Copiar el resto del código fuente
 COPY . .
