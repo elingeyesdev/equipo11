@@ -18,6 +18,7 @@ let tickIndex = 0;
 let currentSesionId = null;
 let currentMetricaClave = null;
 let currentEscenario = null;
+let onCompleteCallback = null;
 
 const METRIC_META = {
   temperatura: { unidad: '°C',  nombre: 'Temperatura'  },
@@ -168,7 +169,7 @@ async function finalizarSesion(sesionId, totalTicks) {
 
 // ─── API pública ──────────────────────────────────────────────────────────────
 
-async function iniciarSimulacionZona(config, onTick) {
+async function iniciarSimulacionZona(config, onTick, onComplete) {
   if (tickIntervalId) throw new Error('Ya hay una simulación de zona activa');
 
   const { metricaClave, escenario, dias, intervalMinutos, intervalSimSeg,
@@ -232,10 +233,15 @@ async function iniciarSimulacionZona(config, onTick) {
   currentMetricaClave = metricaClave;
   currentEscenario = escenario;
 
+  onCompleteCallback = onComplete || null;
+
   tickIntervalId = setInterval(() => {
     if (tickIndex >= tickData.length) {
       logger.info('🏁 Simulación finalizada');
-      detenerSimulacionZona();
+      const cb = onCompleteCallback;
+      detenerSimulacionZona().then(() => {
+        if (cb) cb();
+      });
       return;
     }
     logger.info(`⏱ Tick ${tickIndex + 1}/${tickData.length} [${metricaClave} - ${globalEsc.nombre}]`);
@@ -266,6 +272,7 @@ async function detenerSimulacionZona() {
   const ticks = tickIndex;
   tickData = []; tickIndex = 0;
   currentSesionId = null; currentMetricaClave = null; currentEscenario = null;
+  onCompleteCallback = null;
   if (sesionId) await finalizarSesion(sesionId, ticks);
   return true;
 }

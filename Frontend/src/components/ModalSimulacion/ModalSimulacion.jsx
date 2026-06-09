@@ -105,7 +105,7 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
   // Zona que estamos configurando actualmente (0 o 1)
   const [activeZoneIdx, setActiveZoneIdx] = useState(0);
 
-  // Configuraciones por zona: [{ escenarioIdx, dias, intervalMin, intervalSimSeg }]
+  // Configuraciones por zona: [{ escenarioIdx, intensidad, dias, intervalMin, intervalSimSeg }]
   const [zoneConfigs, setZoneConfigs] = useState([]);
 
   useEffect(() => {
@@ -113,6 +113,7 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
       // Inicializar configs para cada frontera
       setZoneConfigs(fronteras.map(() => ({
         escenarioIdx: 0,
+        intensidad: 'medio',
         dias: 1,
         intervalMin: 60,
         intervalSimSeg: 3
@@ -149,12 +150,25 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
         intervalMinutos: zoneConfigs[0]?.intervalMin || 60,
         intervalSimSeg: zoneConfigs[0]?.intervalSimSeg || 3,
         zonas: fronteras.map((f, idx) => {
-          const zCfg = zoneConfigs[idx] || { escenarioIdx: 0 };
-          const esc = metric.escenarios[zCfg.escenarioIdx] || metric.escenarios[0];
+          const zCfg = zoneConfigs[idx] || { escenarioIdx: 0, intensidad: 'medio' };
+          const escBase = metric.escenarios[zCfg.escenarioIdx] || metric.escenarios[0];
+          const nivelCfg = escBase.niveles?.[zCfg.intensidad] || {
+            inicio: escBase.inicio || 0,
+            fin: escBase.fin || 0,
+            rangoLabel: escBase.rangoLabel || ''
+          };
           return {
             nombre: f.nombre,
             centroide: calcCenter(f.bbox),
-            escenario: esc
+            escenario: {
+              id: `${escBase.id}_${zCfg.intensidad}`,
+              nombre: `${escBase.nombre} (${zCfg.intensidad.toUpperCase()})`,
+              inicio: nivelCfg.inicio,
+              fin: nivelCfg.fin,
+              curva: escBase.curva,
+              rangoLabel: nivelCfg.rangoLabel,
+              borderColor: escBase.borderColor
+            }
           };
         })
       };
@@ -172,7 +186,18 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
 
   if (!isOpen || zoneConfigs.length === 0) return null;
 
-  const escenarioSeleccionado = metric.escenarios[currentCfg.escenarioIdx];
+  const escBase = metric.escenarios[currentCfg.escenarioIdx] || metric.escenarios[0];
+  const nivelCfg = escBase.niveles?.[currentCfg.intensidad || 'medio'] || {
+    inicio: escBase.inicio || 0,
+    fin: escBase.fin || 0,
+    rangoLabel: escBase.rangoLabel || ''
+  };
+  const escenarioSeleccionado = {
+    ...escBase,
+    inicio: nivelCfg.inicio,
+    fin: nivelCfg.fin,
+    rangoLabel: nivelCfg.rangoLabel
+  };
 
   return (
     <div className="msim-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -227,11 +252,42 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
             {metric.escenarios.map((esc, idx) => (
               <EscenarioCard
                 key={esc.id}
-                escenario={esc}
+                escenario={{
+                  ...esc,
+                  rangoLabel: esc.niveles?.[currentCfg.intensidad || 'medio']?.rangoLabel || esc.rangoLabel
+                }}
                 selected={currentCfg.escenarioIdx === idx}
                 onSelect={() => updateCfg('escenarioIdx', idx)}
                 metricaColor={metric.categoriaColor}
               />
+            ))}
+          </div>
+
+          <div className="msim-section-label" style={{ marginTop: '16px' }}>INTENSIDAD DEL ESCENARIO</div>
+          <div className="msim-intensidad-selector" style={{ display: 'flex', gap: '10px', margin: '8px 0 16px 0' }}>
+            {['bajo', 'medio', 'alto'].map(lvl => (
+              <button
+                key={lvl}
+                type="button"
+                className={`msim-btn ${currentCfg.intensidad === lvl ? 'msim-btn-active-level' : ''}`}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  font: '600 12px sans-serif',
+                  textTransform: 'uppercase',
+                  border: currentCfg.intensidad === lvl ? `1px solid ${metric.categoriaColor}` : '1px solid rgba(255,255,255,0.1)',
+                  background: currentCfg.intensidad === lvl ? `${metric.categoriaColor}22` : 'rgba(255,255,255,0.03)',
+                  color: currentCfg.intensidad === lvl ? '#fff' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => updateCfg('intensidad', lvl)}
+              >
+                {lvl === 'bajo' && '🟢 Bajo'}
+                {lvl === 'medio' && '🟡 Medio'}
+                {lvl === 'alto' && '🔴 Alto'}
+              </button>
             ))}
           </div>
 

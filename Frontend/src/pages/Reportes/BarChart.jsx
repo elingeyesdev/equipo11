@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { formatCityName } from '../../utils/formatters';
 
 export default function BarChart({ datos, metrica, colorVar }) {
   const cities = useMemo(() => {
@@ -11,7 +12,7 @@ export default function BarChart({ datos, metrica, colorVar }) {
       map[d.ciudad].n++;
     });
     return Object.entries(map)
-      .map(([name, { sum, n }]) => ({ name, avg: sum / n }))
+      .map(([name, { sum, n }]) => ({ name: formatCityName(name), avg: sum / n }))
       .sort((a, b) => b.avg - a.avg);
   }, [datos, metrica]);
 

@@ -9,7 +9,7 @@
  */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import Map, { NavigationControl, FullscreenControl, GeolocateControl, Popup } from 'react-map-gl/mapbox';
+import Map, { NavigationControl, FullscreenControl, GeolocateControl, Popup, Marker, Source, Layer } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './MapaMonitoreo.css';
 import { useSimulacion } from '../../context/SimulacionContext';
@@ -27,7 +27,6 @@ import { formatTime } from '../../utils/formatters';
 import HeatmapLegend from './components/HeatmapLegend';
 import GeocoderSearch from '../../components/MapaMonitoreo/GeocoderSearch';
 import ComparePanel from '../../components/MapaMonitoreo/ComparePanel';
-import CompareConfigMenu from '../../components/MapaMonitoreo/CompareConfigMenu';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
 import MapLayers from '../../components/MapaMonitoreo/MapLayers';
 import useRadarData from '../../hooks/useRadarData';
@@ -36,10 +35,63 @@ import useSensors from '../../hooks/useSensors';
 import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
-import MapLegend from '../../components/MapaMonitoreo/MapLegend';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import { FALLBACK_DATA } from '../../data/fallbackData';
 import { getImageDataArray, sampleWindBilinear, sampleRainBilinear, sampleSnowBilinear, sampleVisibilityBilinear, sampleTempBilinear, sampleAqiNearest } from '../../utils/windMath';
+
+const updateManualResult = (points, isZ2, customName) => {
+  if (!points || points.length < 3) return null;
+  const minLng = Math.min(...points.map(p => p[0]));
+  const maxLng = Math.max(...points.map(p => p[0]));
+  const minLat = Math.min(...points.map(p => p[1]));
+  const maxLat = Math.max(...points.map(p => p[1]));
+  const bbox = [[minLng, minLat], [maxLng, maxLat]];
+  const closedPoints = [...points, points[0]];
+  const name = customName || (isZ2 ? "Zona Manual 2" : "Zona Manual 1");
+  return {
+    geojson: {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [closedPoints]
+        },
+        properties: { name: name }
+      }]
+    },
+    bbox: bbox,
+    nombre: name
+  };
+};
+
+const getManualGeoJSON = (points) => {
+  if (!points || points.length < 2) return { type: 'FeatureCollection', features: [] };
+  if (points.length < 3) {
+    return {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: points
+        }
+      }]
+    };
+  }
+  return {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[...points, points[0]]]
+      }
+    }]
+  };
+};
 
 function MapaMonitoreo() {
   const location = useLocation();
@@ -53,7 +105,10 @@ function MapaMonitoreo() {
   const {
     isRunning, cities: simulatedCities,
     fronterasSeleccionadas, setFronterasSeleccionadas,
-    isSimMode, setIsSimMode
+    isSimMode, setIsSimMode,
+    zona1Cfg, setZona1Cfg,
+    zona2Cfg, setZona2Cfg,
+    activeDrawingZone, setActiveDrawingZone
   } = useSimulacion();
   const {
     zonaSimActiva, zonaSimZonas = [], zonaSimMetrica,
@@ -143,7 +198,6 @@ function MapaMonitoreo() {
 
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
-  const mapRefRight = useRef(null);
   const pendingFlyTo = useRef(null); // flyTo pendiente si el mapa aún no cargó
   const containerRef = useRef(null); // ref para el ResizeObserver
 
@@ -269,14 +323,6 @@ function MapaMonitoreo() {
     zoom: 3.5
   });
 
-  const [viewStateRight, setViewStateRight] = useState({
-    longitude: -60.0,
-    latitude: -20.0,
-    zoom: 3.5
-  });
-  
-  const [isCameraSynced, setIsCameraSynced] = useState(false);
-
   const getAqiColor = (aqi) => {
     if (aqi >= 300) return '#7e0023';
     if (aqi >= 200) return '#8f3f97';
@@ -343,9 +389,32 @@ function MapaMonitoreo() {
 
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
+    console.log("[DEBUG DRAW] handleMapClick triggered:", { lng, lat, isSimMode, activeDrawingZone, zona1CfgPoints: zona1Cfg?.manualPoints });
 
-    // ─── Modo Simulación: salir (ahora las zonas se manejan por FronterasPanel) ───
+    // ─── Modo Simulación ───
     if (isSimMode) {
+      if (activeDrawingZone === 'z1') {
+        const nextPoints = [...zona1Cfg.manualPoints, [lng, lat]];
+        const updatedZ1 = {
+          ...zona1Cfg,
+          manualPoints: nextPoints,
+          result: updateManualResult(nextPoints, false, zona1Cfg.manualName)
+        };
+        setZona1Cfg(updatedZ1);
+        handleBoundarySelect({ z1: updatedZ1.result, z2: zona2Cfg.result, changed: 'z1' });
+        return;
+      }
+      if (activeDrawingZone === 'z2') {
+        const nextPoints = [...zona2Cfg.manualPoints, [lng, lat]];
+        const updatedZ2 = {
+          ...zona2Cfg,
+          manualPoints: nextPoints,
+          result: updateManualResult(nextPoints, true, zona2Cfg.manualName)
+        };
+        setZona2Cfg(updatedZ2);
+        handleBoundarySelect({ z1: zona1Cfg.result, z2: updatedZ2.result, changed: 'z2' });
+        return;
+      }
       return;
     }
 
@@ -466,18 +535,11 @@ function MapaMonitoreo() {
       scalarMetrics.push({ label: 'Calidad del Aire (AQI)', value: Math.round(localAqi).toString(), unit: catLabel, color: catColor });
     }
 
-    const hasScalarActive = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
-
-    if (hasScalarActive) {
-      if (scalarMetrics.length > 0) {
-        setScalarPopup({ lng, lat, metrics: scalarMetrics });
-      } else {
-        setScalarPopup(null);
-      }
-      return; // Bloqueamos el popup grande si hay una capa escalar
+    if (scalarMetrics.length > 0) {
+      setScalarPopup({ lng, lat, metrics: scalarMetrics });
+    } else {
+      setScalarPopup(null);
     }
-    
-    setScalarPopup(null);
 
     // Primero: buscar la ciudad más cercana en el simulador (radio ~2.5° ≈ 280 km)
     const nearest = citiesData.reduce(
@@ -497,6 +559,7 @@ function MapaMonitoreo() {
         subtitle: `Área de ${nearest.city.name} — ${sourceLabel}`,
         data: {
           ...nearest.city.data,
+          windSpeed: localWind ? localWind.speed : nearest.city.data?.windSpeed,
           rain: localRain !== null ? localRain : nearest.city.data?.rain,
         },
       });
@@ -509,7 +572,8 @@ function MapaMonitoreo() {
               ...prev,
               data: {
                 ...prev.data,
-                // Preservar lluvia calculada localmente
+                // Preservar viento y lluvia calculados localmente
+                windSpeed: prev.data.windSpeed ?? weather.current.wind_speed_10m,
                 rain: prev.data.rain ?? weather.current.rain,
               }
             } : null;
@@ -592,17 +656,18 @@ function MapaMonitoreo() {
   const activeControlsCount = [isParticlesActive, isHeatmapActive, isChoroplethActive, isHistoricalMode, showSensors, isSimMode].filter(Boolean).length;
 
   const handleCityClick = useCallback(async (city) => {
-    const hasScalar = isHeatmapActive || (isParticlesActive && Object.values(particleFilters).some(v => v));
-    if (hasScalar) return; // Bloqueo crítico
-
     setSelectedCity(city);
     try {
       const weather = await getWeatherAtLocation(city.latitude, city.longitude);
       if (weather?.current) {
         setWeatherCode(weather.current.weather_code);
+        setSelectedCity(prev => prev ? {
+          ...prev,
+          data: { ...prev.data, windSpeed: weather.current.wind_speed_10m }
+        } : null);
       }
     } catch (err) { console.error(err); }
-  }, [isHeatmapActive, isParticlesActive, particleFilters]);
+  }, []);
 
   return (
     <div className="mapa-page-container" ref={containerRef}>
@@ -636,7 +701,7 @@ function MapaMonitoreo() {
         </div>
       )}
 
-      <div className={`map-container${isSimMode ? ' sim-mode' : ''}`}>
+      <div className={`map-container${isSimMode ? ' sim-mode' : ''}${activeDrawingZone ? ' drawing-mode' : ''}`}>
         {isSimMode && (
           <FronterasPanel
             onBoundarySelect={handleBoundarySelect}
@@ -664,10 +729,7 @@ function MapaMonitoreo() {
             id="mapA"
             ref={mapRef}
             {...viewState}
-            onMove={evt => {
-              setViewState(evt.viewState);
-              if (isCameraSynced) setViewStateRight(evt.viewState);
-            }}
+            onMove={evt => setViewState(evt.viewState)}
             onMoveEnd={handleMapMoveEnd}
             onLoad={() => {
               if (pendingFlyTo.current) {
@@ -710,8 +772,69 @@ function MapaMonitoreo() {
               particleFilters={particleFilters}
               dynamicWindLabels={dynamicWindLabels}
               scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
-              onCityClick={handleCityClick}
             />
+
+            {/* Dibujo Manual Zona 1 */}
+            {zona1Cfg.selectionMode === 'manual' && zona1Cfg.manualPoints.length >= 2 && (
+              <Source id="manual-z1-temp-src" type="geojson" data={getManualGeoJSON(zona1Cfg.manualPoints)}>
+                {zona1Cfg.manualPoints.length < 3 ? (
+                  <Layer
+                    id="manual-z1-temp-line"
+                    type="line"
+                    paint={{ 'line-color': '#38bdf8', 'line-width': 2, 'line-dasharray': [2, 2] }}
+                  />
+                ) : (
+                  <>
+                    <Layer
+                      id="manual-z1-temp-fill"
+                      type="fill"
+                      paint={{ 'fill-color': '#38bdf8', 'fill-opacity': 0.15 }}
+                    />
+                    <Layer
+                      id="manual-z1-temp-line-closed"
+                      type="line"
+                      paint={{ 'line-color': '#38bdf8', 'line-width': 2 }}
+                    />
+                  </>
+                )}
+              </Source>
+            )}
+            {zona1Cfg.selectionMode === 'manual' && zona1Cfg.manualPoints.map((pt, idx) => (
+              <Marker key={`z1-pt-${idx}`} longitude={pt[0]} latitude={pt[1]} anchor="center">
+                <div className="manual-marker z1-marker">{idx + 1}</div>
+              </Marker>
+            ))}
+
+            {/* Dibujo Manual Zona 2 */}
+            {zona2Cfg.selectionMode === 'manual' && zona2Cfg.manualPoints.length >= 2 && (
+              <Source id="manual-z2-temp-src" type="geojson" data={getManualGeoJSON(zona2Cfg.manualPoints)}>
+                {zona2Cfg.manualPoints.length < 3 ? (
+                  <Layer
+                    id="manual-z2-temp-line"
+                    type="line"
+                    paint={{ 'line-color': '#a855f7', 'line-width': 2, 'line-dasharray': [2, 2] }}
+                  />
+                ) : (
+                  <>
+                    <Layer
+                      id="manual-z2-temp-fill"
+                      type="fill"
+                      paint={{ 'fill-color': '#a855f7', 'fill-opacity': 0.15 }}
+                    />
+                    <Layer
+                      id="manual-z2-temp-line-closed"
+                      type="line"
+                      paint={{ 'line-color': '#a855f7', 'line-width': 2 }}
+                    />
+                  </>
+                )}
+              </Source>
+            )}
+            {zona2Cfg.selectionMode === 'manual' && zona2Cfg.manualPoints.map((pt, idx) => (
+              <Marker key={`z2-pt-${idx}`} longitude={pt[0]} latitude={pt[1]} anchor="center">
+                <div className="manual-marker z2-marker">{idx + 1}</div>
+              </Marker>
+            ))}
 
             {scalarPopup && (
               <Popup
@@ -724,14 +847,14 @@ function MapaMonitoreo() {
                 offset={15}
                 className="premium-weather-popup"
               >
-                <div className="scalar-popup-content">
+                <div style={{ background: 'rgba(20, 20, 20, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', padding: '8px', minWidth: '120px' }}>
                   {scalarPopup.metrics.map((m, idx) => (
-                    <div key={idx} className="scalar-popup-row" style={{ borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none' }}>
-                      <span className="scalar-popup-label">{m.label}</span>
+                    <div key={idx} style={{ padding: '6px 4px', borderBottom: idx < scalarPopup.metrics.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none', display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '11px', color: '#aaa', textTransform: 'uppercase', marginBottom: '2px' }}>{m.label}</span>
                       <div style={{ display: 'flex', alignItems: 'center' }}>
                         {m.color && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: m.color, marginRight: '6px', boxShadow: '0 0 4px rgba(0,0,0,0.5)' }}></div>}
-                        <span className="scalar-popup-value">{m.value}</span>
-                        <span className="scalar-popup-unit">{m.unit}</span>
+                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', fontFamily: 'monospace' }}>{m.value}</span>
+                        <span style={{ fontSize: '12px', color: '#ccc', marginLeft: '4px' }}>{m.unit}</span>
                       </div>
                     </div>
                   ))}
@@ -741,34 +864,6 @@ function MapaMonitoreo() {
           </Map>
 
           {isCompareMode && (
-            <CompareConfigMenu
-              side="A"
-              globalHistoryArray={globalHistoryArray}
-              currentIndex={compareIndexA}
-              onTimeSelect={setCompareIndexA}
-              onBoundarySelect={(boundary) => {
-                if (boundary.bbox && mapRef.current) {
-                  mapRef.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
-                }
-              }}
-            />
-          )}
-
-          {isCompareMode && (
-            <CompareConfigMenu
-              side="B"
-              globalHistoryArray={globalHistoryArray}
-              currentIndex={compareIndexB}
-              onTimeSelect={setCompareIndexB}
-              onBoundarySelect={(boundary) => {
-                if (boundary.bbox && mapRefRight.current) {
-                  mapRefRight.current.fitBounds(boundary.bbox, { padding: 40, duration: 1500 });
-                }
-              }}
-            />
-          )}
-
-          {isCompareMode && (
             <ComparePanel
               swipePos={swipePos}
               setSwipePos={setSwipePos}
@@ -776,17 +871,11 @@ function MapaMonitoreo() {
               compareIndexB={compareIndexB}
               globalHistoryArray={globalHistoryArray}
               formatTime={formatTime}
-              isCameraSynced={isCameraSynced}
-              setIsCameraSynced={setIsCameraSynced}
             >
               <Map
                 id="mapB"
-                ref={mapRefRight}
-                {...viewStateRight}
-                onMove={evt => {
-                  setViewStateRight(evt.viewState);
-                  if (isCameraSynced) setViewState(evt.viewState);
-                }}
+                {...viewState}
+                onMove={evt => setViewState(evt.viewState)}
                 mapStyle={mapStyle}
                 mapboxAccessToken={MAPBOX_TOKEN}
                 projection="mercator"
@@ -858,16 +947,11 @@ function MapaMonitoreo() {
           globalTimelineIndex={globalTimelineIndex} globalHistoryArray={globalHistoryArray}
           particleFilters={particleFilters} setParticleFilters={setParticleFilters}
         />
-
-        <MapLegend 
-          isParticlesActive={isParticlesActive} 
-          particleFilters={particleFilters} 
-        />
       </div>
 
 
 
-      {isDynamicHistoricalMode && !isCompareMode && (
+      {isDynamicHistoricalMode && (
         <>
           <div className="historical-prompt">
             <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Histórico Global Activado</span>
@@ -897,14 +981,14 @@ function MapaMonitoreo() {
         </>
       )}
 
-      {isHistoricalMode && !activeCity && !isCompareMode && (
+      {isHistoricalMode && !activeCity && (
         <div className="historical-prompt">
           <span style={{ fontSize: '1.2rem', marginBottom: '5px' }}>⏳ Modo Histórico Activado</span>
           <span style={{ opacity: 0.8 }}>Selecciona una ciudad o clickea el mapa para cargar su historia.</span>
         </div>
       )}
 
-      {isHistoricalMode && activeCity && !isCompareMode && (
+      {isHistoricalMode && activeCity && (
         <>
           {/* Timeline original comentado temporalmente (Fase 1 Reproductor)
           <Timeline

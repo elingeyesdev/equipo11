@@ -228,3 +228,122 @@
   cursor: not-allowed;
 }
 
+/* Mode Tabs (Frontera vs Manual) */
+.fp-mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--paper-2);
+  padding: 2px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.fp-mode-tab {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--ink-mute);
+  cursor: pointer;
+  border-radius: calc(var(--radius) - 2px);
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.fp-mode-tab.active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.fp-mode-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fp-manual-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px;
+}
+
+.fp-manual-help {
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.fp-pulse-text {
+  color: #ef4444;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.fp-manual-status {
+  font-size: 11.5px;
+  color: var(--ink);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.fp-manual-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fp-btn-draw {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: bold;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--paper-2);
+  color: var(--ink);
+  transition: all 0.2s;
+}
+
+.fp-btn-draw.drawing {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.fp-btn-clear {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: bold;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--paper-2);
+  color: var(--ink);
+  transition: all 0.2s;
+}
+
+.fp-btn-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fp-msg-warn {
+  color: #f59e0b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
