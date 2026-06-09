@@ -6,13 +6,15 @@ const path = require('path');
 const { execSync } = require('child_process');
 const logger = require('../utils/logger');
 
-// 1. Matar procesos huérfanos de Chromium que se quedan colgados cuando Nodemon reinicia la app
-try {
-    execSync('pkill -f chrome');
-    execSync('pkill -f chromium');
-    logger.info('🧹 [WhatsApp] Procesos huérfanos de Chrome/Chromium cerrados.');
-} catch (e) {
-    // Ignorar si no hay procesos
+// 1. Matar procesos huérfanos de Chromium que se quedan colgados cuando Nodemon reinicia la app (solo en Linux/macOS)
+if (process.platform !== 'win32') {
+    try {
+        execSync('pkill -f chrome');
+        execSync('pkill -f chromium');
+        logger.info('🧹 [WhatsApp] Procesos huérfanos de Chrome/Chromium cerrados.');
+    } catch (e) {
+        // Ignorar si no hay procesos
+    }
 }
 
 // 2. Limpieza robusta y recursiva de bloqueos de Chromium (SingletonLock)
