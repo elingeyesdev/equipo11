@@ -1,22 +1,10 @@
+import loginMap from '../../assets/mapa_login.png'
+
 function AuthHero() {
   return (
     <aside className="auth-hero">
       <div className="auth-hero-bg" aria-hidden="true">
-        <svg viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <pattern id="authGrid" patternUnits="userSpaceOnUse" width="32" height="32">
-              <path d="M32 0H0v32" fill="none" stroke="#9aa491" strokeWidth="0.4" />
-            </pattern>
-          </defs>
-          <rect width="600" height="700" fill="url(#authGrid)" />
-          <path d="M 150 80 L 230 60 L 320 55 L 410 70 L 470 90 L 530 85 L 580 120 L 570 200 L 545 280 L 510 360 L 490 440 L 460 510 L 420 560 L 350 580 L 270 590 L 200 570 L 150 520 L 110 440 L 90 360 L 100 280 L 120 200 L 130 140 Z"
-            fill="#cdd2c3" stroke="#9aa491" strokeWidth="1.2" />
-          <circle cx="260" cy="280" r="5" fill="#5b8e5f" />
-          <circle cx="340" cy="400" r="5" fill="#5b8e5f" />
-          <circle cx="420" cy="380" r="5" fill="#c05a3c" />
-          <circle cx="380" cy="480" r="5" fill="#5b8e5f" />
-          <circle cx="300" cy="170" r="5" fill="#d18a3c" />
-        </svg>
+        <img src={loginMap} alt="Mapa de monitoreo" className="auth-hero-bg-img" />
       </div>
 
       <div className="auth-hero-brand">
@@ -29,35 +17,53 @@ function AuthHero() {
         </div>
         <div>
           <div className="nm">EnviroSense</div>
-          <div className="tg">Observatorio ambiental · Bolivia</div>
+          <div className="tg">Observatorio Ambiental Global · Américas</div>
         </div>
       </div>
 
       <div className="auth-hero-mid">
         <div className="kicker">Red de sensores</div>
         <h1>
-          Observando el <em>aire, el agua</em><br />
-          y el ruido de Bolivia<br />
+          Observando el aire,<br />
+          el agua, el clima y los<br />
+          sensores de las Américas<br />
           <em>en tiempo real.</em>
         </h1>
-        <p>Una red abierta de estaciones distribuidas por los nueve departamentos que entrega lecturas cada pocos segundos a municipios, investigadores y ciudadanos.</p>
+        <p>Una red hemisférica de estaciones meteorológicas que entrega lecturas cada pocos segundos, integrando datos satelitales y de superficie para investigadores y ciudadanos.</p>
       </div>
 
       <div className="auth-hero-stats">
         <div className="auth-hero-stat">
-          <div className="l">Estaciones</div>
-          <div className="v">9<span className="live-dot"></span></div>
-          <div className="t">activas ahora</div>
+          <div className="l">Estaciones globales:</div>
+          <div className="v">45K+</div>
+          <div className="stat-visual-dots" style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#8ea389' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#8ea389' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#c88f7b' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#8ea389' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#d1ab7b' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#7ba9b5' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#c88f7b' }}></span>
+            <span style={{ display: 'block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#8ea389' }}></span>
+          </div>
         </div>
         <div className="auth-hero-stat">
-          <div className="l">Lecturas/día</div>
-          <div className="v">25 920</div>
-          <div className="t">una cada 3s</div>
+          <div className="l">Lecturas/minuto:</div>
+          <div className="v">1.2M+</div>
+          <svg width="60" height="12" viewBox="0 0 60 12" fill="none" style={{ marginTop: '6px' }}>
+            <path d="M2 8 C 10 8, 12 2, 20 6 C 28 10, 32 2, 40 7 C 48 12, 50 2, 58 4" stroke="var(--moss-ink)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
         <div className="auth-hero-stat">
-          <div className="l">Datos abiertos</div>
-          <div className="v">1.2 M</div>
-          <div className="t">histórico total</div>
+          <div className="l">Datos abiertos:</div>
+          <div className="v">15.5 PB+</div>
+          <div style={{ display: 'flex', gap: '4px', marginTop: '6px', color: 'var(--ink-mute)' }}>
+            {[...Array(5)].map((_, i) => (
+              <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.5 19A4.5 4.5 0 0 0 22 14.5c0-2.18-1.56-4-3.66-4.42A6 6 0 0 0 7 11c0 .26.02.51.05.76A4.5 4.5 0 0 0 2.5 16a4.5 4.5 0 0 0 4.5 4.5h10.5" />
+              </svg>
+            ))}
+          </div>
         </div>
       </div>
     </aside>

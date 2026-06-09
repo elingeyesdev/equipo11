@@ -38,6 +38,9 @@ importers:
       nodemailer:
         specifier: ^6.9.13
         version: 6.10.1
+      nodemon:
+        specifier: ^3.1.14
+        version: 3.1.14
       pdfkit:
         specifier: ^0.18.0
         version: 0.18.0
@@ -71,10 +74,6 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.4.3
-    devDependencies:
-      nodemon:
-        specifier: ^3.1.14
-        version: 3.1.14
 
 packages:
 

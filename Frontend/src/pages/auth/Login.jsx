@@ -125,7 +125,7 @@ function Login() {
           {view === 'login' && (
             <>
               <div className="auth-eyebrow">Acceso</div>
-              <h2 className="auth-heading">Bienvenido de <em>vuelta</em>.</h2>
+              <h2 className="auth-heading">Bienvenido de vuelta.</h2>
               <p className="auth-subheading">Ingresa tus credenciales para continuar con la observación.</p>
 
               {successMsg && <div className="auth-api-success" style={{color: 'var(--primary)', marginBottom: '1rem', background: 'var(--moss-soft)', padding: '0.8rem', borderRadius: '4px'}}>{successMsg}</div>}
@@ -165,15 +165,7 @@ function Login() {
                 {apiError && <div className="auth-api-error">{apiError}</div>}
 
                 <button type="submit" className="auth-btn" disabled={loading}>
-                  {loading ? 'Ingresando...' : (
-                    <>
-                      Ingresar
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                      </svg>
-                    </>
-                  )}
+                  {loading ? 'Ingresando...' : 'Ingresar →'}
                 </button>
               </form>
 

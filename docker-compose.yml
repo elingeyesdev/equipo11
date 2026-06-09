@@ -30,9 +30,15 @@ services:
       - "3000:3000"
     env_file:
       - ./Backend/.env
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - NODE_ENV=development
     depends_on:
       db:
         condition: service_healthy
+    tty: true
+    stdin_open: true
     command: pnpm run dev
     # Sincroniza tu código local con el contenedor (hot-reload)
     volumes:
