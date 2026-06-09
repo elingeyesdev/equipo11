@@ -3,7 +3,8 @@
  */
 
 export const SNOW_FRESH_RAMP = [
-  { val: 0.0, color: [255, 255, 255, 255] }, // #FFFFFF (Blanco)
+  { val: 0.0, color: [255, 255, 255, 0] }, // Blanco Transparente
+  { val: 0.1, color: [255, 255, 255, 255] }, // Blanco Opaco
   { val: 5.0, color: [221, 251, 255, 255] }, // #DDFBFF (Celeste hielo)
   { val: 15.0, color: [174, 239, 255, 255] }, // #AEEFFF (Celeste suave)
   { val: 30.0, color: [114, 227, 255, 255] }, // #72E3FF (Cyan frío)
@@ -21,29 +22,24 @@ export function buildSnowColorRampTexture(ramp) {
   const maxSnow = 150.0;
   const size = 256;
   const pixels = new Uint8Array(size * 4);
-
+  
   for (let i = 0; i < size; i++) {
-    const snow = (i / (size - 1)) * maxSnow;
-
-    let lo = ramp[0];
-    let hi = ramp[ramp.length - 1];
-
+    const val = (i / 255.0) * maxSnow;
+    let c = ramp[0].color; // Default al mínimo (Transparente)
+    
     for (let j = 0; j < ramp.length - 1; j++) {
-      if (snow >= ramp[j].val && snow <= ramp[j + 1].val) {
-        lo = ramp[j];
-        hi = ramp[j + 1];
+      if (val >= ramp[j].val && val <= ramp[j+1].val) {
+        const t = (val - ramp[j].val) / (ramp[j+1].val - ramp[j].val);
+        c = [
+          Math.round(ramp[j].color[0] + t * (ramp[j+1].color[0] - ramp[j].color[0])),
+          Math.round(ramp[j].color[1] + t * (ramp[j+1].color[1] - ramp[j].color[1])),
+          Math.round(ramp[j].color[2] + t * (ramp[j+1].color[2] - ramp[j].color[2])),
+          Math.round(ramp[j].color[3] + t * (ramp[j+1].color[3] - ramp[j].color[3]))
+        ];
         break;
       }
     }
-
-    const range = hi.val - lo.val;
-    const t = range > 0 ? Math.min(1, Math.max(0, (snow - lo.val) / range)) : 0;
-
-    pixels[i * 4 + 0] = Math.round(lo.color[0] + t * (hi.color[0] - lo.color[0]));
-    pixels[i * 4 + 1] = Math.round(lo.color[1] + t * (hi.color[1] - lo.color[1]));
-    pixels[i * 4 + 2] = Math.round(lo.color[2] + t * (hi.color[2] - lo.color[2]));
-    pixels[i * 4 + 3] = Math.round(lo.color[3] + t * (hi.color[3] - lo.color[3]));
+    pixels.set(c, i * 4);
   }
-
   return pixels;
 }

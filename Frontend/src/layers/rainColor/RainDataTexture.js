@@ -1,62 +1,47 @@
-/**
- * RainDataTexture.js — Gestor de texturas WebGL para datos de lluvia de la NOAA.
- *
- * SRP: Se ocupa de codificar datos escalares del grid en textura GPU.
- *  - Textura 2D de intensidad de lluvia (360x180, LUMINANCE)
- */
-
-import { buildRainColorRampTexture, DEFAULT_RAIN_RAMP } from './colorRamps_rain.js';
+import { buildRainColorRampTexture } from './colorRamps_rain';
 
 const GRID_WIDTH = 360;
 const GRID_HEIGHT = 180;
-const MAX_RAIN = 150.0;
 
 export default class RainDataTexture {
-  /**
-   * @param {WebGLRenderingContext} gl
-   * @param {Array} colorRamp
-   */
-  constructor(gl, colorRamp = DEFAULT_RAIN_RAMP) {
+  constructor(gl) {
     this.gl = gl;
-    this.maxRain = MAX_RAIN;
     this.gridWidth = GRID_WIDTH;
     this.gridHeight = GRID_HEIGHT;
-    this.colorRamp = colorRamp;
 
-    this.rainTextureCurrent = gl.createTexture();
-    this.rainTextureNext = gl.createTexture();
-
-    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
-
-    // Init Current
-    gl.bindTexture(gl.TEXTURE_2D, this.rainTextureCurrent);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
-
-    // Init Next
-    gl.bindTexture(gl.TEXTURE_2D, this.rainTextureNext);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, GRID_WIDTH, GRID_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, emptyData);
+    this.rainTextureCurrent = this._createDataTexture(gl);
+    this.rainTextureNext = this._createDataTexture(gl);
 
     this.rampTexture = gl.createTexture();
-    this._uploadRamp(this.colorRamp);
+    this._uploadRamp();
   }
 
-  _uploadRamp(ramp) {
-    const gl = this.gl;
-    const pixels = buildRainColorRampTexture(ramp);
-
-    gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  _createDataTexture(gl) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    const emptyData = new Uint8Array(GRID_WIDTH * GRID_HEIGHT * 4);
+    gl.texImage2D(
+      gl.TEXTURE_2D, 0, gl.RGBA,
+      GRID_WIDTH, GRID_HEIGHT, 0,
+      gl.RGBA, gl.UNSIGNED_BYTE, emptyData
+    );
+    return tex;
+  }
+
+  _uploadRamp() {
+    const gl = this.gl;
+    const pixels = buildRainColorRampTexture();
+
+    gl.bindTexture(gl.TEXTURE_2D, this.rampTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texImage2D(
       gl.TEXTURE_2D, 0, gl.RGBA,
       256, 1, 0,
@@ -84,20 +69,27 @@ export default class RainDataTexture {
     if (this.pendingCurrentImg && this.pendingCurrentImg !== this.lastCurrentImg) {
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.rainTextureCurrent);
+      // 1. Prevenir wrap en texturas NPOT (Obligatorio)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      // 2. Forzar suavizado bilineal (Elimina el pixelado/efecto Minecraft)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingCurrentImg);
       this.lastCurrentImg = this.pendingCurrentImg;
     }
     if (this.pendingNextImg && this.pendingNextImg !== this.lastNextImg) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.rainTextureNext);
+      // 1. Prevenir wrap en texturas NPOT (Obligatorio)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      // 2. Forzar suavizado bilineal (Elimina el pixelado/efecto Minecraft)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.pendingNextImg);
       this.lastNextImg = this.pendingNextImg;
     }
-  }
-
-  setColorRamp(ramp) {
-    this.colorRamp = ramp;
-    this._uploadRamp(ramp);
   }
 
   destroy() {
