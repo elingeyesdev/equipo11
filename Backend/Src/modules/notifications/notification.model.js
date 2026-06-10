@@ -1,4 +1,5 @@
 const db = require('../../config/db');
+const logger = require('../../utils/logger');
 
 /**
  * Obtiene los tokens FCM de los usuarios que se encuentran en el radio de 50km de la localidad.
@@ -27,7 +28,7 @@ async function getSubscriberTokens(localidadId) {
 
   // Desactivar filtros por completo: retornar todos los tokens activos en desarrollo
   const matchingTokens = users.map(u => u.token);
-  console.log(`[Push Test] Omitiendo filtros. Enviando push a todos los ${matchingTokens.length} dispositivos registrados.`);
+  logger.info(`[Push Test] Omitiendo filtros. Enviando push a todos los ${matchingTokens.length} dispositivos registrados.`);
 
   return matchingTokens;
 }

@@ -19,7 +19,7 @@ const optional = [
   'SMTP_HOST',
   'SMTP_USER',
   'SMTP_PASS',
-  'TELEGRAM_TOKEN',
+  'TELEGRAM_BOT_TOKEN',
 ];
 
 const missing = required.filter(k => !process.env[k]);
