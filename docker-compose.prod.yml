@@ -14,12 +14,10 @@ services:
     ports:
       - "5433:5432"
     volumes:
+      # Esquema normalizado y semillas de inicialización que existen
       - ./database/esquema_envirosense.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./database/seeds/01_geografia.sql:/docker-entrypoint-initdb.d/02_geografia.sql
-      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/03_sudamerica.sql
-      - ./database/seeds/02_umbrales.sql:/docker-entrypoint-initdb.d/04_umbrales.sql
-      - ./database/seeds/geojson:/docker-entrypoint-initdb.d/geojson
-      - ./database/seeds/load_geojson.sh:/docker-entrypoint-initdb.d/05_load_geojson.sh
+      - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/02_sudamerica.sql
+      # Volumen persistente para no perder datos
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-admin} -d $${DB_NAME:-sistema_ambiental}"]
@@ -54,22 +52,30 @@ services:
       SMTP_FROM: ${SMTP_FROM}
     volumes:
       - whatsapp_session:/app/.wwebjs_auth
+      - data_volume:/app/data
     depends_on:
       db:
         condition: service_healthy
 
   # ─── Frontend (React + Vite) ───
   frontend_prod:
-    image: nginx:1.25-alpine
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+        VITE_FIREBASE_VAPID_KEY: ${VITE_FIREBASE_VAPID_KEY}
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_MAP_DATA_URL: ${VITE_MAP_DATA_URL}
     container_name: envirosense_nginx
     restart: always
     ports:
       - "80:80"
-    volumes:
-      # Montar archivo de configuración principal
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      # Montar la compilación estática generada por el frontend
-      - ./Frontend/dist:/usr/share/nginx/html:ro
     depends_on:
       - backend
 
@@ -77,3 +83,4 @@ services:
 volumes:
   pgdata:
   whatsapp_session:
+  data_volume:
