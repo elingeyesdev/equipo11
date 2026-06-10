@@ -13,8 +13,6 @@ async function getSubscriberTokens(localidadId) {
     [localidadId]
   );
   if (locRows.length === 0) return [];
-  
-  const cityName = locRows[0].nombre;
 
   // 2. Obtener usuarios activos con tokens de FCM registrados
   const { rows: users } = await db.query(
