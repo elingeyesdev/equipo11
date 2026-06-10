@@ -11,9 +11,8 @@ RUN apk add --no-cache python3 make g++ gcc musl-dev git
 # Copiar archivos de dependencias
 COPY package.json pnpm-lock.yaml ./
 
-# Instalar pnpm globalmente e instalar dependencias omitiendo devDependencies
 RUN npm install -g pnpm && \
-    pnpm install --prod
+    pnpm install --frozen-lockfile --prod
 
 # ==========================================
 # ETAPA 2: Entorno de Ejecución (Runner)

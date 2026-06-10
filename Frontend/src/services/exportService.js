@@ -67,14 +67,28 @@ export const exportarAExcelMasivo = (dataMasiva, selectedLayers, mainRegionName)
   XLSX.writeFile(wb, `reporte_masivo_${safeFilename}.xlsx`);
 };
 
-export const exportarAPDF = (data, selectedLayers, base64Graph) => {
+export const exportarAPDF = (data, selectedLayers, base64Graph, isPolygon = false, regionName = '') => {
   const doc = new jsPDF();
 
   doc.setFontSize(18);
-  doc.text('Reporte Histórico de Variables Climáticas', 14, 22);
+  doc.setTextColor(0);
+  const title = `Reporte Histórico${regionName ? ` - ${regionName}` : ''}`;
+  if (title.length > 40) doc.setFontSize(14);
+  doc.text(title, 14, 22);
+
+  let currentY = 30;
+
+  if (isPolygon) {
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    const splitNote = doc.splitTextToSize("Nota Metodológica: Los valores presentados en este reporte corresponden a la mediana espacial de todas las lecturas registradas dentro del perímetro seleccionado.", 180);
+    doc.text(splitNote, 14, currentY);
+    currentY += splitNote.length * 5 + 5;
+  }
 
   if (base64Graph) {
-    doc.addImage(base64Graph, 'PNG', 14, 30, 180, 80);
+    doc.addImage(base64Graph, 'PNG', 14, currentY, 180, 80);
+    currentY += 90;
   }
 
   const tableColumn = ["Fecha", ...selectedLayers.map(l => l.charAt(0).toUpperCase() + l.slice(1))];
@@ -91,7 +105,7 @@ export const exportarAPDF = (data, selectedLayers, base64Graph) => {
   doc.autoTable({
     head: [tableColumn],
     body: tableRows,
-    startY: base64Graph ? 120 : 30,
+    startY: currentY,
   });
 
   doc.save('reporte_historico.pdf');
