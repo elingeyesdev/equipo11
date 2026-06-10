@@ -127,7 +127,7 @@ const updatePreferencias = async (req, res) => {
 
     success(res, { mensaje: 'Preferencias actualizadas correctamente', usuario: rows[0] })
   } catch (err) {
-    logger.error(err, 'Error al actualizar preferencias de usuario')
+    logger.error('Error al actualizar preferencias de usuario:', err)
     error(res, 'Error al actualizar preferencias', 500)
   }
 }
@@ -151,7 +151,7 @@ const getPreferencias = async (req, res) => {
 
     success(res, rows[0])
   } catch (err) {
-    logger.error(err, 'Error al obtener preferencias de usuario')
+    logger.error('Error al obtener preferencias de usuario:', err)
     error(res, 'Error al obtener preferencias', 500)
   }
 }
