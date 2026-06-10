@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import * as turf from '@turf/turf';
 import Map, { NavigationControl, FullscreenControl, Popup, Layer, Source } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -568,6 +569,7 @@ const createHistoricalLayer = (id, activeLayerRefInner) => ({
 function MapasAtmosfericosHistorico() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isComparing, setIsComparing] = useState(false);
   const globalIsDraggingRef = useRef(false);
@@ -645,6 +647,59 @@ function MapasAtmosfericosHistorico() {
       map2.off('move', handleMap2Move);
     };
   }, [isComparing, syncMaps]);
+
+  // ─── DEEP LINKING (Desde Módulo de Reportes) ───
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.date) {
+        const d = new Date(location.state.date);
+        setDate1(d);
+        setTimelineAnchorDate1(d);
+        if (syncTime) {
+          setDate2(d);
+          setTimelineAnchorDate2(d);
+        }
+      }
+      if (location.state.layer) {
+        setActiveLayer(location.state.layer);
+      }
+      if (location.state.location) {
+        const loc = location.state.location;
+        let flyOptions;
+        let bbox = null;
+        
+        if (loc.geometry && (loc.geometry.type === 'Polygon' || loc.geometry.type === 'MultiPolygon' || loc.geometry.type === 'Feature' || loc.geometry.type === 'FeatureCollection')) {
+          try {
+            bbox = turf.bbox(loc.geometry);
+          } catch(e) {}
+        }
+        
+        // Timeout para asegurar que la referencia del mapa esté lista
+        setTimeout(() => {
+          if (bbox) {
+            const fitOptions = { padding: 50, duration: 2000, essential: true };
+            if (map1InstanceRef.current) {
+              map1InstanceRef.current.fitBounds(bbox, fitOptions);
+            }
+            if (syncMaps && map2InstanceRef.current) {
+              map2InstanceRef.current.fitBounds(bbox, fitOptions);
+            }
+          } else {
+            flyOptions = { center: [loc.lon, loc.lat], zoom: 8, duration: 2000, essential: true };
+            if (map1InstanceRef.current) {
+              map1InstanceRef.current.flyTo(flyOptions);
+            }
+            if (syncMaps && map2InstanceRef.current) {
+              map2InstanceRef.current.flyTo(flyOptions);
+            }
+          }
+        }, 500);
+      }
+      
+      // Limpiar state para evitar relanzamientos si el usuario navega internamente y vuelve
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, syncTime, syncMaps]);
 
   const mapStyle = theme === 'dark'
     ? 'mapbox://styles/mapbox/dark-v11'
@@ -1292,12 +1347,12 @@ function MapasAtmosfericosHistorico() {
           anchor="bottom"
           className="premium-weather-popup"
         >
-          <div className="scalar-popup-content">
-            <div className="scalar-popup-row" style={{ borderBottom: 'none' }}>
-              <span className="scalar-popup-label">{popupInfo.layer.toUpperCase()}</span>
-              <div className="scalar-popup-value-container">
-                <span className="scalar-popup-value">{popupInfo.value}</span>
-                <span className="scalar-popup-unit">{popupInfo.unit}</span>
+          <div className="scalar-popup-content" style={{ padding: '12px 16px', fontFamily: 'var(--font-sans)' }}>
+            <div className="scalar-popup-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', borderBottom: 'none' }}>
+              <span className="scalar-popup-label" style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{popupInfo.layer.toUpperCase()}</span>
+              <div className="scalar-popup-value-container" style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <span className="scalar-popup-value" style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-light)' }}>{popupInfo.value}</span>
+                <span className="scalar-popup-unit" style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{popupInfo.unit}</span>
               </div>
             </div>
           </div>

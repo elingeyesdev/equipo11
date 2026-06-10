@@ -129,3 +129,27 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Tematización dinámica de Pop-ups de Mapbox */
+.mapboxgl-popup-content {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+  padding: 0 !important;
+}
+.mapboxgl-popup-tip {
+  border-top-color: var(--bg-card) !important;
+  border-bottom-color: var(--bg-card) !important;
+}
+.mapboxgl-popup-close-button {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  padding: 4px 8px;
+}
+.mapboxgl-popup-close-button:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border-radius: 0 var(--radius-lg) 0 0;
+}

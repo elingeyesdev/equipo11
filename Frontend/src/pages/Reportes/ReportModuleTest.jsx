@@ -7,6 +7,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
 import { exportarAExcel, exportarAExcelMasivo, exportarAPDF } from '../../services/exportService';
 import useFronteras from '../../hooks/useFronteras';
+import { useTheme } from '../../context/ThemeContext';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -46,21 +47,40 @@ const geojsonStyle = {
 const ReportModuleTest = () => {
   const navigate = useNavigate();
   
+  const getSavedState = (key, defaultVal) => {
+    try {
+      const saved = sessionStorage.getItem('reportState');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed[key] !== undefined) return parsed[key];
+      }
+    } catch(e) {}
+    return defaultVal;
+  };
+
   // Coordenadas y Previsualización
-  const [lat, setLat] = useState(-16.5000);
-  const [lon, setLon] = useState(-68.1193); // Default La Paz
-  const [regionName, setRegionName] = useState('');
+  const [lat, setLat] = useState(() => getSavedState('lat', -16.5000));
+  const [lon, setLon] = useState(() => getSavedState('lon', -68.1193)); // Default La Paz
+  const [regionName, setRegionName] = useState(() => getSavedState('regionName', ''));
   
   // Modos y Capas Geográficas
-  const [selectionType, setSelectionType] = useState('point'); // point, polygon, country, department, province
-  const [selectedGeoJson, setSelectedGeoJson] = useState(null);
-  const [subRegionsForExport, setSubRegionsForExport] = useState([]); // [{ name, lat, lon }]
+  const [selectionType, setSelectionType] = useState(() => getSavedState('selectionType', 'point')); // point, polygon, country, department, province
+  const [selectedGeoJson, setSelectedGeoJson] = useState(() => getSavedState('selectedGeoJson', null));
+  const [subRegionsForExport, setSubRegionsForExport] = useState(() => getSavedState('subRegionsForExport', [])); // [{ name, lat, lon }]
   
   // Formulario y Estados de Datos
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedLayers, setSelectedLayers] = useState([]);
-  const [intervalHours, setIntervalHours] = useState(1);
+  const [startDate, setStartDate] = useState(() => getSavedState('startDate', ''));
+  const [endDate, setEndDate] = useState(() => getSavedState('endDate', ''));
+  const [selectedLayers, setSelectedLayers] = useState(() => getSavedState('selectedLayers', []));
+  const [intervalHours, setIntervalHours] = useState(() => getSavedState('intervalHours', 1));
+
+  useEffect(() => {
+    const stateToSave = {
+      lat, lon, regionName, selectionType, selectedGeoJson, subRegionsForExport,
+      startDate, endDate, selectedLayers, intervalHours
+    };
+    sessionStorage.setItem('reportState', JSON.stringify(stateToSave));
+  }, [lat, lon, regionName, selectionType, selectedGeoJson, subRegionsForExport, startDate, endDate, selectedLayers, intervalHours]);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   
@@ -76,12 +96,15 @@ const ReportModuleTest = () => {
   const [departamentos, setDepartamentos] = useState([]);
   const [provincias, setProvincias] = useState([]);
 
-  // Estilos Premium Estrictos
-  const bgColor = '#0f172a'; // Negro/Azul profundo
-  const cardColor = '#18181b'; // Gris muy oscuro
-  const textColor = '#f1f5f9';
-  const borderColor = '#27272a';
-  const accentColor = '#86efac'; // Cyan oscuro / Verde pálido
+  // Estilos Premium Estrictos adaptables al tema
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  const bgColor = isDark ? '#0f172a' : '#f8fafc';
+  const cardColor = isDark ? '#18181b' : '#ffffff';
+  const textColor = isDark ? '#f1f5f9' : '#1e293b';
+  const borderColor = isDark ? '#27272a' : '#e2e8f0';
+  const accentColor = isDark ? '#86efac' : '#10b981'; // Cyan oscuro / Verde pálido
   const btnPdfColor = '#ef4444';
   const btnExcelColor = '#22c55e';
 
@@ -103,11 +126,12 @@ const ReportModuleTest = () => {
     const fullStart = `${startDate}T00:00:00`;
     const fullEnd = `${endDate}T23:59:59`;
 
-    // Para la vista en vivo, extraemos solo 1 punto (el centroide o punto clickeado)
+    // Para la vista en vivo, si hay un polígono, se calcula su estadística zonal
     worker.postMessage({
       lat: parseFloat(lat),
       lon: parseFloat(lon),
       regionName,
+      geometry: selectedGeoJson?.features?.[0]?.geometry || (selectedGeoJson?.type === 'Polygon' || selectedGeoJson?.type === 'MultiPolygon' ? selectedGeoJson : null),
       isMassiveExport: false,
       startDate: fullStart,
       endDate: fullEnd,
@@ -152,9 +176,10 @@ const ReportModuleTest = () => {
     
     setSelectedGeoJson({ type: "FeatureCollection", features: [polygon] });
     setSubRegionsForExport([{ 
-      name: 'Polígono Dibujado (Centroide)', 
+      name: 'Polígono Dibujado', 
       lat: centroid.geometry.coordinates[1], 
-      lon: centroid.geometry.coordinates[0] 
+      lon: centroid.geometry.coordinates[0],
+      geometry: polygon.geometry
     }]);
 
     // Limpiar selects
@@ -200,13 +225,18 @@ const ReportModuleTest = () => {
           const cLat = centroid.geometry.coordinates[1];
           const fName = feature.properties?.name || `${name} - Sector ${idx + 1}`;
           
-          extractedSubRegions.push({ name: fName, lat: cLat, lon: cLon });
+          extractedSubRegions.push({ name: fName, lat: cLat, lon: cLon, geometry: feature.geometry });
           
           if (idx === 0) {
             mainCentroidLat = cLat;
             mainCentroidLon = cLon;
           }
         });
+      } else if (geo.geojson.type === 'Polygon' || geo.geojson.type === 'MultiPolygon') {
+        const centroid = turf.centroid(geo.geojson);
+        extractedSubRegions.push({ name: name, lat: centroid.geometry.coordinates[1], lon: centroid.geometry.coordinates[0], geometry: geo.geojson });
+        mainCentroidLat = centroid.geometry.coordinates[1];
+        mainCentroidLon = centroid.geometry.coordinates[0];
       }
 
       setSubRegionsForExport(extractedSubRegions);
@@ -282,7 +312,8 @@ const ReportModuleTest = () => {
         type: 'png', pixelRatio: 2, backgroundColor: cardColor
       });
     }
-    exportarAPDF(data, selectedLayers, base64Graph);
+    const isPolygon = ['polygon', 'country', 'department', 'province'].includes(selectionType);
+    exportarAPDF(data, selectedLayers, base64Graph, isPolygon, regionName);
   };
 
   const handleExportExcel = () => {
@@ -372,9 +403,9 @@ const ReportModuleTest = () => {
   const disablePDF = ['polygon', 'country', 'department'].includes(selectionType);
 
   return (
-    <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto', fontFamily: 'Poppins, sans-serif', color: textColor, background: 'transparent', minHeight: '100vh', transition: 'all 0.3s' }}>
+    <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto', fontFamily: 'var(--font-sans)', color: textColor, background: 'transparent', minHeight: '100vh', transition: 'all 0.3s' }}>
       <h2 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '30px', borderBottom: `1px solid ${borderColor}`, paddingBottom: '10px' }}>
-        Reportes <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', color: accentColor, fontWeight: 400 }}>Ambientales</span>
+        Reportes <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: accentColor, fontWeight: 400 }}>Ambientales</span>
       </h2>
       
       {/* PANEL SUPERIOR: CONTROLES EN FILA */}
@@ -438,7 +469,11 @@ const ReportModuleTest = () => {
         {/* ECharts View */}
         <div style={{ flex: '2 1 600px', position: 'relative', border: `1px solid ${borderColor}`, borderRadius: '12px', padding: '20px', background: cardColor, height: '100%' }}>
           <h3 style={{ fontSize: '1.2rem', marginBottom: '10px', color: accentColor }}>
-            Visualización: {regionName || (selectionType === 'point' ? `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}` : 'Cargando...')}
+            {['polygon', 'country', 'department'].includes(selectionType) ? (
+              `Análisis Espacial: Mediana de los datos dentro de la zona delimitada${regionName ? ` (${regionName})` : ''}`
+            ) : (
+              `Análisis Puntual: Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`
+            )}
           </h3>
           
           {loading && (
@@ -452,7 +487,30 @@ const ReportModuleTest = () => {
           )}
 
           {data.length > 0 ? (
-            <ReactECharts ref={chartRef} option={chartOptions} theme="dark" style={{ height: 'calc(100% - 40px)', width: '100%' }} notMerge={true} />
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <ReactECharts ref={chartRef} option={chartOptions} theme="dark" style={{ flex: 1, width: '100%' }} notMerge={true} />
+              
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', overflowX: 'auto', paddingBottom: '5px' }}>
+                {selectedLayers.map(layer => (
+                  <button
+                    key={`dl-${layer}`}
+                    onClick={() => navigate('/mapa-historico', { 
+                      state: { date: startDate, location: { lat, lon, geometry: selectedGeoJson }, layer } 
+                    })}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)', border: `1px solid ${borderColor}`,
+                      padding: '8px 12px', borderRadius: '6px', color: textColor,
+                      fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  >
+                    🌍 Ver {layer.charAt(0).toUpperCase() + layer.slice(1)} en Mapa
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : !loading ? (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
               <p>Configure los parámetros y dibuje/seleccione una zona para visualizar la serie de tiempo.</p>
@@ -462,6 +520,9 @@ const ReportModuleTest = () => {
 
         {/* Mapbox Mini-Map */}
         <div style={{ flex: '1 1 400px', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${borderColor}`, height: '100%', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: 'rgba(24,24,27,0.85)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#94a3b8', border: `1px solid ${borderColor}`, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+            💡 Tip: Haz doble clic o presiona Enter para finalizar el dibujo del polígono.
+          </div>
           <Map
             ref={mapRef}
             initialViewState={{ longitude: lon, latitude: lat, zoom: 4 }}
@@ -488,7 +549,11 @@ const ReportModuleTest = () => {
             )}
 
             {/* Marcador del Centroide de Previsualización */}
-            <Marker longitude={lon} latitude={lat} color={accentColor} />
+            {selectionType === 'point' && (
+              <Marker longitude={lon} latitude={lat} anchor="bottom" draggable onDragEnd={handleMapClick}>
+                <div style={{ color: accentColor, fontSize: '24px', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>📍</div>
+              </Marker>
+            )}
           </Map>
         </div>
 
