@@ -360,6 +360,48 @@ CREATE INDEX idx_lecturas_sesion ON lecturas(sesion_simulacion_id)
 
 
 -- =============================================================================
+-- BLOQUE 6.1 — SIMULACIÓN DE ESCENARIOS (WHAT-IF)
+-- =============================================================================
+--
+-- Almacena los escenarios de simulación activa configurados por los usuarios.
+-- Cada registro describe el tipo de evento, el polígono geográfico afectado,
+-- los parámetros de intensidad/duración y el estado del experimento.
+
+CREATE TABLE simulaciones (
+  id            BIGSERIAL       PRIMARY KEY,
+  creado_por    INT             REFERENCES usuarios(id) ON DELETE SET NULL,
+  nombre        VARCHAR(200)    NOT NULL,
+  descripcion   TEXT,
+  tipo_evento   VARCHAR(50)     NOT NULL,  -- 'tormenta', 'ola_calor', 'incendio', 'inundacion', 'custom'
+  area_geo      JSONB           NOT NULL,  -- Polígono dibujado [{lat, lng}, ...]
+  localidad_id  INT             REFERENCES localidades(id) ON DELETE CASCADE,
+  parametros    JSONB           NOT NULL,  -- {intensidad, duracion_horas, metricas_afectadas: [...]}
+  estado        VARCHAR(20)     NOT NULL DEFAULT 'activa' 
+                CHECK (estado IN ('activa', 'finalizada', 'cancelada')),
+  creado_en     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+  finalizada_en TIMESTAMPTZ
+);
+
+CREATE INDEX idx_simulaciones_usuario ON simulaciones(creado_por);
+CREATE INDEX idx_simulaciones_localidad ON simulaciones(localidad_id);
+
+-- Almacena los datos inyectados de forma horaria y espacial para cada simulación.
+CREATE TABLE simulaciones_datos (
+  id              BIGSERIAL     PRIMARY KEY,
+  simulacion_id   BIGINT        NOT NULL REFERENCES simulaciones(id) ON DELETE CASCADE,
+  latitud         DECIMAL(10,6) NOT NULL,
+  longitud        DECIMAL(10,6) NOT NULL,
+  metrica_clave   VARCHAR(50)   NOT NULL,
+  valor           DECIMAL(12,4) NOT NULL,
+  tiempo          TIMESTAMPTZ   NOT NULL,
+  UNIQUE (simulacion_id, latitud, longitud, metrica_clave, tiempo)
+);
+
+CREATE INDEX idx_sim_datos_sim ON simulaciones_datos(simulacion_id);
+CREATE INDEX idx_sim_datos_tiempo ON simulaciones_datos(simulacion_id, tiempo);
+
+
+-- =============================================================================
 -- BLOQUE 7 — ALERTAS Y SUSCRIPCIONES
 -- =============================================================================
 --
@@ -381,7 +423,7 @@ CREATE TABLE alertas (
   reconocida       BOOLEAN       NOT NULL DEFAULT FALSE,
   reconocida_por   INT           REFERENCES usuarios(id) ON DELETE SET NULL,
   reconocida_en    TIMESTAMPTZ,
-  tipo             VARCHAR(20)   NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion')),
+  tipo             VARCHAR(20)   NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion', 'simulacion')),
   CHECK ((reconocida = FALSE) OR (reconocida_en IS NOT NULL))
 );
 

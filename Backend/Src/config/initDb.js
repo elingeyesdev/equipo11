@@ -25,7 +25,37 @@ async function initDatabase() {
   await ensureColumn('usuarios', 'whatsapp_destino VARCHAR(100)');
   await ensureColumn('usuarios', 'notif_telegram BOOLEAN DEFAULT FALSE');
   await ensureColumn('usuarios', 'telegram_destino VARCHAR(100)');
-  await ensureColumn('alertas', "tipo VARCHAR(20) NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion'))");
+  await ensureColumn('alertas', "tipo VARCHAR(20) NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion', 'simulacion'))");
+
+  // Hot-migration: actualizar el check constraint de tipo en alertas si ya existía la versión anterior
+  try {
+    const checkConstraintQuery = `
+      SELECT tc.constraint_name 
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.constraint_column_usage ccu 
+        ON tc.constraint_name = ccu.constraint_name 
+        AND tc.table_schema = ccu.table_schema
+        AND tc.table_name = ccu.table_name
+      WHERE tc.table_name = 'alertas' 
+        AND ccu.column_name = 'tipo' 
+        AND tc.constraint_type = 'CHECK'
+    `;
+    const { rows: constraints } = await db.query(checkConstraintQuery);
+    
+    for (const r of constraints) {
+      await db.query(`ALTER TABLE alertas DROP CONSTRAINT IF EXISTS ${r.constraint_name}`);
+      logger.info(`[DB Init] Removiendo check constraint anterior: ${r.constraint_name}`);
+    }
+    
+    await db.query(`
+      ALTER TABLE alertas 
+      ADD CONSTRAINT alertas_tipo_check 
+      CHECK (tipo IN ('real', 'prediccion', 'simulacion'))
+    `);
+    logger.info('✅ Check constraint para alertas.tipo actualizado exitosamente.');
+  } catch (err) {
+    logger.warn('⚠️ No se pudo migrar el check constraint de alertas.tipo (puede no existir la tabla aún):', err.message);
+  }
 
   // 0. Crear tablas de caché (Esenciales para el funcionamiento de los servicios)
   try {
@@ -82,6 +112,43 @@ async function initDatabase() {
     logger.info('✅ Tablas de caché y fcm_tokens verificadas/creadas.');
   } catch (err) {
     logger.error('❌ Error creando tablas de caché/fcm_tokens:', err.message);
+  }
+
+  // 0.2 Crear tablas para Módulo de Simulación de Escenarios (What-If)
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS simulaciones (
+        id            BIGSERIAL       PRIMARY KEY,
+        creado_por    INT             REFERENCES usuarios(id) ON DELETE SET NULL,
+        nombre        VARCHAR(200)    NOT NULL,
+        descripcion   TEXT,
+        tipo_evento   VARCHAR(50)     NOT NULL,  -- 'tormenta', 'ola_calor', 'incendio', 'inundacion', 'custom'
+        area_geo      JSONB           NOT NULL,
+        localidad_id  INT             REFERENCES localidades(id) ON DELETE CASCADE,
+        parametros    JSONB           NOT NULL,
+        estado        VARCHAR(20)     NOT NULL DEFAULT 'activa' 
+                      CHECK (estado IN ('activa', 'finalizada', 'cancelada')),
+        creado_en     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+        finalizada_en TIMESTAMPTZ
+      );
+
+      CREATE TABLE IF NOT EXISTS simulaciones_datos (
+        id              BIGSERIAL     PRIMARY KEY,
+        simulacion_id   BIGINT        NOT NULL REFERENCES simulaciones(id) ON DELETE CASCADE,
+        latitud         DECIMAL(10,6) NOT NULL,
+        longitud        DECIMAL(10,6) NOT NULL,
+        metrica_clave   VARCHAR(50)   NOT NULL,
+        valor           DECIMAL(12,4) NOT NULL,
+        tiempo          TIMESTAMPTZ   NOT NULL,
+        UNIQUE (simulacion_id, latitud, longitud, metrica_clave, tiempo)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_sim_datos_sim ON simulaciones_datos(simulacion_id);
+      CREATE INDEX IF NOT EXISTS idx_sim_datos_tiempo ON simulaciones_datos(simulacion_id, tiempo);
+    `);
+    logger.info('✅ Tablas de simulación de escenarios (What-If) verificadas/creadas.');
+  } catch (err) {
+    logger.error('❌ Error creando tablas de simulación de escenarios:', err.message);
   }
 
   // 1. Verificar Notificaciones
