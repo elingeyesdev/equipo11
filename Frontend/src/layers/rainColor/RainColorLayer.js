@@ -8,6 +8,7 @@
 import mapboxgl from 'mapbox-gl';
 import RainDataTexture from './RainDataTexture.js';
 import { vertexSource, fragmentSource } from './shaders_rain.js';
+import { compileShader, createMercatorQuad } from '../glUtils.js';
 
 export default class RainColorLayer {
   /**
@@ -35,8 +36,8 @@ export default class RainColorLayer {
     this._gl = gl; // Guardamos contexto para limpieza forzada
 
     // 1. Compilar shaders
-    const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
-    const fs = this._compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource, 'RainColorLayer');
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource, 'RainColorLayer');
     this._program = gl.createProgram();
     gl.attachShader(this._program, vs);
     gl.attachShader(this._program, fs);
@@ -57,23 +58,8 @@ export default class RainColorLayer {
     this._uTexSize = gl.getUniformLocation(this._program, 'u_tex_size');
     this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
 
-    // 3. Quad geográfico
-    const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
-    const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
-
-    const nw = { x: -5.0, y: yTop };
-    const ne = { x: 6.0, y: yTop };
-    const sw = { x: -5.0, y: yBottom };
-    const se = { x: 6.0, y: yBottom };
-
-    const vertices = new Float32Array([
-      nw.x, nw.y,
-      ne.x, ne.y,
-      sw.x, sw.y,
-      ne.x, ne.y,
-      se.x, se.y,
-      sw.x, sw.y,
-    ]);
+    // 3. Crear quad geográfico
+    const vertices = createMercatorQuad(map);
 
     this._buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
@@ -196,19 +182,4 @@ export default class RainColorLayer {
     }
   }
 
-  // ─── Helpers Privados ──────────────────────────────────────────
-
-  _compileShader(gl, type, source) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const label = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
-      console.error(`[RainColorLayer] ${label} shader error:`, gl.getShaderInfoLog(shader));
-      gl.deleteShader(shader);
-      return null;
-    }
-    return shader;
-  }
 }

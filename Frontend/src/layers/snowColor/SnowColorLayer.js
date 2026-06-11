@@ -1,6 +1,7 @@
 import mapboxgl from 'mapbox-gl';
 import SnowDataTexture from './SnowDataTexture.js';
 import { vertexSource, fragmentSource } from './shaders_snow.js';
+import { compileShader, createMercatorQuad } from '../glUtils.js';
 
 export default class SnowColorLayer {
   constructor(options = {}) {
@@ -21,8 +22,8 @@ export default class SnowColorLayer {
     this._map = map;
     this._gl = gl;
 
-    const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
-    const fs = this._compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource, 'SnowColorLayer');
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource, 'SnowColorLayer');
     this._program = gl.createProgram();
     gl.attachShader(this._program, vs);
     gl.attachShader(this._program, fs);
@@ -43,22 +44,7 @@ export default class SnowColorLayer {
     this._uMixFactor = gl.getUniformLocation(this._program, 'u_mix_factor');
     this._uSnowType = gl.getUniformLocation(this._program, 'u_snow_type');
 
-    const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
-    const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
-
-    const nw = { x: -5.0, y: yTop };
-    const ne = { x: 6.0, y: yTop };
-    const sw = { x: -5.0, y: yBottom };
-    const se = { x: 6.0, y: yBottom };
-
-    const vertices = new Float32Array([
-      nw.x, nw.y,
-      ne.x, ne.y,
-      sw.x, sw.y,
-      ne.x, ne.y,
-      se.x, se.y,
-      sw.x, sw.y,
-    ]);
+    const vertices = createMercatorQuad(map);
 
     this._buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
@@ -175,17 +161,4 @@ export default class SnowColorLayer {
     }
   }
 
-  _compileShader(gl, type, source) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const label = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
-      console.error(`[SnowColorLayer] ${label} shader error:`, gl.getShaderInfoLog(shader));
-      gl.deleteShader(shader);
-      return null;
-    }
-    return shader;
-  }
 }

@@ -1,17 +1,16 @@
-# Imagen base: Node.js 20 versión ligera
-FROM node:20-alpine
+# Imagen base: Node.js 22 versión ligera
+FROM node:22-alpine
 
 # Instalar pnpm globalmente
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@11.4.0
 
 WORKDIR /app
 
 # Copiar solo manifiestos para aprovechar la caché de capas de Docker
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Instalar dependencias (frozen-lockfile garantiza reproducibilidad exacta)
-RUN pnpm install
-# --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente
 COPY . .

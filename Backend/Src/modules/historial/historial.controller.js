@@ -1,32 +1,15 @@
-const db = require('../../config/db')
 const logger = require('../../utils/logger')
 const { success, error } = require('../../utils/response')
+const { getCiudadHistorial, getHistorial, seedHistorial, clearHistorial } = require('./historial.service')
 
 const historialController = {
-  /**
-   * GET /api/historial/ciudad/:localidadId?horas=24
-   * Devuelve el historial horario de una ciudad específica.
-   * Agrupa por hora para reducir el volumen de datos al cliente.
-   */
   getCiudadHistorial: async (req, res) => {
     try {
       const { localidadId } = req.params
       const horas = parseInt(req.query.horas) || 24
 
-      const { rows } = await db.query(`
-        SELECT
-          date_trunc('hour', l.tiempo)    AS hora,
-          m.clave                         AS metrica,
-          ROUND(AVG(l.valor)::numeric, 2) AS valor
-        FROM lecturas l
-        JOIN metricas m ON m.id = l.metrica_id
-        WHERE l.localidad_id = $1
-          AND l.tiempo >= NOW() - ($2 || ' hours')::interval
-        GROUP BY hora, m.clave
-        ORDER BY hora ASC
-      `, [localidadId, horas])
+      const rows = await getCiudadHistorial(localidadId, horas)
 
-      // Agrupar por hora → [{ timestamp, data: { aqi, temperatura, ... } }]
       const horaMap = new Map()
       for (const r of rows) {
         const key = r.hora.toISOString()
@@ -43,20 +26,7 @@ const historialController = {
 
   getHistorial: async (req, res) => {
     try {
-      const { rows } = await db.query(`
-        SELECT
-          date_trunc('second', l.tiempo)  AS ts,
-          loc.id                          AS localidad_id,
-          loc.nombre                      AS ciudad,
-          loc.latitud,
-          loc.longitud,
-          m.clave                         AS metrica,
-          l.valor
-        FROM lecturas l
-        JOIN localidades loc ON loc.id = l.localidad_id
-        JOIN metricas    m   ON m.id   = l.metrica_id
-        ORDER BY ts ASC, loc.id
-      `)
+      const rows = await getHistorial()
 
       const groups = new Map()
       for (const r of rows) {
@@ -89,45 +59,8 @@ const historialController = {
 
   seedHistorial: async (req, res) => {
     try {
-      const { rows: localidades } = await db.query('SELECT id, nombre FROM localidades')
-      const { rows: metricas }    = await db.query('SELECT id, clave FROM metricas')
-      const { rows: fuentes }     = await db.query("SELECT id FROM fuentes_datos WHERE clave = 'simulacion'")
-
-      if (!fuentes.length) {
-        return error(res, 'Fuente de datos "simulacion" no encontrada en la BD', 400)
-      }
-
-      const fuenteId = fuentes[0].id
-      const now = Date.now()
-
-      // Usar unnest() para SQL parametrizado (defense-in-depth)
-      const tiempos = []
-      const locIds = []
-      const metIds = []
-      const valores = []
-
-      for (let i = 24; i >= 0; i--) {
-        const tiempo = new Date(now - i * 60 * 60 * 1000).toISOString()
-        for (const loc of localidades) {
-          for (const met of metricas) {
-            tiempos.push(tiempo)
-            locIds.push(loc.id)
-            metIds.push(met.id)
-            valores.push(parseFloat((Math.random() * 100).toFixed(2)))
-          }
-        }
-      }
-
-      await db.query(
-        `INSERT INTO lecturas (tiempo, localidad_id, metrica_id, valor, fuente_id)
-         SELECT * FROM unnest(
-           $1::timestamptz[], $2::int[], $3::int[], $4::numeric[], $5::int[]
-         )
-         ON CONFLICT DO NOTHING`,
-        [tiempos, locIds, metIds, valores, Array(tiempos.length).fill(fuenteId)]
-      )
-
-      success(res, { mensaje: 'Datos de prueba inyectados (24 horas)', count: tiempos.length })
+      const count = await seedHistorial()
+      success(res, { mensaje: 'Datos de prueba inyectados (24 horas)', count })
     } catch (err) {
       logger.error('[historial] seed error:', err)
       error(res, 'Error en seeding: ' + err.message, 500)
@@ -136,7 +69,7 @@ const historialController = {
 
   clearHistorial: async (req, res) => {
     try {
-      await db.query('DELETE FROM lecturas')
+      await clearHistorial()
       success(res, { mensaje: 'Todo el historial ha sido borrado exitosamente.' })
     } catch (err) {
       logger.error('[historial] clear error:', err)
