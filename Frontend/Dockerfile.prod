@@ -30,9 +30,8 @@ ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN \
 # Copiar archivos de dependencias
 COPY package.json pnpm-lock.yaml ./
 
-# Instalar pnpm y las dependencias (el CI=true o confirmModulesPurge evitan bloqueos)
-RUN npm install -g pnpm && \
-    pnpm config set confirmModulesPurge false && \
+ENV CI=true
+RUN npm install -g pnpm@11.4.0 && \
     pnpm install --no-frozen-lockfile
 
 # Copiar el código fuente

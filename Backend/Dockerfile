@@ -11,9 +11,8 @@ RUN apk add --no-cache python3 make g++ gcc musl-dev git
 # Copiar archivos de dependencias
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-
+ENV CI=true
 RUN npm install -g pnpm@11.4.0 && \
-    pnpm config set confirmModulesPurge false && \
     pnpm install --no-frozen-lockfile --prod
 
 
