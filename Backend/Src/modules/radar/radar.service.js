@@ -127,8 +127,7 @@ const extractGribData = async (gribPath, shortName, gridKeys) => {
       }
     }
 
-    // Inyección de log crítico de auditoría
-    console.log(`[DEBUG GRIB] Extracción exitosa. Llaves en el Map: ${data.size}. Ejemplo de llave: ${Array.from(data.keys())[0]}`);
+    logger.debug(`[DEBUG GRIB] Extracción exitosa. Llaves en el Map: ${data.size}. Ejemplo de llave: ${Array.from(data.keys())[0]}`);
     return data;
   };
 

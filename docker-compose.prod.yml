@@ -42,7 +42,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-admin123}
       JWT_SECRET: ${JWT_SECRET:-secret_para_tokens_envirosense_2026}
       JWT_EXPIRES_IN: 24h
-      CORS_ORIGIN: "*"
+      CORS_ORIGIN: ${CORS_ORIGIN}
       # Variables de Notificación
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       SMTP_HOST: ${SMTP_HOST}

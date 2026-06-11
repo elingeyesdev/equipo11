@@ -13,6 +13,7 @@
 import mapboxgl from 'mapbox-gl';
 import TempDataTexture from './TempDataTexture.js';
 import { vertexSource, fragmentSource } from './shaders_temp.js';
+import { compileShader, createMercatorQuad } from '../glUtils.js';
 import { findOptimalInsertionPoint } from '../windColor/layerManager.js';
 
 export default class TempColorLayer {
@@ -41,8 +42,8 @@ export default class TempColorLayer {
     this._gl = gl; // Guardamos contexto para limpieza forzada
 
     // 1. Compilar shaders
-    const vs = this._compileShader(gl, gl.VERTEX_SHADER, vertexSource);
-    const fs = this._compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource, 'TempColorLayer');
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource, 'TempColorLayer');
     this._program = gl.createProgram();
     gl.attachShader(this._program, vs);
     gl.attachShader(this._program, fs);
@@ -63,25 +64,8 @@ export default class TempColorLayer {
     this._uMixFactor   = gl.getUniformLocation(this._program, 'u_mix_factor');
     this._uTexSize     = gl.getUniformLocation(this._program, 'u_tex_size');
 
-    // 3. Crear quad geográfico (cubre múltiples copias del mundo en coordenadas Mercator)
-    //    Para soportar el scroll infinito (wrap horizontal), extendemos la geometría de -5.0 a 6.0
-    const yTop = mapboxgl.MercatorCoordinate.fromLngLat([0, 85.051]).y;
-    const yBottom = mapboxgl.MercatorCoordinate.fromLngLat([0, -85.051]).y;
-
-    const nw = { x: -5.0, y: yTop };
-    const ne = { x:  6.0, y: yTop };
-    const sw = { x: -5.0, y: yBottom };
-    const se = { x:  6.0, y: yBottom };
-
-    // Dos triángulos: NW-NE-SW, NE-SE-SW
-    const vertices = new Float32Array([
-      nw.x, nw.y,
-      ne.x, ne.y,
-      sw.x, sw.y,
-      ne.x, ne.y,
-      se.x, se.y,
-      sw.x, sw.y,
-    ]);
+    // 3. Crear quad geográfico
+    const vertices = createMercatorQuad(map);
 
     this._buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this._buffer);
@@ -208,21 +192,6 @@ export default class TempColorLayer {
     if (this._map) this._map.triggerRepaint();
   }
 
-  // ─── Helpers Privados ──────────────────────────────────────────
-
-  _compileShader(gl, type, source) {
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const label = type === gl.VERTEX_SHADER ? 'VERTEX' : 'FRAGMENT';
-      console.error(`[TempColorLayer] ${label} shader error:`, gl.getShaderInfoLog(shader));
-      gl.deleteShader(shader);
-      return null;
-    }
-    return shader;
-  }
 }
 
 // ─── Funciones de Gestión de Capa ────────────────────────────────────

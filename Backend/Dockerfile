@@ -1,7 +1,7 @@
 # ==========================================
 # ETAPA 1: Compilación de Dependencias (Builder)
 # ==========================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -9,16 +9,18 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ gcc musl-dev git
 
 # Copiar archivos de dependencias
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN npm install -g pnpm && \
+
+RUN npm install -g pnpm@11.4.0 && \
     pnpm config set confirmModulesPurge false && \
     pnpm install --no-frozen-lockfile --prod
+
 
 # ==========================================
 # ETAPA 2: Entorno de Ejecución (Runner)
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
