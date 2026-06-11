@@ -1,3 +1,5 @@
+import { mercatorToEquirectUV } from '../glsl/common.glsl.js';
+
 export const vertexSource = `
   attribute vec2 a_pos;
   uniform mat4 u_matrix;
@@ -20,8 +22,9 @@ export const fragmentSource = `
 
   varying vec2 v_mercator;
 
-  const float PI = 3.14159265359;
   const float RAIN_STOPS_COUNT = 22.0;
+
+  ${mercatorToEquirectUV}
 
   // Replica exacta de RAIN_STOPS[] de windMath.js
   // WebGL 1 no permite indexación dinámica de arrays, usamos cascada de ifs
@@ -62,13 +65,7 @@ export const fragmentSource = `
   }
 
   void main() {
-    float wrappedMercatorX = fract(v_mercator.x);
-    float lon = wrappedMercatorX * 360.0 - 180.0;
-    float merc_y = PI * (1.0 - 2.0 * v_mercator.y);
-    float ex = exp(merc_y);
-    float lat = atan((ex - 1.0 / ex) * 0.5) * (180.0 / PI);
-
-    vec2 v_uv = vec2((lon + 180.0) / 360.0, (lat + 90.0) / 180.0);
+    vec2 v_uv = mercatorToUV(v_mercator);
 
     float rainCurrent = texture2D(u_rain_data, v_uv).r;
     float rainNext = texture2D(u_rain_data_next, v_uv).r;
