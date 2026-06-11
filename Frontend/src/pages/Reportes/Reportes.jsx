@@ -90,6 +90,7 @@ export default function Reportes() {
   const [predictiveLoading, setPredictiveLoading] = useState(false)
   const [arimaMetric, setArimaMetric] = useState('temperatura')
   const [whatIfMetric, setWhatIfMetric] = useState('aqi')
+  const [localidadesList, setLocalidadesList] = useState([])
 
   // Datos de predicción devueltos por FastAPI
   const [arimaData, setArimaData] = useState(null)
@@ -107,9 +108,34 @@ export default function Reportes() {
   const [metricaGrafico, setMetricaGrafico] = useState('temperatura')
   const [page, setPage] = useState(1)
 
+  // Cargar lista de localidades desde el backend
+  useEffect(() => {
+    httpClient.get('/geografia/localidades')
+      .then(res => {
+        if (res.data && res.data.data) {
+          const sorted = [...res.data.data].sort((a, b) => a.nombre.localeCompare(b.nombre));
+          setLocalidadesList(sorted);
+          if (sorted.length > 0) {
+            const hasLaPaz = sorted.some(loc => loc.nombre.toLowerCase() === 'la paz');
+            if (!hasLaPaz) {
+              setPredictCity(sorted[0].nombre);
+            }
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Error cargando localidades:', err);
+      });
+  }, []);
+
   const cityId = useMemo(() => {
-    return CIUDAD_IDS[predictCity.toLowerCase()] || 1;
-  }, [predictCity]);
+    const found = localidadesList.find(loc => loc.nombre.toLowerCase() === predictCity.toLowerCase());
+    return found ? found.id : (CIUDAD_IDS[predictCity.toLowerCase()] || 1);
+  }, [predictCity, localidadesList]);
+
+  const dropdownCities = useMemo(() => {
+    return localidadesList.length > 0 ? localidadesList.map(loc => loc.nombre) : CIUDADES;
+  }, [localidadesList]);
 
   // ─── Cargar Datos Predictivos ───
   const fetchPredictiveData = useCallback(async () => {
@@ -229,10 +255,10 @@ export default function Reportes() {
 
   // ─── Lógica de Filtros y Cálculos Históricos ───
   const ciudadesDisponibles = useMemo(() => {
-    const s = new Set(CIUDADES)
+    const s = new Set(dropdownCities)
     historial.forEach(d => s.add(d.ciudad))
     return Array.from(s).sort((a, b) => formatCityName(a).localeCompare(formatCityName(b)))
-  }, [historial])
+  }, [historial, dropdownCities])
 
   const aplicarRango = dias => {
     if (dias === null) {
@@ -636,7 +662,7 @@ export default function Reportes() {
                   value={predictCity}
                   onChange={e => setPredictCity(e.target.value)}
                 >
-                  {CIUDADES.map(c => <option key={c} value={c}>{formatCityName(c)}</option>)}
+                  {dropdownCities.map(c => <option key={c} value={c}>{formatCityName(c)}</option>)}
                 </select>
               </label>
 

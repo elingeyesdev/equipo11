@@ -38,3 +38,13 @@ def get_db():
         yield conn
     finally:
         db_pool.putconn(conn)
+
+def close_pool():
+    global connection_pool
+    if connection_pool is not None:
+        try:
+            connection_pool.closeall()
+            print("PostgreSQL ThreadedConnectionPool closed successfully.")
+            connection_pool = None
+        except Exception as e:
+            print(f"Error closing PostgreSQL connection pool: {e}")

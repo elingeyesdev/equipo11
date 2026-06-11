@@ -381,6 +381,7 @@ CREATE TABLE alertas (
   reconocida       BOOLEAN       NOT NULL DEFAULT FALSE,
   reconocida_por   INT           REFERENCES usuarios(id) ON DELETE SET NULL,
   reconocida_en    TIMESTAMPTZ,
+  tipo             VARCHAR(20)   NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion')),
   CHECK ((reconocida = FALSE) OR (reconocida_en IS NOT NULL))
 );
 

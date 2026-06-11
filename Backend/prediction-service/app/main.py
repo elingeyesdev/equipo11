@@ -105,3 +105,8 @@ def trigger_grid_prediction(background_tasks: BackgroundTasks):
     """
     background_tasks.add_task(predict_global_grid)
     return {"status": "processing", "message": "Grid prediction task triggered in background."}
+
+@app.on_event("shutdown")
+def shutdown_event():
+    from app.database import close_pool
+    close_pool()
