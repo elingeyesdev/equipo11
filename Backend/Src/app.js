@@ -31,8 +31,9 @@ app.use(helmet({
 }))
 
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173'
+app.set('trust proxy', 1)
 app.use(cors({ origin: corsOrigin }))
-app.use(express.json())
+app.use(express.json({ limit: '1mb' }))
 app.use('/api', globalLimiter)
 app.use(cacheHeaders)
 
@@ -67,5 +68,8 @@ app.get('/api/health/whatsapp', (req, res) => {
   }
   return success(res, { status: 'active' })
 })
+
+const { errorHandler } = require('./middleware/errorHandler')
+app.use(errorHandler)
 
 module.exports = app

@@ -14,8 +14,8 @@ router.get('/available-dates', async (req, res) => {
     const dates = result.rows.map(r => r.forecast_time);
     success(res, dates);
   } catch (err) {
-    logger.error('Error detallado en available-dates:', err);
-    error(res, 'Error al obtener fechas disponibles: ' + err.message, 500);
+    logger.error('Error en available-dates:', err);
+    error(res, 'Error al obtener fechas disponibles', 500);
   }
 });
 
