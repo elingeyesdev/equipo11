@@ -36,6 +36,9 @@ export function SimulacionProvider({ children }) {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000,
       reconnectionAttempts: Infinity,
+      auth: {
+        token: localStorage.getItem('token')
+      }
     })
     socketRef.current = socket
 

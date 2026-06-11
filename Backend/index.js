@@ -12,6 +12,7 @@ require('./Src/config/env')
 
 const http = require('http')
 const { Server } = require('socket.io')
+const jwt = require('jsonwebtoken')
 const app = require('./Src/app')
 const { registerSocketEvents } = require('./Src/modules/simulacion/simulacion.socket')
 const { registerZonaSocketEvents } = require('./Src/modules/simulacion-zona/simulacion-zona.socket')
@@ -33,6 +34,23 @@ const io = new Server(server, {
   cors: {
     origin: corsOrigin,
     methods: ['GET', 'POST']
+  }
+})
+
+// Autenticación WebSocket: extraer token del handshake o query string
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token
+
+  if (!token) {
+    return next(new Error('Token no proporcionado para WebSocket'))
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    socket.usuario = decoded
+    next()
+  } catch (err) {
+    next(new Error('Token inválido o expirado'))
   }
 })
 
