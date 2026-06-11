@@ -25,6 +25,7 @@ async function initDatabase() {
   await ensureColumn('usuarios', 'whatsapp_destino VARCHAR(100)');
   await ensureColumn('usuarios', 'notif_telegram BOOLEAN DEFAULT FALSE');
   await ensureColumn('usuarios', 'telegram_destino VARCHAR(100)');
+  await ensureColumn('alertas', "tipo VARCHAR(20) DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion'))");
 
   // 0. Crear tablas de caché (Esenciales para el funcionamiento de los servicios)
   try {

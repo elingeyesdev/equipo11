@@ -488,3 +488,176 @@
   .rep-tabla        { min-width: 580px; }
   .rep-rangos-btns  { flex-wrap: wrap; }
 }
+
+/* ─── Pestañas de Navegación del Módulo de Reportes ─── */
+.tab-navigation {
+  display: flex;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.tab-btn {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--ink);
+  background: var(--bg-hover);
+}
+
+.tab-btn.active {
+  color: var(--white);
+  background: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Layout del Grid Predictivo ─── */
+.grid-predictivo {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.col-chart-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.col-report-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.echarts-wrap {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Selector de métricas de tarjetas */
+.metric-chart-select {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+}
+
+.metric-chart-select:focus {
+  border-color: var(--moss);
+}
+
+/* Tarjetas de simulación what-if */
+.scenario-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.opt-card {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
+.base-card {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  background: rgba(148, 163, 184, 0.05) !important;
+}
+
+.pess-card {
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+/* ─── Reporte Markdown Estilizado ─── */
+.report-markdown-card {
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--line);
+}
+
+.markdown-body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.markdown-body h1 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+
+.markdown-body h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 20px;
+  margin-bottom: 12px;
+  color: #38bdf8; /* sky-400 */
+}
+
+.markdown-body h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #fb923c; /* orange-400 */
+}
+
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: var(--ink-mute);
+}
+
+.markdown-body li {
+  margin-left: 16px;
+  margin-bottom: 6px;
+  color: var(--ink-mute);
+}
+
+.markdown-body hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.markdown-body strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* Responsividad para tabletas y móviles */
+@media (max-width: 1024px) {
+  .grid-predictivo {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+

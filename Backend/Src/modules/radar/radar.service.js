@@ -545,6 +545,15 @@ const scrapeFutureForecasts = async () => {
     }
   }
   logger.info('[Radar Scraper] Pronósticos futuros completados.');
+
+  // Gatillar el predictor del grid en Python tras finalizar el raspado
+  try {
+    const { triggerGridPrediction } = require('../predictions/predictions.service');
+    await triggerGridPrediction();
+    logger.info('[Radar Scraper] Grid predictor gatillado exitosamente.');
+  } catch (err) {
+    logger.warn('[Radar Scraper] No se pudo gatillar el grid predictor:', err.message);
+  }
 };
 
 const getRadarData = async (targetTime = null) => {

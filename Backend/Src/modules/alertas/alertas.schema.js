@@ -6,6 +6,7 @@ const alertasQuerySchema = z.object({
   metrica:   z.string().min(1).max(50).optional(),
   severidad: z.enum(['advertencia', 'critica', 'emergencia']).optional(),
   reconocida: z.enum(['true', 'false']).optional(),
+  tipo:      z.enum(['real', 'prediccion']).optional(),
   page:      z.coerce.number().int().min(1).default(1),
   limit:     z.coerce.number().int().min(1).max(100).default(20),
 });

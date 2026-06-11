@@ -158,6 +158,29 @@ html[data-theme="dark"] .timeline-hour-tick.active {
   box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
 
+/* Ticks de Predicción (Proyección) */
+.timeline-hour-tick.prediction-tick {
+  border: 1px dashed rgba(249, 115, 22, 0.4); /* color naranja suave */
+  color: var(--amber);
+}
+
+.timeline-hour-tick.prediction-tick:hover {
+  background: var(--amber-soft);
+  border-color: var(--amber);
+}
+
+.timeline-hour-tick.prediction-tick.active {
+  background: var(--amber-soft) !important;
+  color: var(--amber) !important;
+  border: 1px dashed var(--amber) !important;
+}
+
+html[data-theme="dark"] .timeline-hour-tick.prediction-tick.active {
+  background: rgba(249, 115, 22, 0.2) !important;
+  color: #fed7aa !important;
+  border: 1px dashed #f97316 !important;
+}
+
 /* Overlay loading */
 .timeplayer-preloading-overlay {
   position: absolute;

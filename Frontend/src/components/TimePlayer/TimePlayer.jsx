@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useTimeBuffer from '../../hooks/useTimeBuffer';
-import { formatTime, formatDate } from '../../utils/formatters';
 import './TimePlayer.css';
 
 const TimePlayer = ({
@@ -44,7 +43,8 @@ const TimePlayer = ({
       daysMap.get(dateKey).hours.push({
         idx,
         hourStr: String(d.getHours()).padStart(2, '0') + 'h',
-        timestamp: entry.timestamp
+        timestamp: entry.timestamp,
+        isPrediction: entry.isPrediction
       });
     });
     
@@ -124,6 +124,7 @@ const TimePlayer = ({
         return;
       }
 
+      setIsBuffering(true); // default loading
       setIsBuffering(false);
       mixFactor += delta / 3500.0; // 4.5 seconds per frame transition for smoother effect
 
@@ -256,12 +257,14 @@ const TimePlayer = ({
               <div className="timeline-hours-row">
                 {dayData.hours.map((hour) => {
                   const isActive = hour.idx === currentIndex;
+                  const isPred = hour.isPrediction;
                   return (
                     <div
                       key={hour.idx}
                       ref={isActive ? activeTickRef : null}
-                      className={`timeline-hour-tick ${isActive ? 'active' : ''}`}
+                      className={`timeline-hour-tick ${isActive ? 'active' : ''} ${isPred ? 'prediction-tick' : ''}`}
                       onClick={(e) => handleHourClick(hour.idx, e)}
+                      title={isPred ? "Predicción / Proyección Futura" : "Dato Histórico Real"}
                     >
                       {hour.hourStr}
                     </div>

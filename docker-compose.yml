@@ -53,6 +53,31 @@ services:
       retries: 3
       start_period: 10s
 
+  # ─── Servicio de Predicciones (Python + FastAPI) ───
+  prediction-service:
+    build: ./Backend/prediction-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=sistema_ambiental
+      - DB_USER=admin
+      - DB_PASSWORD=admin123
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./Backend/prediction-service:/app
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   # ─── Frontend (React + Vite) ───
   frontend:
     build: ./Frontend

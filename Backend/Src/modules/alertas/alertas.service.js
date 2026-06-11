@@ -231,12 +231,14 @@ async function guardarAlertas(alertas, options = {}) {
     let idx = 1
 
     for (const a of alertas) {
-      values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, NOW())`)
-      params.push(a.localidad_id, a.metrica_id, a.umbral_id, a.valor)
+      const alertTime = a.tiempo ? new Date(a.tiempo) : new Date();
+      const alertTipo = a.tipo || 'real';
+      values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`)
+      params.push(a.localidad_id, a.metrica_id, a.umbral_id, a.valor, alertTime, alertTipo)
     }
 
     await db.query(
-      `INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, tiempo)
+      `INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, tiempo, tipo)
        VALUES ${values.join(', ')}`,
       params
     )
@@ -255,7 +257,10 @@ async function guardarAlertas(alertas, options = {}) {
             let title, body;
             const cityName = a.ciudad_nombre || 'Localidad';
 
-            if (options.isManual) {
+            if (a.tipo === 'prediccion') {
+              title = `Predicción de Alerta: ${cityName}`;
+              body = `Se pronostica que la métrica ${a.metrica_clave} alcanzará ${a.valor} (nivel ${a.label.toLowerCase()}) en ${cityName} el ${new Date(a.tiempo).toLocaleString('es-BO')}.`;
+            } else if (options.isManual) {
               title = `Inyección Manual: ${cityName}`;
               body = `Valor inyectado de ${a.metrica_clave} (${a.valor}) a ${cityName} es muy peligroso y alcanzó nivel ${a.label.toLowerCase()}.`;
             } else {
@@ -270,7 +275,8 @@ async function guardarAlertas(alertas, options = {}) {
                 localidadId: String(a.localidad_id),
                 metricaClave: a.metrica_clave,
                 valor: String(a.valor),
-                severidad: a.severidad
+                severidad: a.severidad,
+                tipo: a.tipo || 'real'
               }
             })
           }
@@ -305,7 +311,7 @@ async function reconocerAlerta(id, usuarioId) {
  * @returns {{ total, rows }}
  */
 async function getAlertas(filters) {
-  const { desde, hasta, metrica, severidad, reconocida, page, limit } = filters;
+  const { desde, hasta, metrica, severidad, reconocida, tipo, page, limit } = filters;
   const limitNum = limit;
   const offset   = (page - 1) * limitNum;
 
@@ -318,6 +324,7 @@ async function getAlertas(filters) {
   if (metrica)     { conditions.push(`m.clave = $${idx++}`);   params.push(metrica); }
   if (severidad)   { conditions.push(`u.severidad = $${idx++}`); params.push(severidad); }
   if (reconocida !== undefined) { conditions.push(`a.reconocida = $${idx++}`); params.push(reconocida === 'true'); }
+  if (tipo)        { conditions.push(`a.tipo = $${idx++}`); params.push(tipo); }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -333,7 +340,7 @@ async function getAlertas(filters) {
 
   const { rows } = await db.query(`
     SELECT
-      a.id, a.tiempo, a.valor, a.reconocida, a.reconocida_en,
+      a.id, a.tiempo, a.valor, a.reconocida, a.reconocida_en, a.tipo,
       l.nombre           AS ciudad,
       m.clave            AS metrica,
       m.nombre           AS metrica_nombre,
