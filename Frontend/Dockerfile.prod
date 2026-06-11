@@ -33,7 +33,7 @@ COPY package.json pnpm-lock.yaml ./
 # Instalar pnpm y las dependencias (el CI=true o confirmModulesPurge evitan bloqueos)
 RUN npm install -g pnpm && \
     pnpm config set confirmModulesPurge false && \
-    pnpm install --frozen-lockfile
+    pnpm install --no-frozen-lockfile
 
 # Copiar el código fuente
 COPY . .
@@ -52,16 +52,8 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copiar los archivos estáticos desde el builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configurar Nginx para React Router (redirección a index.html)
-RUN echo 'server { \
-    listen 80; \
-    server_name localhost; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Configurar Nginx: no hace falta sobreescribir default.conf aquí, 
+# usaremos el nginx.conf montado en docker-compose.prod.yml
 
 EXPOSE 80
 

@@ -12,7 +12,8 @@ RUN apk add --no-cache python3 make g++ gcc musl-dev git
 COPY package.json pnpm-lock.yaml ./
 
 RUN npm install -g pnpm && \
-    pnpm install --frozen-lockfile --prod
+    pnpm config set confirmModulesPurge false && \
+    pnpm install --no-frozen-lockfile --prod
 
 # ==========================================
 # ETAPA 2: Entorno de Ejecución (Runner)
