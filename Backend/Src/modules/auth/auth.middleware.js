@@ -23,7 +23,7 @@ function verificarToken(req, res, next) {
     req.usuario = decoded
     next()
   } catch (err) {
-    return res.status(401).json({ message: "Acceso denegado o token inválido" })
+    return error(res, 'Acceso denegado o token inválido', 401)
   }
 }
 

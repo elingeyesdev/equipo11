@@ -9,6 +9,16 @@ const TokenSchema = z.object({
   token: z.string().min(10, 'El token es demasiado corto').max(1024, 'El token es demasiado largo')
 });
 
+const SettingsItemSchema = z.object({
+  tipo: z.string().min(1),
+  habilitado: z.boolean(),
+  destino: z.string().max(500).optional().nullable(),
+});
+
+const UpdateSettingsSchema = z.object({
+  settings: z.array(SettingsItemSchema).min(1).max(20),
+});
+
 const getSettings = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM configuracion_notificaciones ORDER BY id ASC');
@@ -19,15 +29,14 @@ const getSettings = async (req, res) => {
 };
 
 const updateSettings = async (req, res) => {
-  const { settings } = req.body; // Array of { tipo, habilitado, destino }
-  
-  if (!Array.isArray(settings)) {
-    return error(res, 'Settings must be an array', 400);
+  const parseResult = UpdateSettingsSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    return error(res, parseResult.error.errors[0].message, 400);
   }
 
   try {
     await db.query('BEGIN');
-    for (const s of settings) {
+    for (const s of parseResult.data.settings) {
       await db.query(
         'UPDATE configuracion_notificaciones SET habilitado = $1, destino = $2, updated_at = NOW() WHERE tipo = $3',
         [s.habilitado, s.destino, s.tipo]

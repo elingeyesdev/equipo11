@@ -18,7 +18,7 @@ const crearPlantilla = async (req, res) => {
       [usuario_id, nombre_plantilla, tipo, configuracion]
     );
 
-    success(res, rows[0], 'Plantilla creada con éxito', 201);
+    success(res, rows[0], 201);
   } catch (err) {
     logger.error('Error al crear plantilla:', err);
     error(res, 'Error interno al crear plantilla', 500);
@@ -35,7 +35,7 @@ const obtenerPlantillas = async (req, res) => {
       [usuario_id]
     );
 
-    success(res, rows, 'Plantillas obtenidas con éxito');
+    success(res, rows);
   } catch (err) {
     logger.error('Error al obtener plantillas:', err);
     error(res, 'Error interno al obtener plantillas', 500);
@@ -57,7 +57,7 @@ const eliminarPlantilla = async (req, res) => {
       return error(res, 'Plantilla no encontrada o no tienes permisos para eliminarla', 404);
     }
 
-    success(res, null, 'Plantilla eliminada con éxito');
+    success(res, { mensaje: 'Plantilla eliminada con éxito' });
   } catch (err) {
     logger.error('Error al eliminar plantilla:', err);
     error(res, 'Error interno al eliminar plantilla', 500);

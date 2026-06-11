@@ -8,15 +8,6 @@ const logger = require('../../utils/logger');
 const { success, error } = require('../../utils/response');
 const router = express.Router();
 
-router.get('/test-db', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT NOW()');
-    success(res, { time: result.rows[0].now });
-  } catch (err) {
-    error(res, err.message, 500);
-  }
-});
-
 router.get('/available-dates', async (req, res) => {
   try {
     const result = await pool.query('SELECT DISTINCT forecast_time FROM radar_grid_cache WHERE temperatura IS NOT NULL ORDER BY forecast_time DESC');

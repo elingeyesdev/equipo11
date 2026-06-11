@@ -53,7 +53,19 @@ app.use('/api/plantillas', require('./modules/plantillas/plantillas.routes'))
 
 // Ruta de prueba
 app.get('/', (req, res) => success(res, { mensaje: 'API EnviroSense activa ✅' }))
-app.get('/api/health', (req, res) => success(res, { uptime: process.uptime() }))
-app.get('/api/health/whatsapp', (req, res) => success(res, { status: whatsappClient.getStatus() }))
+
+app.get('/api/health', (req, res) => {
+  if (process.env.NODE_ENV !== 'production') {
+    return success(res, { uptime: process.uptime() })
+  }
+  return success(res, { status: 'healthy' })
+})
+
+app.get('/api/health/whatsapp', (req, res) => {
+  if (process.env.NODE_ENV !== 'production') {
+    return success(res, { status: whatsappClient.getStatus() })
+  }
+  return success(res, { status: 'active' })
+})
 
 module.exports = app
