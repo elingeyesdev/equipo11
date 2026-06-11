@@ -71,8 +71,7 @@ A continuación se listan las directrices de mitigación y contingencia ambienta
 """
     for idx, rec in enumerate(recommendations, 1):
         severidad_emoji = "🚨" if rec["severidad"] in ["emergencia", "critica"] else "⚠️" if rec["severidad"] == "advertencia" else "ℹ️"
-        markdown += f"{idx}. **{severidad_emoji} {rec['nivel'].upper()} ({rec['metrica'].upper()})**  
-   *{rec['texto']}*\n\n"
+        markdown += f"{idx}. **{severidad_emoji} {rec['nivel'].upper()} ({rec['metrica'].upper()})**  \n   *{rec['texto']}*\n\n"
 
     markdown += """
 ---
