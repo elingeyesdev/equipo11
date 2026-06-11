@@ -150,11 +150,11 @@ def generate_fallback_prediction(rows, metrica_clave: str, steps: int):
         "model_info": "Fallback-Heuristica (Sinusoidal + Deriva)"
     }
 
-def get_arima_prediction(localidad_id: int, metrica_clave: str, steps: int = 48):
+def get_arima_prediction(localidad_id: int, metrica_clave: str, steps: int = 48, simulated_baseline_data = None):
     now_time = time.time()
     cache_key = (localidad_id, metrica_clave, steps)
     
-    if cache_key in prediction_cache:
+    if simulated_baseline_data is None and cache_key in prediction_cache:
         cached_time, cached_data = prediction_cache[cache_key]
         if now_time - cached_time < CACHE_TTL:
             print(f"Cache hit: {metrica_clave} - localidad {localidad_id}")
@@ -162,8 +162,30 @@ def get_arima_prediction(localidad_id: int, metrica_clave: str, steps: int = 48)
             
     rows = []
     
+    # ─── CASO DATOS SIMULADOS ───
+    if simulated_baseline_data is not None:
+        for item in simulated_baseline_data:
+            if isinstance(item, dict):
+                m_clave = item.get("metrica_clave") or item.get("metrica")
+                if m_clave == metrica_clave:
+                    t = item.get("tiempo") or item.get("time")
+                    v = item.get("valor") or item.get("value")
+                    rows.append((t, v))
+            elif isinstance(item, (tuple, list)) and len(item) >= 5:
+                # Format: (lat, lon, metrica_clave, valor, tiempo)
+                if item[2] == metrica_clave:
+                    rows.append((item[4], item[3]))
+            elif isinstance(item, (tuple, list)) and len(item) == 2:
+                rows.append((item[0], item[1]))
+        
+        # Ordenar por tiempo
+        try:
+            rows.sort(key=lambda x: x[0])
+        except Exception as e:
+            print(f"Error sorting simulated rows: {e}")
+            
     # ─── CASO METRICAS GRID (Lluvia/Viento) ───
-    if metrica_clave in ["precipitacion", "rain", "viento", "wind_speed"]:
+    elif metrica_clave in ["precipitacion", "rain", "viento", "wind_speed"]:
         coords = get_city_coords(localidad_id)
         if coords:
             lat, lon = coords
@@ -265,5 +287,6 @@ def get_arima_prediction(localidad_id: int, metrica_clave: str, steps: int = 48)
             print(f"ARIMA fitting failed: {e}. Falling back...")
             data = generate_fallback_prediction(rows, metrica_clave, steps)
             
-    prediction_cache[cache_key] = (now_time, data)
+    if simulated_baseline_data is None:
+        prediction_cache[cache_key] = (now_time, data)
     return data
