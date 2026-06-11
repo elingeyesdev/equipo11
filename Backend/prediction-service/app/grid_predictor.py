@@ -242,7 +242,6 @@ def predict_global_grid():
                     """,
                     insert_data
                 )
-        conn.commit()
         
     print(f"Grid predictions successfully inserted for {future_steps} steps up to {future_times[-1]}.")
     return True

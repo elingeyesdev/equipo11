@@ -27,17 +27,27 @@ def get_pool():
             print("PostgreSQL ThreadedConnectionPool initialized successfully.")
         except Exception as e:
             print(f"Error creating PostgreSQL connection pool: {e}")
+            connection_pool = None
             raise e
     return connection_pool
 
 @contextmanager
 def get_db():
     db_pool = get_pool()
-    conn = db_pool.getconn()
+    conn = None
     try:
+        conn = db_pool.getconn()
+        conn.autocommit = True
         yield conn
+    except Exception as e:
+        print(f"Error getting/using DB connection: {e}")
+        raise
     finally:
-        db_pool.putconn(conn)
+        if conn is not None:
+            try:
+                db_pool.putconn(conn)
+            except Exception as e:
+                print(f"Error returning connection to pool: {e}")
 
 def close_pool():
     global connection_pool
@@ -45,6 +55,7 @@ def close_pool():
         try:
             connection_pool.closeall()
             print("PostgreSQL ThreadedConnectionPool closed successfully.")
-            connection_pool = None
         except Exception as e:
             print(f"Error closing PostgreSQL connection pool: {e}")
+        finally:
+            connection_pool = None
