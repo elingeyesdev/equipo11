@@ -274,11 +274,11 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
                   flex: 1,
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  font: '600 12px sans-serif',
+                  font: '600 12px var(--font-sans)',
                   textTransform: 'uppercase',
-                  border: currentCfg.intensidad === lvl ? `1px solid ${metric.categoriaColor}` : '1px solid rgba(255,255,255,0.1)',
-                  background: currentCfg.intensidad === lvl ? `${metric.categoriaColor}22` : 'rgba(255,255,255,0.03)',
-                  color: currentCfg.intensidad === lvl ? '#fff' : 'rgba(255,255,255,0.6)',
+                  border: currentCfg.intensidad === lvl ? `1px solid ${metric.categoriaColor}` : '1px solid var(--border)',
+                  background: currentCfg.intensidad === lvl ? `${metric.categoriaColor}22` : 'var(--paper)',
+                  color: currentCfg.intensidad === lvl ? 'var(--text-primary)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}

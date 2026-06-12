@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary'
 import MapaMonitoreo from './pages/MapaMonitoreo/MapaMonitoreo'
-import MapasAtmosfericosHistorico from './pages/MapaMonitoreo/MapasAtmosfericosHistorico'
 import Reportes from './pages/Reportes/Reportes'
 import ReportTemplateBuilder from './pages/Reportes/ReportTemplateBuilder'
 import ReportModuleTest from './pages/Reportes/ReportModuleTest'
@@ -60,7 +59,6 @@ function App() {
 
         <Route element={<ProtectedRoute><DesktopRoute><Layout /></DesktopRoute></ProtectedRoute>}>
           <Route path="mapa" element={<MapaMonitoreo />} />
-          <Route path="mapa-historico" element={<MapasAtmosfericosHistorico />} />
           <Route path="reportes" element={<Reportes />} />
           <Route path="test-report" element={<ReportModuleTest />} />
           <Route path="plantillas" element={<ReportTemplateBuilder />} />

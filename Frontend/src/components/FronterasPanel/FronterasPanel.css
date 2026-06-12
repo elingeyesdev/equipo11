@@ -1,7 +1,8 @@
 .fronteras-panel {
   position: absolute;
   top: 16px;
-  left: 16px;
+  right: 16px;
+  left: auto;
   width: 320px;
   max-height: calc(100vh - 100px);
   background: var(--card);
