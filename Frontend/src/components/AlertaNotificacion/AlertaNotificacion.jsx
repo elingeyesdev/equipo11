@@ -73,7 +73,7 @@ export default function AlertaNotificacion() {
         <div className="alerta-overlay" role="alertdialog" aria-modal="true">
           <div className="alerta-modal-emergencia">
             <div className="alerta-modal-icono">{ICONOS.emergencia}</div>
-            <h2 className="alerta-modal-titulo">⚠ Alerta de Emergencia</h2>
+            <h2 className="alerta-modal-titulo"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Alerta de Emergencia</h2>
             <p className="alerta-modal-subtitulo">
               {emergencias.length === 1
                 ? 'Se ha detectado una condición crítica que requiere atención inmediata.'

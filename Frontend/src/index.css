@@ -2,7 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root { /* MODO CLARO - Paleta Invertida */
+  --bg-app: #F3F4F6;
+  --bg-panel: #FFFFFF;
+  --border-color: #D1D5DB;
+  --text-primary: #0B132B; /* Prussian Blue para contraste */
+  --text-secondary: #3A506B; /* Dusk Blue */
+  --accent: #5BC0BE;
+}
+
+.dark, html[data-theme="dark"], [data-theme="dark"] { /* MODO OSCURO - Paleta Corporativa Oficial */
+  --bg-app: #0B132B;
+  --bg-panel: #1C2541;
+  --border-color: #3A506B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #D1D5DB;
+  --accent: #5BC0BE;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+* {
+    font-family: 'Space Grotesk', sans-serif !important;
+}
 
 * {
   margin: 0;
@@ -10,110 +32,12 @@
   box-sizing: border-box;
 }
 
-:root {
-  /* ─── Paleta editorial · papel · tinta · musgo ─── */
-  --paper:       #f4f2ea;
-  --paper-2:     #eceadf;
-  --card:        #fbfaf5;
-  --white:       #ffffff;
 
-  --ink:         #141a16;
-  --ink-2:       #2a332d;
-  --ink-mute:    #5c6760;
-  --ink-faint:   #8d968f;
 
-  --line:        #dfe3db;
-  --line-soft:   #ecefe8;
 
-  /* Acentos semánticos (mismo chroma, hue distinta) */
-  --moss:        oklch(62% 0.09 148);
-  --moss-ink:    oklch(38% 0.07 148);
-  --moss-soft:   oklch(92% 0.04 148);
-  --river:       oklch(62% 0.09 230);
-  --river-soft:  oklch(92% 0.04 230);
-  --amber:       oklch(62% 0.12 70);
-  --amber-soft:  oklch(92% 0.06 70);
-  --rust:        oklch(55% 0.14 35);
-  --rust-soft:   oklch(92% 0.06 35);
-  --violet:      oklch(58% 0.10 300);
-  --violet-soft: oklch(92% 0.04 300);
 
-  /* Aliases heredados (para no romper componentes existentes) */
-  --primary:             var(--moss-ink);
-  --primary-light:       var(--moss);
-  --primary-extra-light: var(--moss-soft);
-  --primary-dark:        #1e2a20;
-
-  --bg-app:     var(--paper);
-  --bg-panel:   var(--card);
-  --bg-card:    var(--paper-2);
-  --bg-hover:   var(--paper);
-  --bg-overlay: rgba(0, 0, 0, 0.4);
-  --bg-glass:   rgba(251, 250, 245, 0.94);
-
-  --border:         var(--line);
-  --border-strong:  #c8cec0;
-
-  --text-primary:   var(--ink);
-  --text-secondary: var(--ink-mute);
-  --text-muted:     var(--ink-faint);
-
-  /* Semáforos ambientales */
-  --air:     #3f7a4a;
-  --water:   #1e4e6d;
-  --noise:   #7a4b0c;
-  --climate: #553d78;
-
-  /* Layout */
-  --sidebar-width:  232px;
-  --navbar-height:  56px;
-
-  /* Radii, sombras */
-  --radius:  10px;
-  --radius-lg: 12px;
-  --shadow-sm: 0 1px 0 rgba(20,26,22,.04), 0 1px 2px rgba(20,26,22,.04);
-  --shadow-md: 0 1px 0 rgba(20,26,22,.04), 0 8px 24px -12px rgba(20,26,22,.15);
-
-  /* Tipografías utilitarias */
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans:  'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-}
-
-html[data-theme="dark"] {
-  --paper:       #121212;
-  --paper-2:     #1e1e1e;
-  --card:        #181818;
-  --white:       #000000;
-
-  --ink:         #f4f2ea;
-  --ink-2:       #eceadf;
-  --ink-mute:    #9ba49e;
-  --ink-faint:   #68706a;
-
-  --line:        #333333;
-  --line-soft:   #222222;
-
-  --primary:             #499966;
-  --primary-light:       #5eb37e;
-  --primary-extra-light: #1b2e21;
-  --primary-dark:        #6ed496;
-
-  --bg-overlay: rgba(0, 0, 0, 0.7);
-  --bg-glass:   rgba(24, 24, 24, 0.85);
-
-  --border-strong:  #555555;
-
-  --shadow-sm: 0 1px 0 rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.4);
-  --shadow-md: 0 1px 0 rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.6);
-
-  --air:     #57a165;
-  --water:   #2a6991;
-  --noise:   #9c6418;
-  --climate: #7353a3;
-}
-
-html, body {
+html,
+body {
   font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-primary);
@@ -124,15 +48,40 @@ html, body {
 }
 
 /* Utilidades tipográficas reusables */
-.serif  { font-family: var(--font-serif); font-weight: 400; }
-.mono   { font-family: var(--font-mono); }
-.uikick { font: 600 10.5px/1 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-mute); }
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.uikick {
+  font: 600 10.5px/1 var(--font-sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
 
 /* Scrollbar editorial */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
 
 /* Tematización dinámica de Pop-ups de Mapbox */
 .mapboxgl-popup-content {
@@ -143,17 +92,46 @@ html, body {
   box-shadow: var(--shadow-md) !important;
   padding: 0 !important;
 }
+
 .mapboxgl-popup-tip {
   border-top-color: var(--bg-card) !important;
   border-bottom-color: var(--bg-card) !important;
 }
+
 .mapboxgl-popup-close-button {
   color: var(--text-muted);
   font-size: 1.2rem;
   padding: 4px 8px;
 }
+
 .mapboxgl-popup-close-button:hover {
   background: var(--bg-hover) !important;
   color: var(--text-primary) !important;
   border-radius: 0 var(--radius-lg) 0 0;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(100%);
+    cursor: pointer;
+}
+
+.controls-dropdown {
+    background-color: var(--bg-panel) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 1rem !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Soporte nativo para modo oscuro en inputs y selects */
+.dark select, [data-theme="dark"] select {
+    color-scheme: dark;
+}
+
+/* Forzar colores en las opciones desplegables */
+select option {
+    background-color: var(--bg-panel) !important;
+    color: var(--text-primary) !important;
 }

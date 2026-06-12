@@ -71,7 +71,7 @@ function GeocoderSearch({
     <Draggable className="geocoder-search-container">
       <div ref={searchRef}>
         <div className="geocoder-input-wrapper">
-          <span className="geocoder-icon">🔍</span>
+          <span className="geocoder-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
           <input
             id="geocoder-search-input"
             type="text"
@@ -105,15 +105,15 @@ function GeocoderSearch({
             )}
             {!isSearching && searchResults.map((result) => {
               const typeIcon = {
-                country: '🌍',
-                region: '🏔️',
-                place: '🏙️',
-                locality: '📍',
-                district: '🏘️',
-                address: '📫',
+                country: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>,
+                region: '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>️',
+                place: '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect width="8" height="20" x="8" y="2" rx="2" ry="2"/><path d="M4 10V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6"/><path d="M20 22h2"/><path d="M2 22h2"/></svg>️',
+                locality: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>,
+                district: '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>️',
+                address: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 13.47v4.53a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.5"/><path d="M4 5l8 5.33L18 5"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>,
                 poi: '⭐',
               };
-              const icon = typeIcon[result.place_type?.[0]] || '📍';
+              const icon = typeIcon[result.place_type?.[0]] || <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
               return (
                 <li
                   key={result.id}

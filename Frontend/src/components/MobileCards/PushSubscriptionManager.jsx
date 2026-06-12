@@ -103,7 +103,7 @@ export default function PushSubscriptionManager() {
 
       {permission === 'denied' && (
         <div className="push-alert push-alert--error">
-          <strong>⚠️ Permisos bloqueados:</strong> Has bloqueado las notificaciones en este navegador. Restablécelos en la configuración de privacidad del navegador para poder recibir alertas.
+          <strong><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Permisos bloqueados:</strong> Has bloqueado las notificaciones en este navegador. Restablécelos en la configuración de privacidad del navegador para poder recibir alertas.
         </div>
       )}
 

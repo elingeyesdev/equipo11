@@ -29,7 +29,7 @@ function SearchableComboBox({ value, onChange, options, disabled, placeholder, d
   return (
     <div className="fp-combo-container">
       <div className="fp-search-wrapper">
-        <span className="fp-search-icon">🔍</span>
+        <span className="fp-search-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
         <input
           type="text"
           className="fp-combo-search"
@@ -475,7 +475,7 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
           </div>
           <p className="fp-manual-help">
             {activeDrawingZone === (isZ2 ? 'z2' : 'z1') ? (
-              <span className="fp-pulse-text">🔴 Haz clic en el mapa para marcar los puntos de la zona</span>
+              <span className="fp-pulse-text"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ef4444" stroke="none"/></svg> Haz clic en el mapa para marcar los puntos de la zona</span>
             ) : (
               <span>Haz clic en "Dibujar" para marcar puntos en el mapa</span>
             )}

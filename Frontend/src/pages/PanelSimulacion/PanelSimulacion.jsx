@@ -16,11 +16,11 @@ import './PanelSimulacion.css'
 
 // Configuración de métricas para renderizar cards (OCP: agregar una métrica = agregar un objeto)
 const METRICS = [
-  { key: 'aqi',        label: 'Calidad del Aire',  icon: '🌫️', unit: 'AQI', thresholds: [50, 100, 150] },
-  { key: 'ica',        label: 'Calidad del Agua',  icon: '💧', unit: 'ICA', thresholds: [40, 60, 80] },
-  { key: 'ruido',      label: 'Nivel de Ruido',    icon: '🔊', unit: 'dB',  thresholds: [50, 65, 80] },
-  { key: 'temperatura',label: 'Temperatura',       icon: '🌡️', unit: '°C',  thresholds: [10, 25, 32] },
-  { key: 'humedad',    label: 'Humedad',           icon: '💦', unit: '%',   thresholds: [30, 60, 80] },
+  { key: 'aqi',        label: 'Calidad del Aire',  icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M4 14h16"/><path d="M4 10h16"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>, unit: 'AQI', thresholds: [50, 100, 150] },
+  { key: 'ica',        label: 'Calidad del Agua',  icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>, unit: 'ICA', thresholds: [40, 60, 80] },
+  { key: 'ruido',      label: 'Nivel de Ruido',    icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>, unit: 'dB',  thresholds: [50, 65, 80] },
+  { key: 'temperatura',label: 'Temperatura',       icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/><path d="M11.5 6.5v6"/></svg>, unit: '°C',  thresholds: [10, 25, 32] },
+  { key: 'humedad',    label: 'Humedad',           icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>, unit: '%',   thresholds: [30, 60, 80] },
 ]
 
 // Rangos válidos para inyección manual (espejo del backend)
@@ -101,9 +101,9 @@ function PanelSimulacion() {
     setIsBatchRunning(true)
     try {
       const res = await simularRango(batchStart, batchEnd, batchInterval)
-      alert(`✅ Éxito: Se generaron ${Math.round(res.dataPointsPerCity)} puntos de datos por ciudad.`)
+      alert(`<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Éxito: Se generaron ${Math.round(res.dataPointsPerCity)} puntos de datos por ciudad.`)
     } catch (err) {
-      alert(`❌ Error: ${err.message}`)
+      alert(`<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Error: ${err.message}`)
     } finally {
       setIsBatchRunning(false)
     }
@@ -499,7 +499,7 @@ function PanelSimulacion() {
           onClick={() => navigate('/notificaciones')}
           style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', border: '1px solid rgba(99, 102, 241, 0.2)' }}
         >
-          ⚙️ Configurar canales de notificación (Email, WhatsApp, Telegram)
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg> Configurar canales de notificación (Email, WhatsApp, Telegram)
         </button>
       </div>
 

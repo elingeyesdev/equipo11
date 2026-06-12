@@ -15,11 +15,11 @@
 }
 
 .rep-kpi {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 18px 20px 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -27,7 +27,7 @@
 }
 
 .rep-kpi:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .rep-kpi-head {
@@ -48,17 +48,17 @@
 }
 
 .rep-kpi-label {
-  font: 600 10.5px/1 var(--font-sans);
+  font: 600 10.5px/1 'Space Grotesk', sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-kpi-value {
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 24px;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--text-primary);
   line-height: 1;
   margin-top: 2px;
 }
@@ -66,18 +66,18 @@
 .rep-kpi-range {
   display: flex;
   gap: 14px;
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 10.5px;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
 }
 
 /* ─── Filtros ──────────────────────────────────────────────── */
 .rep-filtros {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 16px 20px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .rep-filtros-row {
@@ -91,20 +91,20 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font: 600 10.5px/1 var(--font-sans);
+  font: 600 10.5px/1 'Space Grotesk', sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-input,
 .rep-select {
-  font-family: var(--font-sans);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 13px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   padding: 7px 10px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -113,8 +113,8 @@
 
 .rep-input:focus,
 .rep-select:focus {
-  border-color: var(--moss);
-  box-shadow: 0 0 0 2px var(--moss-soft);
+  border-color: var(--text-secondary);
+  box-shadow: 0 0 0 2px #3A506B;
 }
 
 /* ─── Rangos rápidos ────────────────────────────────────────── */
@@ -125,10 +125,10 @@
 }
 
 .rep-rangos-label {
-  font: 600 10.5px/1 var(--font-sans);
+  font: 600 10.5px/1 'Space Grotesk', sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-rangos-btns {
@@ -137,21 +137,21 @@
 }
 
 .rep-rango-btn {
-  font: 600 11px/1 var(--font-sans);
+  font: 600 11px/1 'Space Grotesk', sans-serif;
   padding: 6px 11px;
   height: 32px;
   border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--ink-mute);
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .rep-rango-btn:hover {
-  background: var(--moss-soft);
-  border-color: var(--moss);
-  color: var(--moss-ink);
+  background: #3A506B;
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
 }
 
 /* ─── Botones de exportación ────────────────────────────────── */
@@ -165,10 +165,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 600 12px/1 var(--font-sans);
+  font: 600 12px/1 'Space Grotesk', sans-serif;
   padding: 0 18px;
   height: 34px;
-  border-radius: var(--radius);
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   transition: opacity 0.15s, transform 0.1s;
@@ -178,16 +178,16 @@
 .rep-export-btn:hover   { opacity: 0.85; }
 .rep-export-btn:active  { transform: scale(0.97); }
 
-.rep-export-pdf { background: var(--rust);  color: var(--bg-card); }
-.rep-export-xl  { background: var(--moss);  color: var(--bg-card); }
+.rep-export-pdf { background: #3A506B;  color: var(--text-primary); }
+.rep-export-xl  { background: var(--accent);  color: var(--text-primary); }
 
 /* ─── Gráficos ──────────────────────────────────────────────── */
 .rep-charts {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 20px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -200,19 +200,19 @@
 }
 
 .rep-chart-tab {
-  font: 600 11.5px/1 var(--font-sans);
+  font: 600 11.5px/1 'Space Grotesk', sans-serif;
   padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--ink-mute);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .rep-chart-tab:hover {
-  background: var(--paper-2);
-  color: var(--ink);
+  background: var(--bg-app);
+  color: var(--text-primary);
 }
 
 .rep-chart-tab--active {
@@ -226,9 +226,9 @@
 }
 
 .rep-chart-card {
-  background: var(--paper);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   padding: 16px 14px 10px;
   overflow: hidden;
 }
@@ -238,17 +238,17 @@
   align-items: baseline;
   gap: 8px;
   margin-bottom: 12px;
-  font: 600 11px/1 var(--font-sans);
+  font: 600 11px/1 'Space Grotesk', sans-serif;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-chart-sub {
-  font: 400 11.5px/1 var(--font-sans);
+  font: 400 11.5px/1 'Space Grotesk', sans-serif;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
 }
 
 .rep-chart-empty {
@@ -257,7 +257,7 @@
   justify-content: center;
   min-height: 100px;
   font-size: 13px;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -272,13 +272,13 @@
   position: absolute;
   z-index: 10;
   pointer-events: none;
-  background: var(--bg-card);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  backdrop-filter: none;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: var(--shadow-md);
-  font-family: var(--font-sans);
+  box-shadow: none;
+  font-family: 'Space Grotesk', sans-serif;
   min-width: 130px;
   transition: left 0.1s ease-out, top 0.1s ease-out;
 }
@@ -287,14 +287,14 @@
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 4px;
 }
 
 .rep-tooltip-time {
-  color: var(--ink);
+  color: var(--text-primary);
   font-size: 11px;
 }
 
@@ -314,19 +314,19 @@
 .rep-tooltip-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
 .rep-tooltip-name {
-  color: var(--ink-mute);
+  color: var(--text-secondary);
   flex: 1;
 }
 
 .rep-tooltip-val {
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 .rep-chart-legend {
@@ -351,7 +351,7 @@
 .rep-legend-name {
   font-size: 11px;
   font-weight: 600;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -359,18 +359,18 @@
 
 /* ─── Tabla ────────────────────────────────────────────────── */
 .rep-tabla-wrap {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .rep-estado {
   padding: 52px 24px;
   text-align: center;
   font-size: 14px;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-tabla {
@@ -380,22 +380,22 @@
 }
 
 .rep-tabla thead tr {
-  background: var(--paper-2);
-  border-bottom: 1px solid var(--line);
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .rep-tabla th {
   text-align: left;
   padding: 10px 14px;
-  font: 600 10.5px/1 var(--font-sans);
+  font: 600 10.5px/1 'Space Grotesk', sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-mute);
-  white-space: nowrap;
+  color: var(--text-secondary);
+  #0B132B-space: nowrap;
 }
 
 .rep-tabla tbody tr {
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--border-color);
   transition: background 0.1s;
 }
 
@@ -404,31 +404,31 @@
 }
 
 .rep-tabla tbody tr:hover {
-  background: var(--paper);
+  background: var(--bg-app);
 }
 
 .rep-tabla td {
   padding: 10px 14px;
   vertical-align: middle;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 .rep-td-fecha {
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12px;
-  color: var(--ink-mute);
-  white-space: nowrap;
+  color: var(--text-secondary);
+  #0B132B-space: nowrap;
 }
 
 .rep-td-ciudad {
   font-weight: 600;
-  white-space: nowrap;
+  #0B132B-space: nowrap;
 }
 
 .rep-td-valor {
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 12.5px;
-  white-space: nowrap;
+  #0B132B-space: nowrap;
 }
 
 /* ─── Paginación ───────────────────────────────────────────── */
@@ -440,12 +440,12 @@
 }
 
 .rep-pag-btn {
-  font: 600 12px/1 var(--font-sans);
+  font: 600 12px/1 'Space Grotesk', sans-serif;
   padding: 7px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
 }
@@ -456,20 +456,20 @@
 }
 
 .rep-pag-btn:not(:disabled):hover {
-  background: var(--paper-2);
-  border-color: var(--moss);
+  background: var(--bg-app);
+  border-color: var(--text-secondary);
 }
 
 .rep-pag-info {
   font-size: 13px;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
 }
 
 .rep-nota {
   text-align: center;
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11.5px;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
 }
 
 /* ─── Responsive ───────────────────────────────────────────── */

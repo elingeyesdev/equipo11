@@ -1,17 +1,17 @@
 /* ==========================================================
-   Sidebar — editorial · papel · tinta
+   Sidebar — editorial · papel · tinta -> Flat Design Corp
    ========================================================== */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  width: var(--sidebar-width);
+  width: var(--sidebar-width, 250px);
   height: 100vh;
-  background-color: var(--bg-app);
-  border-right: 1px solid var(--line);
+  background-color: var(--bg-panel);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: 50;
   transition: width 0.3s ease;
 }
 
@@ -24,22 +24,22 @@
   right: -13px;
   width: 24px;
   height: 24px;
-  background-color: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 50%;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 1001;
-  box-shadow: var(--shadow-sm);
-  color: var(--ink-mute);
+  z-index: 50;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  color: var(--text-secondary);
   font-size: 9px;
   transition: all 0.2s ease;
 }
 .sidebar-toggle-btn:hover {
-  color: var(--ink);
-  background-color: var(--paper);
+  color: var(--text-primary);
+  background-color: #3A506B;
   transform: scale(1.08);
 }
 
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 12px;
   padding: 22px 20px 18px;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--border-color);
   overflow: hidden;
 }
 .sidebar.collapsed .sidebar-brand { padding: 22px 0; justify-content: center; }
@@ -57,9 +57,9 @@
 .sidebar-brand-icon {
   width: 36px;
   height: 36px;
-  background: var(--ink);
-  color: var(--paper);
-  border-radius: 9px;
+  background: var(--bg-app);
+  color: var(--accent);
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -69,18 +69,18 @@
 .sidebar-brand-text { display: flex; flex-direction: column; min-width: 0; }
 
 .sidebar-brand-title {
-  font-family: var(--font-serif);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 22px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: -0.01em;
-  color: var(--ink);
+  color: var(--text-primary);
 }
 
 .sidebar-brand-sub {
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 10px;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
   margin-top: 4px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -102,7 +102,7 @@
 .sidebar-section-label {
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   padding: 4px 8px 10px;
@@ -115,9 +115,9 @@
   align-items: center;
   gap: 11px;
   padding: 9px 10px;
-  border-radius: 7px;
+  border-radius: 6px;
   text-decoration: none;
-  color: var(--ink-mute);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
   transition: background 0.15s ease, color 0.15s ease;
@@ -126,26 +126,26 @@
 }
 
 .sidebar-item:hover {
-  background-color: var(--paper);
-  color: var(--ink);
+  background-color: #3A506B;
+  color: var(--text-primary);
 }
 
 .sidebar-item--active {
-  background-color: var(--ink);
-  color: var(--paper);
+  background-color: var(--accent);
+  color: var(--bg-app);
   font-weight: 600;
 }
 
-.sidebar-item--active .sidebar-item-icon { color: var(--moss); }
+.sidebar-item--active .sidebar-item-icon { color: var(--bg-app); }
 
 .sidebar-item-icon {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
 }
 
-.sidebar-item:hover .sidebar-item-icon { color: var(--ink); }
+.sidebar-item:hover .sidebar-item-icon { color: var(--text-primary); }
 
 .sidebar-item-label {
   white-space: nowrap;
@@ -159,20 +159,20 @@
 /* ─── Footer ─── */
 .sidebar-footer {
   padding: 14px 18px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-family: var(--font-mono);
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 11px;
-  color: var(--ink-faint);
+  color: var(--text-secondary);
 }
 
 .sidebar-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--moss-ink);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -188,8 +188,8 @@
 }
 
 .status-dot--online {
-  background-color: var(--moss);
-  box-shadow: 0 0 0 3px var(--border);
+  background-color: var(--accent);
+  box-shadow: 0 0 0 3px #1C2541;
   animation: sbPulse 2.2s infinite;
 }
 
@@ -200,21 +200,21 @@
 
 .sidebar-version {
   font-size: 10.5px;
-  color: var(--ink-faint);
-  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-family: 'Space Grotesk', sans-serif;
   letter-spacing: 0.05em;
 }
 
 @media (max-width: 768px) {
   .sidebar { 
     transform: translateX(-100%); 
-    z-index: 1000;
+    z-index: 50;
     width: 280px;
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .sidebar.mobile-open { 
     transform: translateX(0);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
   .sidebar-toggle-btn { display: none; }
 }

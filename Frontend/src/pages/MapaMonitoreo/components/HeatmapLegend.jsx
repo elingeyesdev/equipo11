@@ -108,7 +108,7 @@ export default function HeatmapLegend({ metrica, onRangeClick, visible, onClose,
             style={styles.actionBtn}
             title="Cerrar mapa de calor"
           >
-            ✕
+            <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
       </div>

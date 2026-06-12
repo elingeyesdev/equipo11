@@ -9,18 +9,18 @@ import './Auth.css'
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
 const CODES = [
-  { code: '+591', name: 'Bolivia 🇧🇴' },
-  { code: '+54', name: 'Argentina 🇦🇷' },
-  { code: '+55', name: 'Brasil 🇧🇷' },
-  { code: '+56', name: 'Chile 🇨🇱' },
-  { code: '+57', name: 'Colombia 🇨🇴' },
-  { code: '+51', name: 'Perú 🇵🇪' },
-  { code: '+593', name: 'Ecuador 🇪🇨' },
+  { code: '+591', name: 'Bolivia' },
+  { code: '+54', name: 'Argentina' },
+  { code: '+55', name: 'Brasil' },
+  { code: '+56', name: 'Chile' },
+  { code: '+57', name: 'Colombia' },
+  { code: '+51', name: 'Perú' },
+  { code: '+593', name: 'Ecuador' },
   { code: '+595', name: 'Paraguay 🇵y' },
-  { code: '+598', name: 'Uruguay 🇺🇾' },
-  { code: '+58', name: 'Venezuela 🇻🇪' },
-  { code: '+52', name: 'México 🇲🇽' },
-  { code: '+34', name: 'España 🇪🇸' },
+  { code: '+598', name: 'Uruguay' },
+  { code: '+58', name: 'Venezuela' },
+  { code: '+52', name: 'México' },
+  { code: '+34', name: 'España' },
 ]
 
 const VALIDACIONES = {
@@ -244,7 +244,7 @@ function Register() {
 
             {!MAPBOX_TOKEN ? (
               <div className="auth-info-banner" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', color: '#ef4444' }}>
-                ⚠️ Mapbox Token no configurado. Activa VITE_MAPBOX_TOKEN en tu archivo .env
+                <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Mapbox Token no configurado. Activa VITE_MAPBOX_TOKEN en tu archivo .env
               </div>
             ) : (
               <div style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line-soft)', position: 'relative', marginBottom: '8px' }}>
@@ -262,7 +262,7 @@ function Register() {
                       longitude={form.longitud}
                       anchor="bottom"
                     >
-                      <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>📍</div>
+                      <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
                     </Marker>
                   )}
                 </Map>
@@ -289,7 +289,7 @@ function Register() {
 
             {!hasLocation ? (
               <div className="auth-info-banner">
-                💡 Haz clic en el mapa de arriba para seleccionar tu ubicación y habilitar las alertas.
+                <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> Haz clic en el mapa de arriba para seleccionar tu ubicación y habilitar las alertas.
               </div>
             ) : (
               <div className="auth-notif-options">
