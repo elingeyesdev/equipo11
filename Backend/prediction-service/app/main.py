@@ -160,11 +160,11 @@ def check_thresholds_and_generate_alerts(localidad_id: int, predictions: dict, s
                             if t["min"] <= val <= t["max"]:
                                 if t["severidad"] in ["advertencia", "critica", "emergencia"]:
                                     insert_query = """
-                                        INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, reconocida, tipo, tiempo)
-                                        VALUES (%s, %s, %s, %s, FALSE, 'simulacion', %s)
+                                        INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, reconocida, tipo, simulacion_id, tiempo)
+                                        VALUES (%s, %s, %s, %s, FALSE, 'simulacion', %s, %s)
                                         RETURNING id, tiempo, reconocida, tipo
                                     """
-                                    cur.execute(insert_query, (localidad_id, metric_id, t["id"], val, tiempo))
+                                    cur.execute(insert_query, (localidad_id, metric_id, t["id"], val, simulacion_id, tiempo))
                                     alert_row = cur.fetchone()
                                     if alert_row:
                                         alerts.append({
@@ -373,13 +373,8 @@ def get_simulate_by_id(id: int):
                     FROM alertas a
                     JOIN umbrales u ON u.id = a.umbral_id
                     JOIN metricas m ON m.id = a.metrica_id
-                    WHERE a.localidad_id = %s AND a.tipo = 'simulacion'
-                      AND a.tiempo BETWEEN %s AND %s
-                """, (
-                    localidad_id,
-                    datetime.fromisoformat(sim_meta["creado_en"].replace('Z', '+00:00')) if sim_meta["creado_en"] else datetime.utcnow() - timedelta(days=1),
-                    datetime.utcnow() + timedelta(days=5)
-                ))
+                    WHERE a.localidad_id = %s AND a.simulacion_id = %s
+                """, (localidad_id, id))
                 for a_row in cur.fetchall():
                     alertas.append({
                         "id": a_row[0],

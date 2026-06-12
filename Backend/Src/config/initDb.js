@@ -151,6 +151,9 @@ async function initDatabase() {
     logger.error('❌ Error creando tablas de simulación de escenarios:', err.message);
   }
 
+  // Hot-migration: asegurar la columna simulacion_id en la tabla alertas (referenciando a simulaciones)
+  await ensureColumn('alertas', 'simulacion_id BIGINT REFERENCES simulaciones(id) ON DELETE CASCADE');
+
   // 1. Verificar Notificaciones
   try {
     const { rows: notifs } = await db.query('SELECT count(*) FROM configuracion_notificaciones');

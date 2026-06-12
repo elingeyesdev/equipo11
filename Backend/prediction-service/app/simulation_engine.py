@@ -24,7 +24,7 @@ def extract_vertices(area_geo):
         for p in area_geo:
             if isinstance(p, dict):
                 lat = p.get("lat") or p.get("latitude")
-                lng = p.get("lng") or p.get("lng") or p.get("lon") or p.get("longitude")
+                lng = p.get("lng") or p.get("lon") or p.get("longitude")
                 if lat is not None and lng is not None:
                     vertices.append((float(lat), float(lng)))
             elif isinstance(p, (list, tuple)) and len(p) >= 2:

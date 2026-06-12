@@ -424,6 +424,7 @@ CREATE TABLE alertas (
   reconocida_por   INT           REFERENCES usuarios(id) ON DELETE SET NULL,
   reconocida_en    TIMESTAMPTZ,
   tipo             VARCHAR(20)   NOT NULL DEFAULT 'real' CHECK (tipo IN ('real', 'prediccion', 'simulacion')),
+  simulacion_id    BIGINT        REFERENCES simulaciones(id) ON DELETE CASCADE,
   CHECK ((reconocida = FALSE) OR (reconocida_en IS NOT NULL))
 );
 

@@ -72,9 +72,14 @@ async function sendPushNotification(tokens, payload) {
       }
     }
 
+    let finalTitle = title || 'Alerta EnviroSense';
+    if (formattedData.tipo === 'simulacion' && !finalTitle.startsWith('🎭 SIMULACIÓN:')) {
+      finalTitle = `🎭 SIMULACIÓN: ${finalTitle}`;
+    }
+
     const message = {
       notification: {
-        title: title || 'Alerta EnviroSense',
+        title: finalTitle,
         body: body || 'Notificación del sistema'
       },
       tokens: cleanTokens,

@@ -233,12 +233,13 @@ async function guardarAlertas(alertas, options = {}) {
     for (const a of alertas) {
       const alertTime = a.tiempo ? new Date(a.tiempo) : new Date();
       const alertTipo = a.tipo || 'real';
-      values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`)
-      params.push(a.localidad_id, a.metrica_id, a.umbral_id, a.valor, alertTime, alertTipo)
+      const simId = a.simulacion_id || null;
+      values.push(`($${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++}, $${idx++})`)
+      params.push(a.localidad_id, a.metrica_id, a.umbral_id, a.valor, alertTime, alertTipo, simId)
     }
 
     await db.query(
-      `INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, tiempo, tipo)
+      `INSERT INTO alertas (localidad_id, metrica_id, umbral_id, valor, tiempo, tipo, simulacion_id)
        VALUES ${values.join(', ')}`,
       params
     )
@@ -260,12 +261,15 @@ async function guardarAlertas(alertas, options = {}) {
             if (a.tipo === 'prediccion') {
               title = `Predicción de Alerta: ${cityName}`;
               body = `Se pronostica que la métrica ${a.metrica_clave} alcanzará ${a.valor} (nivel ${a.label.toLowerCase()}) en ${cityName} el ${new Date(a.tiempo).toLocaleString('es-BO')}.`;
+            } else if (a.tipo === 'simulacion') {
+              title = `🎭 SIMULACIÓN: ${cityName}`;
+              body = `La simulación en ${cityName} detectó ${a.metrica_clave} en ${a.valor}, alcanzando nivel ${a.label.toLowerCase()}.`;
             } else if (options.isManual) {
               title = `Inyección Manual: ${cityName}`;
               body = `Valor inyectado de ${a.metrica_clave} (${a.valor}) a ${cityName} es muy peligroso y alcanzó nivel ${a.label.toLowerCase()}.`;
             } else {
-              title = `Simulación: ${cityName}`;
-              body = `La simulación en ${cityName} detectó ${a.metrica_clave} en ${a.valor}, por lo tanto es muy peligroso (${a.label.toLowerCase()}).`;
+              title = `Alerta en tiempo real: ${cityName}`;
+              body = `${a.metrica_clave} alcanzó ${a.valor} (nivel ${a.label.toLowerCase()}) en ${cityName}.`;
             }
 
             await sendPushNotification(tokens, {
@@ -276,7 +280,8 @@ async function guardarAlertas(alertas, options = {}) {
                 metricaClave: a.metrica_clave,
                 valor: String(a.valor),
                 severidad: a.severidad,
-                tipo: a.tipo || 'real'
+                tipo: a.tipo || 'real',
+                simulacionId: a.simulacion_id ? String(a.simulacion_id) : ''
               }
             })
           }
