@@ -472,6 +472,94 @@
   color: var(--ink-faint);
 }
 
+/* ─── Tabs ─────────────────────────────────────────────────── */
+.rep-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rep-tab {
+  padding: 10px 22px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font: 600 13px var(--font-sans);
+  color: var(--ink-mute);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.rep-tab:hover {
+  color: var(--ink);
+}
+
+.rep-tab--active {
+  color: var(--moss-ink);
+  border-bottom-color: var(--moss-ink);
+}
+
+/* ─── Atmosferico Tab ──────────────────────────────────────── */
+.atm-tab {
+  width: 100%;
+}
+
+.atm-header {
+  margin-bottom: 20px;
+}
+
+.atm-title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.atm-title em {
+  font-style: italic;
+  color: var(--moss-ink);
+}
+
+.atm-desc {
+  font-size: 13.5px;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+
+.atm-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.atm-time-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.atm-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+
+.atm-png-wrap {
+  margin-bottom: 20px;
+}
+
+.atm-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 /* ─── Responsive ───────────────────────────────────────────── */
 @media (max-width: 960px) {
   .rep-kpi-grid     { grid-template-columns: repeat(2, 1fr); }

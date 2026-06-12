@@ -4,10 +4,12 @@ export const CIUDADES = [
 ];
 
 export const METRICAS_OPTS = [
-  { value: 'temperatura', label: 'Temperatura',      sufijo: '°C',   color: 'violet', icon: '🌡' },
-  { value: 'aqi',         label: 'Calidad del Aire', sufijo: ' AQI', color: 'rust',   icon: '🌫' },
-  { value: 'humedad',     label: 'Humedad',          sufijo: '%',    color: 'river',  icon: '💧' },
-  { value: 'ruido',       label: 'Ruido',            sufijo: ' dB',  color: 'amber',  icon: '🔊' },
+  { value: 'temperatura', label: 'Temperatura',      sufijo: '°C',   color: 'violet',  icon: '🌡' },
+  { value: 'aqi',         label: 'Calidad del Aire', sufijo: ' AQI', color: 'rust',    icon: '🌫' },
+  { value: 'humedad',     label: 'Humedad',          sufijo: '%',    color: 'river',   icon: '💧' },
+  { value: 'ruido',       label: 'Ruido',            sufijo: ' dB',  color: 'amber',   icon: '🔊' },
+  { value: 'windSpeed',   label: 'Viento',           sufijo: ' km/h',color: 'moss',    icon: '🌬' },
+  { value: 'rain',        label: 'Lluvia',           sufijo: ' mm/h', color: 'climate', icon: '🌧' },
 ];
 
 export const RANGOS = [

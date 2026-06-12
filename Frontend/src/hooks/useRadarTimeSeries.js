@@ -30,8 +30,8 @@ const _loadPng = async (path, params = {}) => {
   return { img, objectUrl };
 };
 
-export function useRadarSampling(selectedTime, ciudades) {
-  const [sampledData, setSampledData] = useState([]);
+export function useRadarTimeSeries(ciudad, timestamps) {
+  const [timeSeriesData, setTimeSeriesData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const objectUrlsRef = useRef([]);
@@ -40,9 +40,9 @@ export function useRadarSampling(selectedTime, ciudades) {
     let cancelled = false;
 
     const run = async () => {
-      if (!selectedTime || !ciudades || ciudades.length === 0) {
+      if (!ciudad || !timestamps || timestamps.length === 0) {
         if (!cancelled) {
-          setSampledData([]);
+          setTimeSeriesData([]);
           setLoading(false);
           setError(null);
         }
@@ -54,46 +54,43 @@ export function useRadarSampling(selectedTime, ciudades) {
         setError(null);
       }
 
-      const params = { time: selectedTime };
+      const lng = Number(ciudad.longitude) || Number(ciudad.lng) || 0;
+      const lat = Number(ciudad.latitude) || Number(ciudad.lat) || 0;
 
-      const [tempResult, rainResult, windResult, visResult, snowResult, aqiResult] =
-        await Promise.allSettled([
-          _loadPng('/radar/bolivia/temp/png', params),
-          _loadPng('/radar/bolivia/rain/png', params),
-          _loadPng('/radar/bolivia/wind/png', params),
-          _loadPng('/radar/bolivia/vis/png', params),
-          _loadPng('/radar/bolivia/snow/png', params),
-          _loadPng('/radar/bolivia/aqi/png', params),
-        ]);
+      const results = [];
 
-      if (cancelled) {
-        cleanupUrls();
-        return;
-      }
+      for (const ts of timestamps) {
+        if (cancelled) break;
 
-      const results = [tempResult, rainResult, windResult, visResult, snowResult, aqiResult];
+        const params = { time: ts };
 
-      const urls = [];
-      results.forEach(r => {
-        if (r.status === 'fulfilled') urls.push(r.value.objectUrl);
-      });
-      objectUrlsRef.current = urls;
+        const [tempResult, rainResult, windResult, visResult, snowResult, aqiResult] =
+          await Promise.allSettled([
+            _loadPng('/radar/bolivia/temp/png', params),
+            _loadPng('/radar/bolivia/rain/png', params),
+            _loadPng('/radar/bolivia/wind/png', params),
+            _loadPng('/radar/bolivia/vis/png', params),
+            _loadPng('/radar/bolivia/snow/png', params),
+            _loadPng('/radar/bolivia/aqi/png', params),
+          ]);
 
-      const decode = (result) => {
-        if (result.status !== 'fulfilled') return null;
-        return getImageDataArray(result.value.img);
-      };
+        const urls = [];
+        [tempResult, rainResult, windResult, visResult, snowResult, aqiResult].forEach(r => {
+          if (r.status === 'fulfilled') urls.push(r.value.objectUrl);
+        });
+        objectUrlsRef.current.push(...urls);
 
-      const tempData = decode(tempResult);
-      const rainData = decode(rainResult);
-      const windData = decode(windResult);
-      const visData = decode(visResult);
-      const snowData = decode(snowResult);
-      const aqiData = decode(aqiResult);
+        const decode = (result) => {
+          if (result.status !== 'fulfilled') return null;
+          return getImageDataArray(result.value.img);
+        };
 
-      const resultado = ciudades.map((ciudad) => {
-        const lng = Number(ciudad.longitude) || Number(ciudad.lng) || 0;
-        const lat = Number(ciudad.latitude) || Number(ciudad.lat) || 0;
+        const tempData = decode(tempResult);
+        const rainData = decode(rainResult);
+        const windData = decode(windResult);
+        const visData = decode(visResult);
+        const snowData = decode(snowResult);
+        const aqiData = decode(aqiResult);
 
         const tempK = sampleTempBilinear(tempData, lng, lat);
         const rain = sampleRainBilinear(rainData, lng, lat);
@@ -102,10 +99,8 @@ export function useRadarSampling(selectedTime, ciudades) {
         const snow = sampleSnowBilinear(snowData, lng, lat);
         const aqi = sampleAqiNearest(aqiData, lng, lat);
 
-        return {
-          nombre: ciudad.name || ciudad.nombre || 'Desconocido',
-          lat,
-          lng,
+        results.push({
+          timestamp: ts,
           temp: tempK !== null ? tempK - 273.15 : null,
           rain: rain ?? null,
           windSpeed: wind ? wind.speed : null,
@@ -113,32 +108,28 @@ export function useRadarSampling(selectedTime, ciudades) {
           snowAccum: snow ? snow.accumulated : null,
           snowFresh: snow ? snow.fresh : null,
           aqi: aqi ?? null,
-        };
-      });
+        });
+      }
 
       if (!cancelled) {
-        setSampledData(resultado);
+        setTimeSeriesData(results);
         setLoading(false);
       }
     };
 
     run().catch((err) => {
       if (!cancelled) {
-        setError(err.message || 'Error al muestrear datos radar');
+        setError(err.message || 'Error en serie temporal radar');
         setLoading(false);
       }
     });
 
-    const cleanupUrls = () => {
+    return () => {
+      cancelled = true;
       objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
     };
+  }, [ciudad, timestamps]);
 
-    return () => {
-      cancelled = true;
-      cleanupUrls();
-    };
-  }, [selectedTime, ciudades]);
-
-  return { sampledData, loading, error };
+  return { timeSeriesData, loading, error };
 }
