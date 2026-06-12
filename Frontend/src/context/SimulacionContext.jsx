@@ -29,6 +29,7 @@ export function SimulacionProvider({ children }) {
   const [zona2Cfg, setZona2Cfg] = useState({ selectionMode: 'country', pais: '', depto: '', prov: '', departamentos: [], provincias: [], loadingGeo: false, result: null, manualPoints: [], manualName: '' })
   const [activeDrawingZone, setActiveDrawingZone] = useState(null)
   const [isSimMode, setIsSimMode] = useState(false)
+  const [restSimPoints, setRestSimPoints] = useState([])
 
   useEffect(() => {
     const socket = io(SOCKET_URL, {
@@ -93,11 +94,11 @@ export function SimulacionProvider({ children }) {
     iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
     fronterasSeleccionadas, setFronterasSeleccionadas, isComparing, setIsComparing,
     zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, isSimMode, setIsSimMode,
-    activeDrawingZone, setActiveDrawingZone,
+    activeDrawingZone, setActiveDrawingZone, restSimPoints, setRestSimPoints
   }), [isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas,
       iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
       fronterasSeleccionadas, isComparing, zona1Cfg, zona2Cfg, isSimMode,
-      activeDrawingZone])
+      activeDrawingZone, restSimPoints])
 
   return (
     <SimulacionContext.Provider value={value}>

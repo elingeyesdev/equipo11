@@ -18,7 +18,7 @@ def clip_metric_value(metric: str, val: float) -> float:
         val = min(100.0, val)
     return val
 
-def calculate_scenarios(localidad_id: int, target_metric: str, steps: int = 48):
+def calculate_scenarios(localidad_id: int, target_metric: str, steps: int = 48, simulated_predictions = None):
     """
     Simula escenarios what-if propagando el cambio porcentual de una métrica
     objetivo hacia las otras métricas usando la matriz de correlación de Pearson.
@@ -26,10 +26,17 @@ def calculate_scenarios(localidad_id: int, target_metric: str, steps: int = 48):
     if target_metric not in PRESETS:
         target_metric = "aqi"
 
-    # 1. Obtener predicción ARIMA base para todas las métricas
+    # 1. Obtener predicción ARIMA base para todas las métricas o usar las simuladas
     baselines = {}
     for m in METRICS:
-        baselines[m] = get_arima_prediction(localidad_id, m, steps)["predictions"]
+        if simulated_predictions is not None and m in simulated_predictions:
+            m_data = simulated_predictions[m]
+            if isinstance(m_data, dict) and "predictions" in m_data:
+                baselines[m] = m_data["predictions"]
+            else:
+                baselines[m] = m_data
+        else:
+            baselines[m] = get_arima_prediction(localidad_id, m, steps)["predictions"]
 
     # 2. Obtener matriz de correlación
     correlations = get_metrics_correlation(localidad_id)

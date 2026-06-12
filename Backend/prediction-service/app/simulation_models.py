@@ -24,3 +24,5 @@ class SimulationResponse(BaseModel):
     datos_generados_count: int
     predicciones_derivadas: Dict[str, Any]
     alertas_generadas: List[Dict[str, Any]]
+    recomendaciones: Optional[Dict[str, Any]] = None
+    scenarios: Optional[Dict[str, Any]] = None

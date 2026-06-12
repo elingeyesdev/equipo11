@@ -9,6 +9,8 @@ import LineChart from './LineChart'
 import BarChart from './BarChart'
 import KpiCard from './KpiCard'
 import { CIUDADES, METRICAS_OPTS, RANGOS, PAGE_SIZE, calcStats } from './constants'
+import Simulacion from './Simulacion'
+import SimulacionResultados from './SimulacionResultados'
 import './Reportes.css'
 import '../PagePlaceholder.css'
 
@@ -82,7 +84,27 @@ export default function Reportes() {
   const { unidades } = useUnidades()
 
   // ─── Control de Pestañas principales ───
-  const [activeTab, setActiveTab] = useState('predictivos') // 'predictivos' | 'historico'
+  const [activeTab, setActiveTab] = useState('predictivos') // 'predictivos' | 'historico' | 'simulacion'
+  const [simActiveData, setSimActiveData] = useState(null)
+  const [hasActiveSimulation, setHasActiveSimulation] = useState(false)
+
+  const checkActiveSimulations = useCallback(async () => {
+    try {
+      const res = await httpClient.get('/simulaciones');
+      if (res.data && res.data.data) {
+        const active = res.data.data.some(sim => sim.estado === 'activa');
+        setHasActiveSimulation(active);
+      }
+    } catch (err) {
+      console.error('Error checking active simulations:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkActiveSimulations();
+    const intervalId = setInterval(checkActiveSimulations, 15000);
+    return () => clearInterval(intervalId);
+  }, [checkActiveSimulations]);
 
   // ─── Estados del Módulo Predictivo ───
   const [predictCity, setPredictCity] = useState('La Paz')
@@ -644,8 +666,21 @@ export default function Reportes() {
           >
             📂 Historial de Lecturas
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'simulacion' ? 'active' : ''}`}
+            onClick={() => setActiveTab('simulacion')}
+          >
+            🎭 Simulación de Escenarios
+          </button>
         </div>
       </div>
+
+      {hasActiveSimulation && (
+        <div className="sim-active-banner">
+          <span className="sim-active-banner-pulse"></span>
+          <span>⚠️ <strong>MODO SIMULACIÓN ACTIVO:</strong> Hay un escenario climático artificial ejecutándose en el área del mapa meteorológico.</span>
+        </div>
+      )}
 
       {/* ──────────────────────────────────────────────────────────────────────── */}
       {/* 🧠 PESTAÑA 1: CONTROL DE REPORTES PREDICTIVOS                             */}
@@ -1011,6 +1046,33 @@ export default function Reportes() {
             Mostrando {datosPagina.length} de {datosFiltrados.length} registros
             · El archivo exportado incluye todos los registros filtrados.
           </p>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {/* 🎭 PESTAÑA 3: SIMULACIÓN DE ESCENARIOS                                   */}
+      {/* ──────────────────────────────────────────────────────────────────────── */}
+      {activeTab === 'simulacion' && (
+        <div className="simulation-tab-content">
+          {simActiveData ? (
+            <SimulacionResultados 
+              simulationData={simActiveData} 
+              onBack={() => {
+                setSimActiveData(null);
+                checkActiveSimulations();
+              }} 
+            />
+          ) : (
+            <Simulacion 
+              localidadesList={localidadesList}
+              activeCityName={predictCity}
+              setActiveCityName={setPredictCity}
+              onLoadResults={(data) => {
+                setSimActiveData(data);
+                checkActiveSimulations();
+              }}
+            />
+          )}
         </div>
       )}
     </div>

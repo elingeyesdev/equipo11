@@ -263,27 +263,41 @@ def post_simulate(req: SimulationRequest):
                     
         # 5. Ejecutar predicciones ARIMA con baseline simulado
         predictions = {}
+        predictions_completas = {}
         duration_hours = req.parametros.get("duracion_horas", 24)
         horas_pred = max(24, duration_hours)
         
         for m in ["temperatura", "humedad", "aqi", "precipitacion", "viento"]:
-            predictions[m] = get_arima_prediction(
+            full_pred = get_arima_prediction(
                 req.localidad_id, 
                 m, 
                 horas_pred, 
                 simulated_baseline_data=city_simulated_data
-            )["predictions"]
+            )
+            predictions[m] = full_pred["predictions"]
+            predictions_completas[m] = full_pred
             
         # 6. Generar alertas basadas en la simulación
         alertas = check_thresholds_and_generate_alerts(req.localidad_id, predictions, sim_id)
         
+        # 7. Generar recomendaciones
+        city_name = get_city_name(req.localidad_id)
+        recomendaciones = generate_recommendations(predictions, city_name)
+        
+        # 8. Calcular escenarios What-If para todas las métricas
+        scenarios_dict = {}
+        for m in ["temperatura", "humedad", "aqi", "precipitacion", "viento"]:
+            scenarios_dict[m] = calculate_scenarios(req.localidad_id, m, horas_pred, simulated_predictions=predictions_completas)
+
         return {
             "id_simulacion": sim_id,
             "nombre": req.nombre,
             "estado": estado,
             "datos_generados_count": len(simulated_data),
-            "predicciones_derivadas": predictions,
-            "alertas_generadas": alertas
+            "predicciones_derivadas": predictions_completas,
+            "alertas_generadas": alertas,
+            "recomendaciones": recomendaciones,
+            "scenarios": scenarios_dict
         }
     except Exception as e:
         import traceback
@@ -353,16 +367,19 @@ def get_simulate_by_id(id: int):
                     
         # 4. Rerun predictions
         predictions = {}
+        predictions_completas = {}
         duration_hours = sim_meta["parametros"].get("duracion_horas", 24)
         horas_pred = max(24, duration_hours)
         
         for m in ["temperatura", "humedad", "aqi", "precipitacion", "viento"]:
-            predictions[m] = get_arima_prediction(
+            full_pred = get_arima_prediction(
                 localidad_id, 
                 m, 
                 horas_pred, 
                 simulated_baseline_data=city_simulated_data
-            )["predictions"]
+            )
+            predictions[m] = full_pred["predictions"]
+            predictions_completas[m] = full_pred
             
         # 5. Obtener alertas simuladas
         alertas = []
@@ -388,13 +405,26 @@ def get_simulate_by_id(id: int):
                         "tipo": "simulacion"
                     })
                     
+        # 6. Generar recomendaciones
+        city_name = get_city_name(localidad_id)
+        recomendaciones = generate_recommendations(predictions, city_name)
+        
+        # 7. Calcular escenarios What-If para todas las métricas
+        scenarios_dict = {}
+        for m in ["temperatura", "humedad", "aqi", "precipitacion", "viento"]:
+            scenarios_dict[m] = calculate_scenarios(localidad_id, m, horas_pred, simulated_predictions=predictions_completas)
+
         return {
             "meta": sim_meta,
             "datos_generados_count": len(data_rows),
-            "predicciones_derivadas": predictions,
-            "alertas_generadas": alertas
+            "predicciones_derivadas": predictions_completas,
+            "alertas_generadas": alertas,
+            "recomendaciones": recomendaciones,
+            "scenarios": scenarios_dict
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

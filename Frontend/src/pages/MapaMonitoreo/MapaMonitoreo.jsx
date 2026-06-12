@@ -108,7 +108,8 @@ function MapaMonitoreo() {
     isSimMode, setIsSimMode,
     zona1Cfg, setZona1Cfg,
     zona2Cfg, setZona2Cfg,
-    activeDrawingZone, setActiveDrawingZone
+    activeDrawingZone, setActiveDrawingZone,
+    restSimPoints, setRestSimPoints
   } = useSimulacion();
   const {
     zonaSimActiva, zonaSimZonas = [], zonaSimMetrica,
@@ -413,6 +414,11 @@ function MapaMonitoreo() {
         };
         setZona2Cfg(updatedZ2);
         handleBoundarySelect({ z1: zona1Cfg.result, z2: updatedZ2.result, changed: 'z2' });
+        return;
+      }
+      if (activeDrawingZone === 'rest') {
+        const nextPoints = [...restSimPoints, [lng, lat]];
+        setRestSimPoints(nextPoints);
         return;
       }
       return;
@@ -833,6 +839,39 @@ function MapaMonitoreo() {
             {zona2Cfg.selectionMode === 'manual' && zona2Cfg.manualPoints.map((pt, idx) => (
               <Marker key={`z2-pt-${idx}`} longitude={pt[0]} latitude={pt[1]} anchor="center">
                 <div className="manual-marker z2-marker">{idx + 1}</div>
+              </Marker>
+            ))}
+
+            {/* Dibujo Manual Simulación REST */}
+            {restSimPoints.length >= 2 && (
+              <Source id="manual-rest-temp-src" type="geojson" data={getManualGeoJSON(restSimPoints)}>
+                {restSimPoints.length < 3 ? (
+                  <Layer
+                    id="manual-rest-temp-line"
+                    type="line"
+                    paint={{ 'line-color': '#eab308', 'line-width': 2, 'line-dasharray': [2, 2] }}
+                  />
+                ) : (
+                  <>
+                    <Layer
+                      id="manual-rest-temp-fill"
+                      type="fill"
+                      paint={{ 'fill-color': '#eab308', 'fill-opacity': 0.15 }}
+                    />
+                    <Layer
+                      id="manual-rest-temp-line-closed"
+                      type="line"
+                      paint={{ 'line-color': '#eab308', 'line-width': 2 }}
+                    />
+                  </>
+                )}
+              </Source>
+            )}
+            {restSimPoints.map((pt, idx) => (
+              <Marker key={`rest-pt-${idx}`} longitude={pt[0]} latitude={pt[1]} anchor="center">
+                <div className="manual-marker" style={{ backgroundColor: '#eab308', color: '#1e293b', border: '2px solid #fff', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>
+                  {idx + 1}
+                </div>
               </Marker>
             ))}
 
