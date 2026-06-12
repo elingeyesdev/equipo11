@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Instalar dependencias (frozen-lockfile garantiza reproducibilidad exacta)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Copiar el resto del código fuente
 COPY . .

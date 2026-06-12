@@ -455,10 +455,10 @@ const ReportModuleTest = () => {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={handleExportPDF} disabled={data.length === 0 || loading || disablePDF} style={{ padding: '10px 20px', background: btnPdfColor, color: 'white', border: 'none', borderRadius: '8px', cursor: data.length === 0 || loading || disablePDF ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', opacity: data.length === 0 || loading || disablePDF ? 0.5 : 1 }}>
-            📄 Exportar PDF {disablePDF && '(Deshabilitado en modo masivo)'}
+            <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Exportar PDF {disablePDF && '(Deshabilitado en modo masivo)'}
           </button>
           <button onClick={handleExportExcel} disabled={data.length === 0 || loading} style={{ padding: '10px 20px', background: btnExcelColor, color: 'white', border: 'none', borderRadius: '8px', cursor: data.length === 0 || loading ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', opacity: data.length === 0 || loading ? 0.5 : 1 }}>
-            📊 Exportar Excel {['polygon', 'country', 'department'].includes(selectionType) && '(Masivo)'}
+            <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg> Exportar Excel {['polygon', 'country', 'department'].includes(selectionType) && '(Masivo)'}
           </button>
         </div>
       </div>
@@ -506,7 +506,7 @@ const ReportModuleTest = () => {
                     onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
                   >
-                    🌍 Ver {layer.charAt(0).toUpperCase() + layer.slice(1)} en Mapa
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg> Ver {layer.charAt(0).toUpperCase() + layer.slice(1)} en Mapa
                   </button>
                 ))}
               </div>
@@ -521,7 +521,7 @@ const ReportModuleTest = () => {
         {/* Mapbox Mini-Map */}
         <div style={{ flex: '1 1 400px', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${borderColor}`, height: '100%', position: 'relative' }}>
           <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 10, background: 'rgba(24,24,27,0.85)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#94a3b8', border: `1px solid ${borderColor}`, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
-            💡 Tip: Haz doble clic o presiona Enter para finalizar el dibujo del polígono.
+            <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg> Tip: Haz doble clic o presiona Enter para finalizar el dibujo del polígono.
           </div>
           <Map
             ref={mapRef}
@@ -551,7 +551,7 @@ const ReportModuleTest = () => {
             {/* Marcador del Centroide de Previsualización */}
             {selectionType === 'point' && (
               <Marker longitude={lon} latitude={lat} anchor="bottom" draggable onDragEnd={handleMapClick}>
-                <div style={{ color: accentColor, fontSize: '24px', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}>📍</div>
+                <div style={{ color: accentColor, fontSize: '24px', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' }}><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
               </Marker>
             )}
           </Map>

@@ -78,22 +78,22 @@ export default function LineChart({ series, metrica }) {
             const y = cy(v);
             return (
               <g key={i}>
-                <line x1={PX} x2={W - PX} y1={y} y2={y} stroke="var(--line)" strokeDasharray="4,4" strokeWidth={0.8} />
-                <text x={PX - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-faint)" fontWeight="500">{v.toFixed(0)}</text>
+                <line x1={PX} x2={W - PX} y1={y} y2={y} stroke="var(--border-color)" strokeDasharray="4,4" strokeWidth={0.8} />
+                <text x={PX - 8} y={y + 3.5} textAnchor="end" fontSize={10} fill="var(--text-secondary)" fontWeight="500">{v.toFixed(0)}</text>
               </g>
             );
           })}
-          <text x={PX} y={H - 8} textAnchor="start" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
+          <text x={PX} y={H - 8} textAnchor="start" fontSize={10} fill="var(--text-secondary)" fontWeight="500">
             {formatDate(minT)} {formatTime(minT)}
           </text>
-          <text x={W - PX} y={H - 8} textAnchor="end" fontSize={10} fill="var(--ink-mute)" fontWeight="500">
+          <text x={W - PX} y={H - 8} textAnchor="end" fontSize={10} fill="var(--text-secondary)" fontWeight="500">
             {formatDate(maxT)} {formatTime(maxT)}
           </text>
           {series.map((serie, sIdx) => {
             let pts = serie.datos.filter(d => d[metrica] != null && !isNaN(d[metrica])).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
             if (pts.length === 0) return null;
             const linePath = pts.map((d, i) => `${i === 0 ? 'M' : 'L'}${cx(new Date(d.fecha).getTime()).toFixed(1)},${cy(d[metrica]).toFixed(1)}`).join(' ');
-            const stroke = `var(--${serie.colorVar})`;
+            const stroke = `var(--accent)`;
             const areaPath = series.length === 1
               ? `${linePath} L${cx(new Date(pts[pts.length - 1].fecha).getTime()).toFixed(1)},${cy(minV).toFixed(1)} L${cx(new Date(pts[0].fecha).getTime()).toFixed(1)},${cy(minV).toFixed(1)} Z`
               : null;

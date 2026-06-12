@@ -52,7 +52,7 @@ export default function MapLayers({
               onClick={async (e) => { e.originalEvent.stopPropagation(); onCityClick(city); }}
             >
               <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
+                <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0 1 17-10"/><path d="M9 12a3 3 0 0 1 4-2"/><path d="M6 12a6 6 0 0 1 10-5"/><circle cx="12" cy="12" r="2"/></svg></span>
               </div>
             </Marker>
           ))

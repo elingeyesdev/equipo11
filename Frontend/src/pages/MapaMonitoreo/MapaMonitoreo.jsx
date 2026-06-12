@@ -43,7 +43,7 @@ function BuscadorEspacial({ mapRef }) {
     setPais(p); setDepto(''); setProv(''); setDepartamentos([]); setProvincias([]);
     if (p) {
       const pObj = paises.find(x => x.name === p);
-      if (pObj && pObj.states) setDepartamentos(pObj.states.sort((a,b) => a.name.localeCompare(b.name)));
+      if (pObj && pObj.states) setDepartamentos(pObj.states.sort((a, b) => a.name.localeCompare(b.name)));
     }
   };
 
@@ -69,32 +69,27 @@ function BuscadorEspacial({ mapRef }) {
   };
 
   return (
-    <div style={{
+    <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]" style={{
       position: 'absolute', top: 20, left: 20, zIndex: 10,
-      background: 'var(--card)',
-      padding: '10px', borderRadius: 'var(--radius)', color: 'var(--text-primary)',
-      border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '5px', width: '200px',
-      boxShadow: 'var(--shadow-md)'
+      padding: '10px', display: 'flex', flexDirection: 'column', gap: '5px', width: '200px'
     }}>
-      <select value={pais} onChange={handlePaisChange} style={{ background: 'var(--paper)', color: 'var(--text-primary)', border: '1px solid var(--line)', borderRadius: '4px', padding: '4px', fontFamily: 'var(--font-sans)' }}>
+      <select value={pais} onChange={handlePaisChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
         <option value="">-- País --</option>
         {paises.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
       </select>
       {pais && (
-        <select value={depto} onChange={handleDeptoChange} style={{ background: 'var(--paper)', color: 'var(--text-primary)', border: '1px solid var(--line)', borderRadius: '4px', padding: '4px', fontFamily: 'var(--font-sans)' }}>
+        <select value={depto} onChange={handleDeptoChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
           <option value="">-- Departamento --</option>
           {departamentos.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
         </select>
       )}
       {depto && (
-        <select value={prov} onChange={(e) => setProv(e.target.value)} style={{ background: 'var(--paper)', color: 'var(--text-primary)', border: '1px solid var(--line)', borderRadius: '4px', padding: '4px', fontFamily: 'var(--font-sans)' }}>
+        <select value={prov} onChange={(e) => setProv(e.target.value)} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
           <option value="">-- Provincia --</option>
           {provincias.map(pr => <option key={pr} value={pr}>{pr}</option>)}
         </select>
       )}
-      <button onClick={handleFly} disabled={!pais || loading} style={{
-        background: 'var(--moss)', color: 'var(--white)', border: 'none', padding: '5px', borderRadius: '4px', cursor: 'pointer', opacity: (!pais || loading) ? 0.5 : 1, fontFamily: 'var(--font-sans)'
-      }}>
+      <button onClick={handleFly} disabled={!pais || loading} className={`p-1 rounded-md cursor-pointer transition-colors ${(!pais || loading) ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)] opacity-50 cursor-not-allowed' : 'bg-[#5BC0BE] text-[#0B132B] font-bold border-none'}`}>
         {loading ? 'Buscando...' : 'Ir a destino'}
       </button>
     </div>
@@ -242,22 +237,22 @@ const COLOR_RAMPS = {
     { t: 1.00, r: 255, g: 255, b: 255, a: 200 },
   ],
   viento: [
-    { t: 0.000, r: 51,  g: 51,  b: 255, a: 210 },
-    { t: 0.071, r: 70,  g: 130, b: 180, a: 210 },
-    { t: 0.142, r: 46,  g: 139, b: 87,  a: 210 },
-    { t: 0.214, r: 0,   g: 255, b: 0,   a: 210 },
-    { t: 0.285, r: 173, g: 255, b: 47,  a: 210 },
-    { t: 0.357, r: 255, g: 255, b: 0,   a: 210 },
-    { t: 0.428, r: 255, g: 204, b: 0,   a: 210 },
-    { t: 0.500, r: 255, g: 136, b: 0,   a: 210 },
-    { t: 0.571, r: 255, g: 69,  b: 0,   a: 210 },
-    { t: 0.714, r: 139, g: 0,   b: 0,   a: 210 },
-    { t: 0.857, r: 255, g: 0,   b: 255, a: 210 },
+    { t: 0.000, r: 51, g: 51, b: 255, a: 210 },
+    { t: 0.071, r: 70, g: 130, b: 180, a: 210 },
+    { t: 0.142, r: 46, g: 139, b: 87, a: 210 },
+    { t: 0.214, r: 0, g: 255, b: 0, a: 210 },
+    { t: 0.285, r: 173, g: 255, b: 47, a: 210 },
+    { t: 0.357, r: 255, g: 255, b: 0, a: 210 },
+    { t: 0.428, r: 255, g: 204, b: 0, a: 210 },
+    { t: 0.500, r: 255, g: 136, b: 0, a: 210 },
+    { t: 0.571, r: 255, g: 69, b: 0, a: 210 },
+    { t: 0.714, r: 139, g: 0, b: 0, a: 210 },
+    { t: 0.857, r: 255, g: 0, b: 255, a: 210 },
     { t: 1.000, r: 255, g: 182, b: 193, a: 210 },
   ],
   evaporacion: [
-    { t: 0.000, r: 0,   g: 0,   b: 0,   a: 0   },   // 0 W/m² = transparente
-    { t: 0.020, r: 0,   g: 0,   b: 0,   a: 0   },   // ruido = invisible
+    { t: 0.000, r: 0, g: 0, b: 0, a: 0 },   // 0 W/m² = transparente
+    { t: 0.020, r: 0, g: 0, b: 0, a: 0 },   // ruido = invisible
     { t: 0.050, r: 200, g: 220, b: 255, a: 120 },   // azul muy claro
     { t: 0.150, r: 160, g: 200, b: 240, a: 160 },   // azul cielo
     { t: 0.300, r: 130, g: 170, b: 220, a: 190 },   // azul medio
@@ -276,9 +271,9 @@ function buildRampPixels(stops, activeLayer) {
       pixels[i * 4] = 255;     // R: Blanco constante
       pixels[i * 4 + 1] = 255; // G: Blanco constante
       pixels[i * 4 + 2] = 255; // B: Blanco constante
-      
+
       // Suavizado de bordes (Anti-aliasing manual)
-      if (i % 12 === 0) { 
+      if (i % 12 === 0) {
         pixels[i * 4 + 3] = 220; // Centro de la línea (muy visible)
       } else if (i % 12 === 1 || i % 12 === 11) {
         pixels[i * 4 + 3] = 100; // Borde interior (semitransparente)
@@ -389,19 +384,19 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
   };
 
   return (
-    <div 
+    <div
       ref={scrollRef}
       onMouseDown={handleMouseDown}
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
-      style={{ 
-        flex: 1, display: 'flex', overflowX: 'auto', 
+      style={{
+        flex: 1, display: 'flex', overflowX: 'auto',
         gap: '6px', padding: '15px 0 5px 0',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         scrollbarWidth: 'none', msOverflowStyle: 'none'
-      }} 
+      }}
     >
       {(() => {
         const groups = {};
@@ -437,21 +432,9 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
                       key={tickDate.getTime()}
                       id={`${idPrefix}-tick-${tickDate.getTime()}`}
                       onClick={() => setDate(tickDate)}
-                      style={{
-                        minWidth: '38px', padding: '5px 3px', borderRadius: 'var(--radius)',
-                        background: isSelected ? 'var(--moss)' : 'var(--paper-2)',
-                        border: isSelected ? '1px solid var(--moss)' : '1px solid transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
-                        cursor: 'pointer'
-                      }}
+                      className={`min-w-[38px] p-1 rounded-[6px] flex items-center justify-center cursor-pointer transition-all duration-150 ${isSelected ? 'bg-[#5BC0BE] text-[#0B132B]' : 'bg-[#3A506B] text-[var(--text-primary)]'}`}
                     >
-                      <span style={{
-                        fontSize: '12px', fontWeight: isSelected ? 700 : 500,
-                        color: isSelected ? 'var(--white)' : 'var(--text-secondary)',
-                        pointerEvents: 'none'
-                      }}>
+                      <span className="text-xs pointer-events-none" style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
                         {hr}:00
                       </span>
                     </div>
@@ -589,22 +572,22 @@ function MapaMonitoreo() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  
+
   // --- MIGRATION CONTEXTS ---
   const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas, zona1Cfg, zona2Cfg } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
   const { isParticlesActive, setIsParticlesActive, particleFilters, setParticleFilters, showSensors, setShowSensors, isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric, isChoroplethActive, setIsChoroplethActive } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades } = useUnidades();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
 
   const { citiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters });
-  
-  
+
+
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
     if (active) setSelectedCity(null);
@@ -631,7 +614,7 @@ function MapaMonitoreo() {
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
-  
+
   const [activeLayer, setActiveLayer] = useState('lluvia');
   const activeLayerRef = useRef(activeLayer);
   const [aqiGeoJson, setAqiGeoJson] = useState(null);
@@ -672,7 +655,7 @@ function MapaMonitoreo() {
   // ─── Sincronización Nativa de Cámaras (Anti-Infinite Loop) ───
   useEffect(() => {
     if (!isComparing || !syncMaps) return;
-    
+
     const map1 = map1InstanceRef.current;
     const map2 = map2InstanceRef.current;
     if (!map1 || !map2) return;
@@ -719,13 +702,13 @@ function MapaMonitoreo() {
         const loc = location.state.location;
         let flyOptions;
         let bbox = null;
-        
+
         if (loc.geometry && (loc.geometry.type === 'Polygon' || loc.geometry.type === 'MultiPolygon' || loc.geometry.type === 'Feature' || loc.geometry.type === 'FeatureCollection')) {
           try {
             bbox = turf.bbox(loc.geometry);
-          } catch(e) {}
+          } catch (e) { }
         }
-        
+
         // Timeout para asegurar que la referencia del mapa esté lista
         setTimeout(() => {
           if (bbox) {
@@ -747,7 +730,7 @@ function MapaMonitoreo() {
           }
         }, 500);
       }
-      
+
       // Limpiar state para evitar relanzamientos si el usuario navega internamente y vuelve
       window.history.replaceState({}, document.title);
     }
@@ -810,7 +793,7 @@ function MapaMonitoreo() {
     const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
     const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
     const stepHours = getLayerStepHours(activeLayer);
-    
+
     // Rango dinámico: ±15 días en el paso de la variable activa
     const anchorSnapped = snapToValidHour(anchorDate, activeLayer);
     const maxTicks = Math.floor(360 / stepHours);
@@ -856,17 +839,17 @@ function MapaMonitoreo() {
         const stepHours = getLayerStepHours(activeLayer);
         const nextDate = new Date(prev);
         nextDate.setUTCHours(nextDate.getUTCHours() + stepHours);
-        
+
         const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
         const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-        
+
         let resultDate = nextDate;
         if (nextDate.getTime() > maxTime) {
           resultDate = new Date(minTime);
         } else if (nextDate.getTime() < minTime) {
           resultDate = new Date(maxTime);
         }
-        
+
         setAnchor(resultDate);
         return resultDate;
       };
@@ -914,14 +897,14 @@ function MapaMonitoreo() {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.src = imageUrl1;
-    
+
     let isCancelled = false;
 
     img.onload = () => {
       if (isCancelled) return;
-      
+
       const isFastMoving = isPlayingRef.current || globalIsDraggingRef.current;
-      
+
       if (!isFastMoving) {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -948,7 +931,7 @@ function MapaMonitoreo() {
         if (layerMap1Ref.current) layerMap1Ref.current._pendingImg = img;
       }
     };
-    
+
     return () => {
       isCancelled = true;
       img.onload = null;
@@ -967,14 +950,14 @@ function MapaMonitoreo() {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.src = imageUrl2;
-    
+
     let isCancelled = false;
 
     img.onload = () => {
       if (isCancelled) return;
-      
+
       const isFastMoving = isPlayingRef.current || globalIsDraggingRef.current;
-      
+
       if (!isFastMoving) {
         const canvas = document.createElement('canvas');
         canvas.width = img.width;
@@ -1001,7 +984,7 @@ function MapaMonitoreo() {
         if (layerMap2Ref.current) layerMap2Ref.current._pendingImg = img;
       }
     };
-    
+
     return () => {
       isCancelled = true;
       img.onload = null;
@@ -1063,11 +1046,11 @@ function MapaMonitoreo() {
       const stepHours = getLayerStepHours(activeLayer);
       const nextDate = new Date(date1);
       nextDate.setUTCHours(nextDate.getUTCHours() + stepHours);
-      
+
       const yyyy = nextDate.getUTCFullYear();
       const mm = String(nextDate.getUTCMonth() + 1).padStart(2, '0');
       const backendDate = formatBackendDate(nextDate);
-      
+
       const nextImageUrl = `${BASE_DATA_URL}/${activeLayer}/${yyyy}/${mm}/${backendDate}.png`;
       const preImg = new Image();
       preImg.src = nextImageUrl;
@@ -1113,7 +1096,7 @@ function MapaMonitoreo() {
 
     // Definir el CustomLayer usando la factoría
     const layerDef = createHistoricalLayer(
-      isMap2 ? 'historico-custom-webgl-2' : 'historico-custom-webgl-1', 
+      isMap2 ? 'historico-custom-webgl-2' : 'historico-custom-webgl-1',
       activeLayerRef
     );
 
@@ -1173,7 +1156,7 @@ function MapaMonitoreo() {
     }
 
     if (lat > 85.051 || lat < -85.051) return;
-    
+
     // 1. Determinar de qué canvas leer basado en en qué mapa se hizo clic
     const currentCanvasCtx = isMap2 ? canvasCtx2Ref.current : canvasCtx1Ref.current;
     const currentCanvasSize = isMap2 ? canvasSize2Ref.current : canvasSize1Ref.current;
@@ -1185,10 +1168,10 @@ function MapaMonitoreo() {
     const normLng = ((lng % 360) + 540) % 360 - 180;
     const normLat = Math.max(-90, Math.min(90, lat));
     // La imagen cruda viene con lat -90 en fila 0 (sur arriba)
-    
+
     const shiftLayers = ['evaporacion'];
     const shiftAmount = shiftLayers.includes(activeLayer) ? 0.5 : 0.0;
-    
+
     let u = ((normLng + 180) / 360) + shiftAmount;
     u = u - Math.floor(u); // Equivalente JS a fract()
     const pxX = Math.floor(u * width);
@@ -1265,14 +1248,14 @@ function MapaMonitoreo() {
   const totalHours = Math.floor((maxTimeGlobal - minTimeGlobal) / (1000 * 60 * 60));
   const currentHourOffset = Math.floor((date1.getTime() - minTimeGlobal) / (1000 * 60 * 60));
 
-  const formattedDateString = new Intl.DateTimeFormat("es-ES", { 
-    weekday: 'long', 
+  const formattedDateString = new Intl.DateTimeFormat("es-ES", {
+    weekday: 'long',
     year: 'numeric',
-    month: 'long', 
-    day: 'numeric', 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    timeZone: 'UTC' 
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC'
   }).format(date1);
   const formattedText = formattedDateString.replace(', ', ' - ') + ' UTC';
   const finalFormattedText = formattedText.charAt(0).toUpperCase() + formattedText.slice(1);
@@ -1281,10 +1264,10 @@ function MapaMonitoreo() {
     setTimelineAnchorDate(prev => {
       const nextDate = new Date(prev);
       nextDate.setUTCHours(nextDate.getUTCHours() + (direction * 24));
-      
+
       const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
       const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-      
+
       if (nextDate.getTime() > maxTime) return new Date(maxTime);
       if (nextDate.getTime() < minTime) return new Date(minTime);
       return nextDate;
@@ -1297,11 +1280,10 @@ function MapaMonitoreo() {
         <BuscadorEspacial mapRef={isMap2 ? map2InstanceRef : map1InstanceRef} />
       </div>
 
-      <div style={{
+      <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[6px] text-[var(--text-primary)]" style={{
         position: 'absolute', top: '90px', right: '120px', zIndex: 50,
-        background: 'var(--card)', 
-        padding: '8px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-        pointerEvents: 'auto', boxShadow: 'var(--shadow-md)'
+        padding: '8px 12px',
+        pointerEvents: 'auto'
       }}>
         <input 
           type="date" 
@@ -1327,7 +1309,7 @@ function MapaMonitoreo() {
               }
             }
           }}
-          style={{ background: 'transparent', color: 'var(--text-primary)', border: 'none', outline: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '13px' }}
+          style={{ background: 'var(--bg-app)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: '"Space Grotesk", sans-serif', fontSize: '13px', padding: '4px 6px' }}
         />
       </div>
     </>
@@ -1339,13 +1321,13 @@ function MapaMonitoreo() {
       <NavigationControl position="top-right" />
 
       {activeLayer === 'viento' && (
-        <HistoricalWindParticles 
-          isActive={true} 
-          windPixels={isMap2 ? windPixels2 : windPixels} 
+        <HistoricalWindParticles
+          isActive={true}
+          windPixels={isMap2 ? windPixels2 : windPixels}
         />
       )}
 
-      
+
       {/* ─── MIGRATION: CAPAS DE SUPERPOSICIÓN (HEATMAP Y SENSORES) ─── */}
       {!isMap2 && isHeatmapActive && (
         <VoronoiLayer metrica={heatmapMetric} umbrales={umbrales} cities={citiesData} activeFilter={null} />
@@ -1441,8 +1423,8 @@ function MapaMonitoreo() {
   return (
     <div className="mapa-page-container" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0 }}>
       <div className="map-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: isComparing ? 'row' : 'column' }}>
-        
-        
+
+
         {/* MAPA 1 */}
         <div style={{ flex: 1, position: 'relative', borderRight: isComparing ? '2px solid rgba(255,255,255,0.2)' : 'none' }}>
           {isSimMode && (
@@ -1499,7 +1481,7 @@ function MapaMonitoreo() {
           </div>
         )}
 
-        
+
         <CityHistoryPanel
           activeCity={selectedCity}
           setSelectedCity={setSelectedCity}
@@ -1517,84 +1499,59 @@ function MapaMonitoreo() {
           isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}
           heatmapMetric={heatmapMetric} setHeatmapMetric={setHeatmapMetric}
           isChoroplethActive={isChoroplethActive} setIsChoroplethActive={setIsChoroplethActive}
-          isHistoricalMode={false} setIsHistoricalMode={() => {}}
+          isHistoricalMode={false} setIsHistoricalMode={() => { }}
           showSensors={showSensors} setShowSensors={setShowSensors} setSelectedCity={setSelectedCity}
           iotLoading={false}
-          unidades={unidades} cambiarUnidad={() => {}} METRICAS_UNIDADES={METRICAS_UNIDADES}
-          isDynamicHistoricalMode={false} setIsDynamicHistoricalMode={() => {}}
+          unidades={unidades} cambiarUnidad={() => { }} METRICAS_UNIDADES={METRICAS_UNIDADES}
+          isDynamicHistoricalMode={false} setIsDynamicHistoricalMode={() => { }}
           isCompareMode={isComparing} setIsCompareMode={setIsComparing}
           compareIndexA={0} compareIndexB={0}
-          setCompareIndexA={() => {}} setCompareIndexB={() => {}}
+          setCompareIndexA={() => { }} setCompareIndexB={() => { }}
           globalTimelineIndex={0} globalHistoryArray={[]}
           particleFilters={particleFilters} setParticleFilters={setParticleFilters}
         />
 
         {/* ─── PANELES DE CONTROL (Time Machine & Timeline) ─── */}
-        
+
         {/* Selector Rápido Superior (Time Machine) -> Reubicado Abajo a la Derecha */}
-        <div style={{ 
+        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
           position: 'absolute', bottom: '130px', right: 20, zIndex: 20, 
-          background: 'var(--card)', 
-          padding: '1.25rem', borderRadius: 'var(--radius-lg)', color: 'var(--text-primary)', 
-          border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-lg)',
+          padding: '1.25rem',
           minWidth: '220px'
         }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>Modo Histórico</h3>
+          <h3 className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Modo Histórico</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               onClick={() => setIsComparing(!isComparing)}
-              style={{
-                padding: '8px 12px', borderRadius: 'var(--radius)', border: 'none',
-                background: isComparing ? 'var(--rust)' : 'var(--moss)',
-                color: 'var(--white)', fontWeight: '600', cursor: 'pointer',
-                transition: 'background 0.2s, transform 0.1s',
-                fontSize: '13px'
-              }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              className={`px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] ${isComparing ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
             >
               {isComparing ? 'Desactivar Comparación' : 'Comparar Mapas'}
             </button>
             <button
               onClick={() => navigate('/reportes')}
-              style={{
-                padding: '8px 12px', borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)',
-                background: 'var(--paper)',
-                color: 'var(--text-primary)', fontWeight: '600', cursor: 'pointer',
-                transition: 'background 0.2s',
-                fontSize: '13px'
-              }}
-              onMouseOver={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseOut={e => e.currentTarget.style.background = 'var(--paper)'}
+              className="px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]"
             >
               Ir a Reportes
             </button>
             
             {isComparing && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--paper-2)', padding: '10px', borderRadius: 'var(--radius)', border: '1px solid var(--line)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <div className="flex flex-col gap-2 p-2 rounded-[6px] bg-[var(--bg-app)] border border-[var(--border-color)]">
+                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
                   <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
                   Sincronizar Tiempo
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
                   <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
                   Sincronizar Vistas
                 </label>
               </div>
             )}
-            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px', fontWeight: 500 }}>
+            <label className="flex flex-col text-xs font-medium text-[var(--text-primary)] mt-2">
               Variable Atmosférica:
               <select
                 value={activeLayer}
                 onChange={e => setActiveLayer(e.target.value)}
-                style={{ 
-                  marginTop: '6px', padding: '8px 10px', 
-                  background: 'var(--paper)', color: 'var(--text-primary)', 
-                  border: '1px solid var(--line)', borderRadius: 'var(--radius)',
-                  outline: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '13px'
-                }}
+                className="mt-1 px-2 py-1 bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-[6px] outline-none cursor-pointer text-[13px]"
               >
                 <option value="visibilidad">Visibilidad</option>
                 <option value="viento">Velocidad del Viento</option>
@@ -1612,33 +1569,22 @@ function MapaMonitoreo() {
         </div>
 
         {/* Barra de Reproducción Inferior (Timeline UI) */}
-        <div style={{
+        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
           position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)',
           zIndex: 10,
-          background: 'var(--card)', backdropFilter: 'none',
-          padding: '16px 24px', borderRadius: 'var(--radius-lg)', color: 'var(--text-primary)',
-          border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-lg)',
+          padding: '16px 24px',
           display: 'flex', flexDirection: 'column', gap: '15px',
           width: '90%', maxWidth: '800px'
         }}>
           {/* Fila superior: Info de Fecha (Estilo Meteored) */}
-          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '18px', letterSpacing: '0.5px' }}>
+          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '18px', letterSpacing: '0.5px', color: 'var(--text-primary)' }}>
             {finalFormattedText}
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <button 
               onClick={() => setIsPlaying(!isPlaying)}
-              style={{
-                background: isPlaying ? 'var(--rust)' : 'var(--moss)',
-                color: 'var(--white)', border: 'none', padding: '10px 20px', borderRadius: 'var(--radius)',
-                cursor: 'pointer', fontWeight: 600, fontSize: '15px', minWidth: '90px',
-                transition: 'background 0.2s, transform 0.1s', boxShadow: 'var(--shadow-md)'
-              }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              className={`px-4 py-2 rounded-[6px] cursor-pointer font-bold text-[15px] min-w-[90px] transition-all duration-200 ${isPlaying ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
             >
               {isPlaying ? 'Pausa' : 'Play'}
             </button>
@@ -1658,19 +1604,19 @@ function MapaMonitoreo() {
           </div>
         </div>
 
-      
-      <SimulationStatus
-        zonaSimActiva={zonaSimActiva}
-        zonaSimZonas={zonaSimZonas}
-        zonaSimUnidad={zonaSimUnidad}
-        zonaSimEscNombre={zonaSimEscNombre}
-        zonaSimMetrica={zonaSimMetrica}
-        zonaSimProgreso={zonaSimProgreso}
-        zonaSimTiempo={zonaSimTiempo}
-        zonaSimSesionId={zonaSimSesionId}
-        zonaSimTotalLecturas={zonaSimTotalLecturas}
-        detenerZona={detenerZona}
-      />
+
+        <SimulationStatus
+          zonaSimActiva={zonaSimActiva}
+          zonaSimZonas={zonaSimZonas}
+          zonaSimUnidad={zonaSimUnidad}
+          zonaSimEscNombre={zonaSimEscNombre}
+          zonaSimMetrica={zonaSimMetrica}
+          zonaSimProgreso={zonaSimProgreso}
+          zonaSimTiempo={zonaSimTiempo}
+          zonaSimSesionId={zonaSimSesionId}
+          zonaSimTotalLecturas={zonaSimTotalLecturas}
+          detenerZona={detenerZona}
+        />
 
       </div>
     </div>

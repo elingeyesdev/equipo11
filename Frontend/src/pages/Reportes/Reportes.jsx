@@ -56,11 +56,11 @@ export default function Reportes() {
             })
           })
         })
-        console.log(`✅ [Reportes] Historial cargado. Total ciudades en historial:`, new Set(flat.map(x => x.ciudad)).size);
+        console.log(`<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> [Reportes] Historial cargado. Total ciudades en historial:`, new Set(flat.map(x => x.ciudad)).size);
         setHistorial(flat.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
       })
       .catch((err) => {
-        console.error('❌ [Reportes] Error cargando historial:', err);
+        console.error('<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> [Reportes] Error cargando historial:', err);
         addToast('Error cargando historial', 'error');
       })
       .finally(() => setLoading(false))
@@ -263,17 +263,17 @@ export default function Reportes() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {zonaSimActiva && (
             <span className="page-tag" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#fb923c', borderColor: 'rgba(251, 146, 60, 0.3)' }}>
-              ⏳ Simulación en curso…
+              <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{marginRight: '6px', display: 'inline-block', animation: 'spin 2s linear infinite'}}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Simulación en curso…
             </span>
           )}
           <button
-            className="rep-rango-btn"
+            className="rep-rango-btn flex items-center justify-center gap-2"
             onClick={fetchHistorial}
             disabled={loading}
             title="Recargar datos del historial"
             style={{ padding: '6px 14px', fontSize: '13px', cursor: loading ? 'wait' : 'pointer' }}
           >
-            {loading ? '⏳' : '🔄'} Actualizar
+            {loading ? <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{animation: 'spin 2s linear infinite'}}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> : <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>} Actualizar
           </button>
           <span className="page-tag">{datosFiltrados.length} registros</span>
         </div>
@@ -281,10 +281,10 @@ export default function Reportes() {
 
       {/* ─── KPI Cards ──────────────────────────────────────── */}
       <div className="rep-kpi-grid">
-        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" icon="🌡" stats={stats.temperatura} />
-        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" icon="🌫" stats={stats.aqi} />
-        <KpiCard label="Humedad" sufijo="%" colorVar="river" icon="💧" stats={stats.humedad} />
-        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" icon="🔊" stats={stats.ruido} />
+        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" icon={<svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/><path d="M11.5 6.5v6"/></svg>} stats={stats.temperatura} />
+        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" icon={<svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M4 14h16"/><path d="M4 10h16"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>} stats={stats.aqi} />
+        <KpiCard label="Humedad" sufijo="%" colorVar="river" icon={<svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>} stats={stats.humedad} />
+        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" icon={<svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>} stats={stats.ruido} />
       </div>
 
       {/* ─── Filtros ────────────────────────────────────────── */}
@@ -373,7 +373,7 @@ export default function Reportes() {
           {METRICAS_OPTS.map(m => (
             <button
               key={m.value}
-              className={`rep-chart-tab${metricaGrafico === m.value ? ' rep-chart-tab--active' : ''}`}
+              className={`rep-chart-tab flex items-center justify-center gap-2 ${metricaGrafico === m.value ? ' rep-chart-tab--active' : ''}`}
               style={metricaGrafico === m.value
                 ? { borderColor: `var(--${m.color})`, color: `var(--${m.color})`, background: `var(--${m.color}-soft)` }
                 : {}}
