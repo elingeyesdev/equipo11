@@ -11,6 +11,9 @@ export default {
         'space-indigo': '#1C2541',
         'dusk-blue': '#3A506B',
         'tropical-teal': '#5BC0BE',
+      },
+      fontFamily: {
+        sans: ['"Space Grotesk"', 'sans-serif'],
       }
     },
   },

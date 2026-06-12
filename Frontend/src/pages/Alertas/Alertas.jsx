@@ -127,7 +127,7 @@ export default function Alertas() {
 
   return (
     <div 
-      className="page alertas-page overflow-y-auto" 
+      className="page alertas-page overflow-y-auto w-full max-w-7xl mx-auto p-6 md:p-10" 
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -138,11 +138,10 @@ export default function Alertas() {
         </div>
       )}
       {/* ─── Cabecera ──────────────────────────────────────────────────── */}
-      <div className="page-header">
+      <div className="page-header mb-8 flex justify-between items-start">
         <div>
-          <p className="page-eyebrow">Módulo de Alertas</p>
-          <h1 className="page-heading">Historial de <em>Alertas</em></h1>
-          <p className="page-desc">
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Historial de <span className="text-[var(--accent)]">Alertas</span></h1>
+          <p className="text-base text-[var(--text-secondary)] mb-8">
             Consulta, filtra y reconoce las alertas generadas automáticamente por el sistema de simulación.
           </p>
         </div>

@@ -76,7 +76,7 @@ function ModalInyeccion({ isOpen, onClose }) {
 
   return (
     <div className="minject-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="minject-box">
+      <div className="minject-box text-[var(--text-primary)] shadow-2xl rounded-xl p-6" style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', borderWidth: '1px', borderStyle: 'solid' }}>
         <div className="minject-box-header">
           <span className="minject-box-title">Inyección Manual de Datos</span>
           <button type="button" className="minject-close-btn" onClick={onClose}>×</button>
@@ -89,7 +89,7 @@ function ModalInyeccion({ isOpen, onClose }) {
             <div className="minject-field minject-field--full">
               <label className="minject-label">Departamento</label>
               <select
-                className="minject-select"
+                className="minject-select bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] outline-none"
                 value={injectCity}
                 onChange={(e) => handleCitySelect(e.target.value)}
                 required

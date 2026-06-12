@@ -939,3 +939,7 @@ input:checked+.notif-slider:before {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+.notif-container, .notif-container * {
+    font-family: 'Space Grotesk', sans-serif !important;
+}

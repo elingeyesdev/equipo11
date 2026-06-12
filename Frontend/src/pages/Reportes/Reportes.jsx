@@ -248,14 +248,13 @@ export default function Reportes() {
   }
 
   return (
-    <div className="page reportes-page">
+    <div className="page reportes-page w-full max-w-7xl mx-auto p-6 md:p-10">
 
       {/* ─── Header ─────────────────────────────────────────── */}
-      <div className="page-header">
+      <div className="page-header mb-8">
         <div>
-          <p className="page-eyebrow">Análisis de datos</p>
-          <h1 className="page-heading">Reportes <em>Ambientales</em></h1>
-          <p className="page-desc">
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Reportes <span className="text-[var(--accent)]">Ambientales</span></h1>
+          <p className="text-base text-[var(--text-secondary)] mb-8">
             Explora el historial de lecturas por localidad, visualiza tendencias
             estadísticas y exporta los datos en PDF o Excel.
           </p>

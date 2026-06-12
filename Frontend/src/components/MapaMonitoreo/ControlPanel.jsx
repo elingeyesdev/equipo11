@@ -25,7 +25,7 @@ export default function ControlPanel({
   return (
     <div className="map-controls-toolbar">
       <button
-        className="controls-toggle-btn bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] flex items-center justify-center p-2 rounded-md transition-colors"
+        className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
         onClick={() => setIsOpen(!isOpen)}
         title="Ajustes del mapa"
       >
@@ -36,7 +36,7 @@ export default function ControlPanel({
       </button>
 
       <button
-        className="controls-toggle-btn bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] flex items-center justify-center p-2 rounded-md transition-colors"
+        className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
         style={{ marginLeft: '10px' }}
         onClick={() => setIsInjectModalOpen(true)}
         title="Inyectar datos manualmente"
@@ -45,7 +45,7 @@ export default function ControlPanel({
       </button>
 
       {isOpen && (
-        <div className="controls-dropdown bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] shadow-md rounded-md">
+        <div className="controls-dropdown bg-[var(--bg-panel)] border border-[var(--border-color)] p-4 rounded-md shadow-lg">
           <div className="controls-tabs">
             <button
               className={`controls-tab ${activeTab === 'capas' ? 'active' : ''}`}
@@ -65,43 +65,43 @@ export default function ControlPanel({
             <div className="controls-tab-content">
               <div className="controls-section-title">Capas Visuales</div>
 
-              <div className="control-row">
-                <div className="control-row-label">
+              <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
+                <div className="flex items-center gap-3">
                   <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg></span>
-                  <span className="control-text">Modo Simulación</span>
+                  <span className="control-text text-[var(--text-primary)]">Modo Simulación</span>
                   {isSimMode && <span className="control-status on">ON</span>}
                 </div>
                 <label className="ios-switch">
                   <input type="checkbox" checked={isSimMode} onChange={(e) => handleToggleSimMode(e.target.checked)} />
-                  <span className="slider round"></span>
+                  <span className={`slider round ${isSimMode ? 'bg-[var(--accent)]' : 'bg-[var(--border-color)]'}`}></span>
                 </label>
               </div>
 
               <div className="controls-divider"></div>
 
-              <div className="control-row">
-                <div className="control-row-label">
+              <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
+                <div className="flex items-center gap-3">
                   <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0 1 17-10"/><path d="M9 12a3 3 0 0 1 4-2"/><path d="M6 12a6 6 0 0 1 10-5"/><circle cx="12" cy="12" r="2"/></svg></span>
-                  <span className="control-text">Sensores IoT</span>
+                  <span className="control-text text-[var(--text-primary)]">Sensores IoT</span>
                   {iotLoading && <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>cargando…</span>}
                 </div>
                 <label className="ios-switch">
                   <input type="checkbox" checked={showSensors} onChange={(e) => setShowSensors(e.target.checked)} />
-                  <span className="slider round"></span>
+                  <span className={`slider round ${showSensors ? 'bg-[var(--accent)]' : 'bg-[var(--border-color)]'}`}></span>
                 </label>
               </div>
 
-              <div className="control-row">
-                <div className="control-row-label">
+              <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
+                <div className="flex items-center gap-3">
                   <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg></span>
-                  <span className="control-text">Mapa de calor</span>
+                  <span className="control-text text-[var(--text-primary)]">Mapa de calor</span>
                 </div>
                 <label className="ios-switch">
                   <input type="checkbox" checked={isHeatmapActive} onChange={(e) => {
                     setIsHeatmapActive(e.target.checked);
                     if (e.target.checked) { setSelectedCity(null); setShowSensors(true); }
                   }} />
-                  <span className="slider round"></span>
+                  <span className={`slider round ${isHeatmapActive ? 'bg-[var(--accent)]' : 'bg-[var(--border-color)]'}`}></span>
                 </label>
               </div>
 

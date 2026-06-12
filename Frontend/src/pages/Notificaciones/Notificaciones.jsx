@@ -254,12 +254,11 @@ const Notificaciones = () => {
   const mapStyle = theme === 'dark' ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
 
   return (
-    <div className="notif-container">
+    <div className="notif-container w-full max-w-7xl mx-auto p-6 md:p-10">
       <div className="notif-header">
         <div className="notif-header-content">
-          <span className="notif-eyebrow">Perfil de Usuario</span>
-          <h1 className="notif-title">Preferencias y <em>Localidad</em></h1>
-          <p className="notif-subtitle">
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Preferencias y <span className="text-[var(--accent)]">Localidad</span></h1>
+          <p className="text-base text-[var(--text-secondary)] mb-8">
             Ubica tu área de interés en el mapa y activa los canales para recibir alertas climáticas regionales en tiempo real.
           </p>
         </div>

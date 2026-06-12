@@ -432,7 +432,7 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
                       key={tickDate.getTime()}
                       id={`${idPrefix}-tick-${tickDate.getTime()}`}
                       onClick={() => setDate(tickDate)}
-                      className={`min-w-[38px] p-1 rounded-[6px] flex items-center justify-center cursor-pointer transition-all duration-150 ${isSelected ? 'bg-[#5BC0BE] text-[#0B132B]' : 'bg-[#3A506B] text-[var(--text-primary)]'}`}
+                      className={`min-w-[38px] p-1 rounded-[6px] flex items-center justify-center cursor-pointer transition-all duration-150 ${isSelected ? 'bg-[#5BC0BE] text-[#0B132B]' : 'bg-[#3A506B] text-white'}`}
                     >
                       <span className="text-xs pointer-events-none" style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
                         {hr}:00
