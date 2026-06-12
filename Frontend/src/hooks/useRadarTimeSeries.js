@@ -10,6 +10,45 @@ import {
   sampleAqiNearest,
 } from '../utils/windMath';
 
+const CONFIG_MAP = {
+  temp: {
+    endpoint: '/radar/bolivia/temp/png',
+    sample: sampleTempBilinear,
+    process: (val) => (val !== null ? val - 273.15 : null),
+    unit: '°C'
+  },
+  rain: {
+    endpoint: '/radar/bolivia/rain/png',
+    sample: sampleRainBilinear,
+    process: (val) => val ?? null,
+    unit: 'mm'
+  },
+  wind: {
+    endpoint: '/radar/bolivia/wind/png',
+    sample: sampleWindBilinear,
+    process: (val) => (val ? val.speed : null),
+    unit: 'km/h'
+  },
+  vis: {
+    endpoint: '/radar/bolivia/vis/png',
+    sample: sampleVisibilityBilinear,
+    process: (val) => (val !== null ? val / 1000 : null),
+    unit: 'km'
+  },
+  snow: {
+    endpoint: '/radar/bolivia/snow/png',
+    sample: sampleSnowBilinear,
+    process: (val) => (val ? val.fresh : null),
+    unit: 'mm'
+  },
+  aqi: {
+    endpoint: '/radar/bolivia/aqi/png',
+    sample: sampleAqiNearest,
+    process: (val) => val ?? null,
+    unit: 'AQI'
+  }
+};
+
 const _loadPng = async (path, params = {}) => {
   const timeParam = params.time ? `?time=${encodeURIComponent(params.time)}` : '';
   const url = `${httpClient.defaults.baseURL}${path}${timeParam}`;
@@ -30,8 +69,8 @@ const _loadPng = async (path, params = {}) => {
   return { img, objectUrl };
 };
 
-export function useRadarTimeSeries(ciudad, timestamps) {
-  const [timeSeriesData, setTimeSeriesData] = useState([]);
+export function useRadarTimeSeries(ciudad, timestamps, layerKey) {
+  const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const objectUrlsRef = useRef([]);
@@ -40,9 +79,9 @@ export function useRadarTimeSeries(ciudad, timestamps) {
     let cancelled = false;
 
     const run = async () => {
-      if (!ciudad || !timestamps || timestamps.length === 0) {
+      if (!ciudad || !timestamps || timestamps.length === 0 || !layerKey || !CONFIG_MAP[layerKey]) {
         if (!cancelled) {
-          setTimeSeriesData([]);
+          setSeries([]);
           setLoading(false);
           setError(null);
         }
@@ -56,63 +95,57 @@ export function useRadarTimeSeries(ciudad, timestamps) {
 
       const lng = Number(ciudad.longitude) || Number(ciudad.lng) || 0;
       const lat = Number(ciudad.latitude) || Number(ciudad.lat) || 0;
-
+      const config = CONFIG_MAP[layerKey];
       const results = [];
 
-      for (const ts of timestamps) {
-        if (cancelled) break;
-
-        const params = { time: ts };
-
-        const [tempResult, rainResult, windResult, visResult, snowResult, aqiResult] =
-          await Promise.allSettled([
-            _loadPng('/radar/bolivia/temp/png', params),
-            _loadPng('/radar/bolivia/rain/png', params),
-            _loadPng('/radar/bolivia/wind/png', params),
-            _loadPng('/radar/bolivia/vis/png', params),
-            _loadPng('/radar/bolivia/snow/png', params),
-            _loadPng('/radar/bolivia/aqi/png', params),
-          ]);
-
-        const urls = [];
-        [tempResult, rainResult, windResult, visResult, snowResult, aqiResult].forEach(r => {
-          if (r.status === 'fulfilled') urls.push(r.value.objectUrl);
-        });
-        objectUrlsRef.current.push(...urls);
-
-        const decode = (result) => {
-          if (result.status !== 'fulfilled') return null;
-          return getImageDataArray(result.value.img);
-        };
-
-        const tempData = decode(tempResult);
-        const rainData = decode(rainResult);
-        const windData = decode(windResult);
-        const visData = decode(visResult);
-        const snowData = decode(snowResult);
-        const aqiData = decode(aqiResult);
-
-        const tempK = sampleTempBilinear(tempData, lng, lat);
-        const rain = sampleRainBilinear(rainData, lng, lat);
-        const wind = sampleWindBilinear(windData, lng, lat);
-        const vis = sampleVisibilityBilinear(visData, lng, lat);
-        const snow = sampleSnowBilinear(snowData, lng, lat);
-        const aqi = sampleAqiNearest(aqiData, lng, lat);
-
-        results.push({
-          timestamp: ts,
-          temp: tempK !== null ? tempK - 273.15 : null,
-          rain: rain ?? null,
-          windSpeed: wind ? wind.speed : null,
-          visibility: vis ?? null,
-          snowAccum: snow ? snow.accumulated : null,
-          snowFresh: snow ? snow.fresh : null,
-          aqi: aqi ?? null,
-        });
+      // Si son pocos timestamps, hacemos Promise.all. Si son muchos (ej 7 días), secuencial.
+      if (timestamps.length <= 8) {
+        const fetchPromises = timestamps.map(ts => 
+          _loadPng(config.endpoint, { time: ts }).then(res => ({ ts, res })).catch(err => ({ ts, err }))
+        );
+        
+        const fetched = await Promise.all(fetchPromises);
+        
+        for (const item of fetched) {
+          if (cancelled) break;
+          
+          if (item.err) {
+            results.push({ timestamp: item.ts, value: null, unit: config.unit });
+            continue;
+          }
+          
+          objectUrlsRef.current.push(item.res.objectUrl);
+          const data = getImageDataArray(item.res.img);
+          const rawVal = config.sample(data, lng, lat);
+          const finalVal = config.process(rawVal);
+          
+          results.push({ timestamp: item.ts, value: finalVal, unit: config.unit });
+        }
+      } else {
+        // Secuencial para evitar saturar el navegador si son muchos requests
+        for (const ts of timestamps) {
+          if (cancelled) break;
+          
+          try {
+            const res = await _loadPng(config.endpoint, { time: ts });
+            objectUrlsRef.current.push(res.objectUrl);
+            const data = getImageDataArray(res.img);
+            const rawVal = config.sample(data, lng, lat);
+            const finalVal = config.process(rawVal);
+            results.push({ timestamp: ts, value: finalVal, unit: config.unit });
+          } catch (err) {
+            results.push({ timestamp: ts, value: null, unit: config.unit });
+          }
+          
+          // Pequeño delay de 100ms
+          await new Promise(r => setTimeout(r, 100));
+        }
       }
 
       if (!cancelled) {
-        setTimeSeriesData(results);
+        // Retornar series ordenada por timestamp ascendente
+        results.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        setSeries(results);
         setLoading(false);
       }
     };
@@ -129,7 +162,7 @@ export function useRadarTimeSeries(ciudad, timestamps) {
       objectUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
     };
-  }, [ciudad, timestamps]);
+  }, [ciudad, timestamps, layerKey]);
 
-  return { timeSeriesData, loading, error };
+  return { series, loading, error };
 }
