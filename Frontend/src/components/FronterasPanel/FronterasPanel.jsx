@@ -21,7 +21,7 @@ const ESCENARIOS_OPTS = [
   { id: 'pico', nombre: 'Pico y Descenso', inicio: 30, fin: 80, curva: 'pico' },
 ]
 
-function SearchableComboBox({ value, onChange, options, disabled, placeholder }) {
+function SearchableComboBox({ value, onChange, options, disabled, placeholder, defaultOptionText = "-- Selecciona --" }) {
   const [query, setQuery] = useState('')
 
   const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
@@ -45,7 +45,7 @@ function SearchableComboBox({ value, onChange, options, disabled, placeholder })
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
       >
-        <option value="">-- Selecciona --</option>
+        <option value="">{defaultOptionText}</option>
         {filtered.map(opt => (
           <option key={opt} value={opt}>{opt}</option>
         ))}
@@ -403,19 +403,27 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
           {z.pais && (
             <div className="fp-field">
               <label>Departamento</label>
-              <select value={z.depto} onChange={e => handleDeptoChange(z, setZ, e.target.value, isZ2)} disabled={z.departamentos.length === 0 || isRunning}>
-                <option value="">Todo el país</option>
-                {z.departamentos.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
-              </select>
+              <SearchableComboBox
+                value={z.depto}
+                onChange={val => handleDeptoChange(z, setZ, val, isZ2)}
+                options={z.departamentos.map(d => d.name)}
+                disabled={z.departamentos.length === 0 || isRunning}
+                placeholder="Filtrar..."
+                defaultOptionText="Todo el país"
+              />
             </div>
           )}
           {z.depto && (
             <div className="fp-field">
               <label>Provincia</label>
-              <select value={z.prov} onChange={e => handleProvChange(z, setZ, e.target.value, isZ2)} disabled={z.provincias.length === 0 || isRunning}>
-                <option value="">Todo el departamento</option>
-                {z.provincias.map(pr => <option key={pr} value={pr}>{pr}</option>)}
-              </select>
+              <SearchableComboBox
+                value={z.prov}
+                onChange={val => handleProvChange(z, setZ, val, isZ2)}
+                options={z.provincias}
+                disabled={z.provincias.length === 0 || isRunning}
+                placeholder="Filtrar..."
+                defaultOptionText="Todo el departamento"
+              />
             </div>
           )}
           {z.loadingGeo && <div className="fp-msg fp-msg-load">Cargando frontera...</div>}
