@@ -20,6 +20,8 @@ import MobileMapView from './pages/mobile/MobileMapView'
 import AlertHistoryView from './pages/mobile/AlertHistoryView'
 import MobileProfile from './pages/mobile/MobileProfile'
 
+import LandingPage from './pages/LandingPage'
+
 function RootRedirect() {
   const { isPWA } = usePwa()
   if (!isAuthenticated()) return <Navigate to="/login" replace />
@@ -53,7 +55,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="/" element={<LandingPage />} />
 
         <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
