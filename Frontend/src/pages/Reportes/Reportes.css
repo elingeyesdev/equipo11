@@ -384,3 +384,42 @@
   font-weight: 600;
   color: #fff;
 }
+
+.google-weather-tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #334155;
+  margin-bottom: 10px;
+}
+
+.gwt-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 5px;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.gwt-btn:hover {
+  color: #f8fafc;
+}
+
+.gwt-btn.active {
+  color: #ffffff;
+}
+
+.gwt-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: #fbbc04;
+  border-radius: 3px 3px 0 0;
+}
+

@@ -1,0 +1,140 @@
+.meteoro-assistant {
+  display: flex;
+  align-items: center;
+  background: var(--bi-bg-card);
+  border: 1px solid #8b5cf6;
+  border-radius: 20px;
+  padding: 10px 15px;
+  gap: 15px;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.meteoro-assistant.global-mode {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 400px;
+}
+
+.meteoro-assistant.embedded-mode {
+  width: 100%;
+  max-width: 600px;
+  margin: 20px 0;
+}
+
+.meteoro-avatar {
+  font-size: 32px;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.8));
+  animation: float 3s ease-in-out infinite;
+}
+
+.meteoro-dialogue {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.meteoro-dialogue p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.prompt-text {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.listening-text {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+.processing-text {
+  color: #3b82f6;
+  animation: pulse 1.5s infinite;
+}
+
+.response-text {
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.mic-button {
+  background: #334155;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.mic-button:hover {
+  background: #475569;
+}
+
+.mic-button.listening {
+  background: #ef4444;
+  color: white;
+  animation: pulse-red 1.5s infinite;
+}
+
+.mic-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.prompt-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  font-size: 14px;
+  outline: none;
+}
+
+.prompt-input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.send-button {
+  background: #3b82f6;
+  border: none;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+

@@ -245,11 +245,14 @@ function TabDashboard() {
   );
 }
 
+import MeteoroAssistant from '../../components/MeteoroAssistant/MeteoroAssistant';
+
 function TabSimulador() {
   const [selectedCityIdx, setSelectedCityIdx] = useState(0);
   const [selectedVariable, setSelectedVariable] = useState('temperatura');
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [simulatedData, setSimulatedData] = useState(null); // Para los datos proyectados por Meteoro
   const { addToast } = useToast();
   
   const selectedCity = CIUDADES_BOLIVIA[selectedCityIdx];
@@ -266,7 +269,6 @@ function TabSimulador() {
     setIsAnalyzing(true);
     setAiAnalysis(null);
     try {
-      // Tomamos una muestra representativa de los datos (ej: cada 6 horas) para no sobrecargar el prompt
       const sampleData = forecastData.filter((_, idx) => idx % 2 === 0).map(d => {
         let val = 0;
         if (selectedVariable === 'temperatura') val = d.temperatura.toFixed(1);
@@ -279,19 +281,13 @@ function TabSimulador() {
         };
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/reportes/ia`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({
-          ciudad: selectedCity.nombre,
-          variable: selectedVariable,
-          datos: sampleData
-        })
+      const response = await httpClient.post('/reportes/ia', {
+        ciudad: selectedCity.nombre,
+        variable: selectedVariable,
+        datos: sampleData
       });
 
-      if (!response.ok) throw new Error('Error en IA');
-      
-      const { data } = await response.json();
+      const { data } = response.data;
       setAiAnalysis(data.recomendacion);
     } catch (err) {
       addToast('Error al obtener análisis de DeepSeek', 'error');
@@ -321,9 +317,32 @@ function TabSimulador() {
 
     const minVal = Math.min(...seriesData);
     const maxVal = Math.max(...seriesData);
-    const avgVal = (seriesData.reduce((a, b) => a + b, 0) / seriesData.length).toFixed(1);
+    const avgVal = (seriesData.reduce((a, b) => a + b, 0) / (seriesData.length || 1)).toFixed(1);
 
-    // Diseño inspirado en la Imagen 2: Fondo blanco, línea roja gruesa, marcadores de diamante
+    const seriesArray = [
+      {
+        name, type: 'line', data: seriesData,
+        symbol: 'diamond', symbolSize: 10,
+        itemStyle: { color: '#dd0000', borderColor: '#880000', borderWidth: 1 }, 
+        lineStyle: { color: '#dd0000', width: 4 }
+      }
+    ];
+
+    if (simulatedData) {
+      // Map the simulated data to the timeline array
+      const simSeries = forecastData.map(d => {
+        const isoStr = new Date(d.forecast_time).toISOString();
+        return simulatedData[isoStr] !== undefined ? simulatedData[isoStr] : null; // If null, ECharts skips it or connects
+      });
+      seriesArray.push({
+        name: 'Proyección IA (Meteoro)', type: 'line', data: simSeries,
+        symbol: 'circle', symbolSize: 8,
+        itemStyle: { color: '#8b5cf6' },
+        lineStyle: { color: '#8b5cf6', width: 3, type: 'dashed' },
+        connectNulls: true
+      });
+    }
+
     return {
       backgroundColor: '#ffffff',
       title: {
@@ -357,14 +376,7 @@ function TabSimulador() {
           style: { text: `MÁX: ${maxVal.toFixed(1)}\nMIN: ${minVal.toFixed(1)}\nPROM: ${avgVal}`, fill: '#000', font: 'bold 12px sans-serif' }
         }
       ],
-      series: [
-        {
-          name, type: 'line', data: seriesData,
-          symbol: 'diamond', symbolSize: 10,
-          itemStyle: { color: '#dd0000', borderColor: '#880000', borderWidth: 1 }, 
-          lineStyle: { color: '#dd0000', width: 4 }
-        }
-      ]
+      series: seriesArray
     };
   };
 
@@ -381,12 +393,12 @@ function TabSimulador() {
             {CIUDADES_BOLIVIA.map((city, idx) => <option key={city.nombre} value={idx}>{city.nombre}</option>)}
           </select>
 
-          <select className="bi-select" value={selectedVariable} onChange={(e) => setSelectedVariable(e.target.value)}>
-            <option value="temperatura">Temperatura (°C)</option>
-            <option value="rain">Precipitación (mm/h)</option>
-            <option value="wind_speed">Viento (km/h)</option>
-            <option value="vis">Visibilidad (m)</option>
-          </select>
+          <div className="google-weather-tabs">
+            <button className={`gwt-btn ${selectedVariable === 'temperatura' ? 'active' : ''}`} onClick={() => setSelectedVariable('temperatura')}>Temperatura</button>
+            <button className={`gwt-btn ${selectedVariable === 'rain' ? 'active' : ''}`} onClick={() => setSelectedVariable('rain')}>Precipitaciones</button>
+            <button className={`gwt-btn ${selectedVariable === 'wind_speed' ? 'active' : ''}`} onClick={() => setSelectedVariable('wind_speed')}>Viento</button>
+            <button className={`gwt-btn ${selectedVariable === 'vis' ? 'active' : ''}`} onClick={() => setSelectedVariable('vis')}>Visibilidad</button>
+          </div>
 
           <button 
             onClick={requestAiAnalysis} 
@@ -410,22 +422,12 @@ function TabSimulador() {
         )}
       </div>
 
-      {/* DECISION BANNER (DEEPSEEK READY) */}
-      <div className="bi-decision-banner type-info" style={{ borderColor: '#8b5cf6' }}>
-        <div className="bi-decision-icon" style={{ fontSize: '48px' }}>🤖</div>
-        <div className="bi-decision-content">
-          <h4 className="bi-decision-title" style={{ color: '#c4b5fd' }}>Dictamen de DeepSeek AI</h4>
-          {isAnalyzing ? (
-            <p className="bi-decision-text" style={{ fontStyle: 'italic', color: '#cbd5e1' }}>Procesando modelos de predicción, por favor espere...</p>
-          ) : aiAnalysis ? (
-            <p className="bi-decision-text" style={{ whiteSpace: 'pre-line' }}>{aiAnalysis}</p>
-          ) : (
-            <p className="bi-decision-text">
-              Presiona el botón "Solicitar Análisis IA" para que DeepSeek evalúe los 32 puntos proyectados de <strong>{selectedVariable}</strong> en <strong>{selectedCity.nombre}</strong> y emita una recomendación experta.
-            </p>
-          )}
-        </div>
-      </div>
+      <MeteoroAssistant 
+        cityContext={selectedCity.nombre}
+        dataContext={forecastData}
+        onSimulatedData={setSimulatedData}
+        globalMode={false}
+      />
     </div>
   );
 }

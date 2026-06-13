@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as turf from '@turf/turf';
 import Map, { NavigationControl, FullscreenControl, Popup, Layer, Source } from 'react-map-gl/mapbox';
@@ -593,7 +593,16 @@ function MapaMonitoreo() {
   // --- MIGRATION CONTEXTS ---
   const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas, zona1Cfg, zona2Cfg } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
-  const { isParticlesActive, setIsParticlesActive, particleFilters, setParticleFilters, showSensors, setShowSensors, isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric, isChoroplethActive, setIsChoroplethActive } = useMapVisuals();
+  const { 
+    isParticlesActive, setIsParticlesActive, 
+    particleFilters, setParticleFilters, 
+    showSensors, setShowSensors, 
+    isHeatmapActive, setIsHeatmapActive, 
+    heatmapMetric, setHeatmapMetric, 
+    isChoroplethActive, setIsChoroplethActive,
+    isHistoricalMode, setIsHistoricalMode,
+    isDynamicHistoricalMode, setIsDynamicHistoricalMode
+  } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades } = useUnidades();
   
@@ -602,7 +611,19 @@ function MapaMonitoreo() {
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
 
-  const { citiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters });
+  const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters });
+  
+  const [meteoroOverrides, setMeteoroOverrides] = useState(null);
+
+  const citiesData = useMemo(() => {
+    if (!meteoroOverrides) return baseCitiesData;
+    return baseCitiesData.map(city => {
+      if (meteoroOverrides.datos[city.nombre] !== undefined) {
+        return { ...city, [meteoroOverrides.metrica]: meteoroOverrides.datos[city.nombre] };
+      }
+      return city;
+    });
+  }, [baseCitiesData, meteoroOverrides]);
   
   
   const handleToggleSimMode = useCallback((active) => {
@@ -663,6 +684,91 @@ function MapaMonitoreo() {
 
   const [timelineAnchorDate1, setTimelineAnchorDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [timelineAnchorDate2, setTimelineAnchorDate2] = useState(new Date('2024-01-01T00:00:00Z'));
+
+  // ─── Event Bus para Comandos de IA (Meteoro) ───
+  useEffect(() => {
+    const handleMeteoroAction = (e) => {
+      const acciones = e.detail;
+      if (!acciones || !Array.isArray(acciones)) return;
+
+      acciones.forEach(acc => {
+        if (acc.comando === 'activar_modo_historico') {
+          setIsHistoricalMode(true);
+          setIsDynamicHistoricalMode(true);
+        }
+        if (acc.comando === 'set_fecha' && acc.valor) {
+          try {
+            const newDate = new Date(acc.valor);
+            if (!isNaN(newDate)) {
+              setDate1(newDate);
+              setTimelineAnchorDate1(newDate);
+              setTimelineAnchorDate(newDate); // En caso de que se use un solo timeline
+            }
+          } catch (err) {
+            console.error('Fecha inválida desde IA', acc.valor);
+          }
+        }
+        if (acc.comando === 'reproducir_simulacion') {
+          setIsPlaying(true);
+        }
+        if (acc.comando === 'set_capa' && acc.valor) {
+          const capaMapeo = {
+            'lluvia': 'lluvia',
+            'temperatura': 'temperatura',
+            'viento': 'viento',
+            'aqi': 'aqi',
+            'humedad': 'humedad',
+            'ica': 'ica'
+          };
+          if (capaMapeo[acc.valor]) setActiveLayer(capaMapeo[acc.valor]);
+        }
+        if (acc.comando === 'activar_comparativo') {
+          setIsComparing(true);
+          setIsHistoricalMode(true);
+        }
+        if (acc.comando === 'set_fecha_comparativa' && acc.valor1 && acc.valor2) {
+          try {
+            const newDate1 = new Date(acc.valor1);
+            const newDate2 = new Date(acc.valor2);
+            if (!isNaN(newDate1)) setDate1(newDate1);
+            if (!isNaN(newDate2)) setDate2(newDate2);
+          } catch (err) {
+            console.error('Fechas comparativas inválidas desde IA');
+          }
+        }
+        if (acc.comando === 'simular_heatmap' && acc.metrica && acc.datos) {
+          setMeteoroOverrides({ metrica: acc.metrica, datos: acc.datos });
+          setIsHeatmapActive(true);
+          setHeatmapMetric(acc.metrica);
+        }
+        if (acc.comando === 'limpiar_simulacion') {
+          setMeteoroOverrides(null);
+          setIsHeatmapActive(false);
+          setIsComparing(false);
+        }
+      });
+    };
+
+    window.addEventListener('meteoro_action', handleMeteoroAction);
+    
+    const pendingActions = localStorage.getItem('pending_meteoro_actions');
+    if (pendingActions) {
+      try {
+        const parsed = JSON.parse(pendingActions);
+        handleMeteoroAction({ detail: parsed });
+        localStorage.removeItem('pending_meteoro_actions');
+      } catch (err) {
+        localStorage.removeItem('pending_meteoro_actions');
+      }
+    }
+
+    return () => window.removeEventListener('meteoro_action', handleMeteoroAction);
+  }, [
+    setIsHistoricalMode, setIsDynamicHistoricalMode, setIsPlaying, 
+    setActiveLayer, setIsComparing, setDate1, setDate2, 
+    setTimelineAnchorDate1, setTimelineAnchorDate, setIsHeatmapActive, setHeatmapMetric
+  ]);
+  // -------------------------
 
   // ─── Toggles de Sincronización ───
   const [syncTime, setSyncTime] = useState(true);
