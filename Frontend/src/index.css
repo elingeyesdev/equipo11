@@ -5,20 +5,89 @@
 @tailwind utilities;
 
 :root { /* MODO CLARO - Paleta Invertida */
+  --paper: #FFFFFF;
+  --paper-2: #F9FAFB;
+  --card: #FFFFFF;
+  --white: #FFFFFF;
+  --ink: #0B132B;
+  --ink-2: #1C2541;
+  --ink-mute: #4B5563;
+  --ink-faint: #9CA3AF;
+  --line: #E5E7EB;
+  --line-soft: #F3F4F6;
+  --border: #D1D5DB;
+  --border-color: #D1D5DB;
+  --border-strong: #9CA3AF;
+  --moss: #22C55E;
+  --moss-ink: #14532D;
+  --moss-soft: #DCFCE7;
+  --river: #3B82F6;
+  --river-soft: #DBEAFE;
+  --amber: #F59E0B;
+  --amber-soft: #FEF3C7;
+  --rust: #EF4444;
+  --rust-soft: #FEE2E2;
+  --violet: #8B5CF6;
+  --violet-soft: #EDE9FE;
+  --primary: #5BC0BE;
+  --primary-light: #6BE0DE;
+  --primary-extra-light: #E0F7F6;
+  --primary-dark: #3A9694;
   --bg-app: #F3F4F6;
   --bg-panel: #FFFFFF;
-  --border-color: #D1D5DB;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F3F4F6;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-glass: rgba(255, 255, 255, 0.7);
   --text-primary: #0B132B; /* Prussian Blue para contraste */
   --text-secondary: #3A506B; /* Dusk Blue */
+  --text-muted: #6B7280;
   --accent: #5BC0BE;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 .dark, html[data-theme="dark"], [data-theme="dark"] { /* MODO OSCURO - Paleta Corporativa Oficial */
+  --paper: #0B132B;
+  --paper-2: #1C2541;
+  --card: #1C2541;
+  --white: #FFFFFF;
+  --ink: #FFFFFF;
+  --ink-2: #E5E7EB;
+  --ink-mute: #9CA3AF;
+  --ink-faint: #4B5563;
+  --line: #3A506B;
+  --line-soft: #1C2541;
+  --border: #3A506B;
+  --border-color: #3A506B;
+  --border-strong: #5BC0BE;
+  --moss: #22C55E;
+  --moss-ink: #DCFCE7;
+  --moss-soft: #14532D;
+  --river: #3B82F6;
+  --river-soft: #1D4ED8;
+  --amber: #F59E0B;
+  --amber-soft: #78350F;
+  --rust: #EF4444;
+  --rust-soft: #7F1D1D;
+  --violet: #8B5CF6;
+  --violet-soft: #4C1D95;
+  --primary: #5BC0BE;
+  --primary-light: #6BE0DE;
+  --primary-extra-light: #1C2541;
+  --primary-dark: #0B132B;
   --bg-app: #0B132B;
   --bg-panel: #1C2541;
-  --border-color: #3A506B;
+  --bg-card: #1C2541;
+  --bg-hover: #1C2541;
+  --bg-overlay: rgba(0, 0, 0, 0.7);
+  --bg-glass: rgba(11, 19, 43, 0.7);
   --text-primary: #FFFFFF;
   --text-secondary: #D1D5DB;
+  --text-muted: #9CA3AF;
   --accent: #5BC0BE;
 }
 

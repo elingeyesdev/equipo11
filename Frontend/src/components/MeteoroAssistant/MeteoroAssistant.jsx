@@ -13,6 +13,7 @@ export default function MeteoroAssistant({
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [meteoroMessage, setMeteoroMessage] = useState('');
+  const [isExpanded, setIsExpanded] = useState(!globalMode);
   const { addToast } = useToast();
   
   const recognitionRef = useRef(null);
@@ -99,6 +100,7 @@ export default function MeteoroAssistant({
   const procesarComandoVoz = async (prompt) => {
     setIsProcessing(true);
     setMeteoroMessage('Pensando...');
+    setIsExpanded(true); // Auto expand to show status
     
     try {
       const payload = {
@@ -142,8 +144,33 @@ export default function MeteoroAssistant({
     }
   };
 
+  if (!isExpanded && globalMode) {
+    return (
+      <div 
+        className="meteoro-assistant-collapsed global-mode"
+        onClick={() => setIsExpanded(true)}
+        title="Abrir Asistente Meteoro"
+      >
+        <div className="meteoro-avatar">🤖</div>
+        <span className="meteoro-tooltip-badge">Pregúntale a Meteoro</span>
+      </div>
+    );
+  }
+
   return (
     <div className={`meteoro-assistant ${globalMode ? 'global-mode' : 'embedded-mode'}`}>
+      {globalMode && (
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(false);
+          }} 
+          className="meteoro-close-btn"
+          title="Colapsar asistente"
+        >
+          ✕
+        </button>
+      )}
       <div className="meteoro-avatar">
         🤖
       </div>
@@ -151,11 +178,11 @@ export default function MeteoroAssistant({
         {isListening ? (
           <p className="listening-text">Escuchando... {transcript}</p>
         ) : isProcessing ? (
-          <p className="processing-text">Analizando escenario simulado...</p>
+          <p className="processing-text">Analizando escenario...</p>
         ) : meteoroMessage ? (
-          <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '5px', paddingRight: globalMode ? '15px' : '0'}}>
              <p className="response-text">{meteoroMessage}</p>
-             <button onClick={() => setMeteoroMessage('')} style={{background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0}}>Descartar mensaje</button>
+             <button onClick={() => setMeteoroMessage('')} style={{background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0}}>Descartar mensaje</button>
           </div>
         ) : (
           <form onSubmit={(e) => {
@@ -167,7 +194,7 @@ export default function MeteoroAssistant({
             <input 
               type="text" 
               className="prompt-input" 
-              placeholder="Hazme una pregunta o escribe un escenario..." 
+              placeholder="Hazme una pregunta..." 
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
               disabled={isProcessing}

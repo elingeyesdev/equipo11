@@ -1,13 +1,14 @@
 .meteoro-assistant {
   display: flex;
   align-items: center;
-  background: var(--bi-bg-card);
-  border: 1px solid #8b5cf6;
+  background: var(--bg-panel);
+  border: 1.5px solid #8b5cf6;
   border-radius: 20px;
   padding: 10px 15px;
   gap: 15px;
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .meteoro-assistant.global-mode {
@@ -16,6 +17,76 @@
   right: 20px;
   z-index: 1000;
   max-width: 400px;
+}
+
+.meteoro-assistant-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  border: 2px solid #8b5cf6;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.meteoro-assistant-collapsed:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+}
+
+.meteoro-assistant-collapsed .meteoro-avatar {
+  font-size: 26px;
+}
+
+.meteoro-assistant-collapsed.global-mode {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.meteoro-tooltip-badge {
+  position: absolute;
+  right: 70px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.meteoro-assistant-collapsed:hover .meteoro-tooltip-badge {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.meteoro-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  line-height: 1;
+  padding: 4px;
+}
+
+.meteoro-close-btn:hover {
+  color: var(--text-primary);
 }
 
 .meteoro-assistant.embedded-mode {
@@ -43,7 +114,7 @@
 }
 
 .prompt-text {
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
@@ -58,13 +129,14 @@
 }
 
 .response-text {
-  color: #f8fafc;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .mic-button {
-  background: #334155;
-  border: none;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 50%;
   width: 45px;
   height: 45px;
@@ -78,7 +150,7 @@
 }
 
 .mic-button:hover {
-  background: #475569;
+  background: var(--bg-hover);
 }
 
 .mic-button.listening {
@@ -114,13 +186,13 @@
   width: 100%;
   background: transparent;
   border: none;
-  color: #f8fafc;
+  color: var(--text-primary);
   font-size: 14px;
   outline: none;
 }
 
 .prompt-input::placeholder {
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-style: italic;
 }
 
