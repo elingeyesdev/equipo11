@@ -45,6 +45,8 @@
   --accent: #5BC0BE;
   --radius: 8px;
   --radius-lg: 12px;
+  --sidebar-width: 232px;
+  --navbar-height: 56px;
   --font-serif: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;

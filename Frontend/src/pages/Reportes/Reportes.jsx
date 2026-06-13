@@ -83,14 +83,12 @@ function TabDashboard() {
         temp: d.t.toFixed(2), rain: d.r.toFixed(3), wind: d.w.toFixed(2)
       }));
       const payload = { formato: format, titulo: `Reporte Analítico Global (BI) - ${new Date().toLocaleDateString()}`, columnas, datos: filas };
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/reportes/generar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
+      
+      const response = await httpClient.post('/reportes/generar', payload, {
+        responseType: 'blob'
       });
-      if (!response.ok) throw new Error('Error generando reporte');
-      const blob = await response.blob();
+      
+      const blob = new Blob([response.data], { type: format === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

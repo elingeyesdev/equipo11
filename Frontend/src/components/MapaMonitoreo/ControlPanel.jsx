@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
+import Draggable from '../Draggable/Draggable';
 
 export default function ControlPanel({
   activeControlsCount,
@@ -23,7 +24,7 @@ export default function ControlPanel({
   const [activeTab, setActiveTab] = useState('capas');
 
   return (
-    <div className="map-controls-toolbar">
+    <Draggable className="map-controls-toolbar">
       <button
         className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
         onClick={() => setIsOpen(!isOpen)}
@@ -150,6 +151,6 @@ export default function ControlPanel({
           ) : null}
         </div>
       )}
-    </div>
+    </Draggable>
   );
 }

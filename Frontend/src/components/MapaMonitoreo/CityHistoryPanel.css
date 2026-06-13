@@ -3,8 +3,9 @@
    ========================================================== */
 .city-info-panel-wrapper {
   position: absolute;
-  top: 68px;
-  left: calc(var(--sidebar-width, 232px) + 15px);
+  top: 16px;
+  right: 60px;
+  left: auto;
   z-index: 20;
   cursor: grab;
 }

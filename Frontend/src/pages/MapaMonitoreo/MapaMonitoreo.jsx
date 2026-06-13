@@ -70,28 +70,31 @@ function BuscadorEspacial({ mapRef }) {
   };
 
   return (
-    <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]" style={{
-      position: 'absolute', top: 20, left: 20, zIndex: 10,
-      padding: '10px', display: 'flex', flexDirection: 'column', gap: '5px', width: '200px'
-    }}>
-      <select value={pais} onChange={handlePaisChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-        <option value="">-- País --</option>
+    <div className="buscador-espacial">
+      <div className="buscador-header">
+        <span className="buscador-header-icon">
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <span className="buscador-header-text">Navegación</span>
+      </div>
+      <select value={pais} onChange={handlePaisChange} className="map-overlay-select">
+        <option value="">— País —</option>
         {paises.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
       </select>
       {pais && (
-        <select value={depto} onChange={handleDeptoChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-          <option value="">-- Departamento --</option>
+        <select value={depto} onChange={handleDeptoChange} className="map-overlay-select">
+          <option value="">— Departamento —</option>
           {departamentos.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
         </select>
       )}
       {depto && (
-        <select value={prov} onChange={(e) => setProv(e.target.value)} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-          <option value="">-- Provincia --</option>
+        <select value={prov} onChange={(e) => setProv(e.target.value)} className="map-overlay-select">
+          <option value="">— Provincia —</option>
           {provincias.map(pr => <option key={pr} value={pr}>{pr}</option>)}
         </select>
       )}
-      <button onClick={handleFly} disabled={!pais || loading} className={`p-1 rounded-md cursor-pointer transition-colors ${(!pais || loading) ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)] opacity-50 cursor-not-allowed' : 'bg-[#5BC0BE] text-[#0B132B] font-bold border-none'}`}>
-        {loading ? 'Buscando...' : 'Ir a destino'}
+      <button onClick={handleFly} disabled={!pais || loading} className="map-overlay-btn-primary">
+        {loading ? '⏳ Buscando...' : '📍 Ir a destino'}
       </button>
     </div>
   );
@@ -391,13 +394,8 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
-      style={{
-        flex: 1, display: 'flex', overflowX: 'auto',
-        gap: '6px', padding: '15px 0 5px 0',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none',
-        scrollbarWidth: 'none', msOverflowStyle: 'none'
-      }}
+      className="timeline-slider-container"
+      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
     >
       {(() => {
         const groups = {};
@@ -416,15 +414,11 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
           const weekday = dayNames[sample.getUTCDay()];
 
           return (
-            <div key={dayKey} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-              <span style={{
-                alignSelf: 'flex-start', marginLeft: '4px',
-                fontSize: '10px', fontWeight: 600, letterSpacing: '0.3px',
-                color: 'var(--text-secondary)', whiteSpace: 'nowrap', pointerEvents: 'none'
-              }}>
+            <div key={dayKey} className="timeline-day-group">
+              <span className="timeline-day-label">
                 {weekday} {dayNum}/{monthNum}
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="timeline-tick-row">
                 {ticks.map((tickDate) => {
                   const isSelected = tickDate.getTime() === date.getTime();
                   const hr = String(tickDate.getUTCHours()).padStart(2, '0');
@@ -433,9 +427,9 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
                       key={tickDate.getTime()}
                       id={`${idPrefix}-tick-${tickDate.getTime()}`}
                       onClick={() => setDate(tickDate)}
-                      className={`min-w-[38px] p-1 rounded-[6px] flex items-center justify-center cursor-pointer transition-all duration-150 ${isSelected ? 'bg-[#5BC0BE] text-[#0B132B]' : 'bg-[#3A506B] text-white'}`}
+                      className={`timeline-tick ${isSelected ? 'active' : 'inactive'}`}
                     >
-                      <span className="text-xs pointer-events-none" style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                      <span className="pointer-events-none">
                         {hr}:00
                       </span>
                     </div>
@@ -1338,10 +1332,10 @@ function MapaMonitoreo() {
     const leg = legends[activeLayer];
     if (!leg) return null;
     return (
-      <div style={{ marginTop: '20px' }}>
-        <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Leyenda</p>
-        <div style={{ width: '100%', height: '14px', background: leg.gradient, borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+      <div className="mh-legend-section">
+        <p className="mh-legend-label">Leyenda</p>
+        <div className="mh-legend-bar" style={{ background: leg.gradient }} />
+        <div className="mh-legend-labels">
           {leg.labels.map((lbl, i) => <span key={i}>{lbl}</span>)}
         </div>
       </div>
@@ -1382,27 +1376,24 @@ function MapaMonitoreo() {
   const renderFloatingControls = (isMap2) => (
     <div style={{ 
       position: 'absolute', 
-      top: '90px', 
-      left: isMap2 ? '20px' : 'calc(var(--sidebar-width, 250px) + 20px)', 
+      top: '16px', 
+      left: isMap2 ? '25%' : 'calc(50% + (var(--sidebar-width, 232px) / 2))', 
+      transform: 'translateX(-50%)',
       zIndex: 50,
       display: 'flex',
-      gap: '12px',
-      alignItems: 'center',
+      gap: '10px',
+      alignItems: 'flex-start',
       pointerEvents: 'none'
     }}>
       <div style={{ pointerEvents: 'auto' }}>
         <BuscadorEspacial mapRef={isMap2 ? map2InstanceRef : map1InstanceRef} />
       </div>
 
-      <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[6px] text-[var(--text-primary)]" style={{
-        padding: '6px 10px',
-        pointerEvents: 'auto',
-        display: 'flex',
-        alignItems: 'center',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
+      <div className="map-date-input-wrapper" style={{ pointerEvents: 'auto', marginTop: '16px' }}>
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <input 
-          type="date" 
+          type="date"
+          className="map-date-input"
           min={MIN_DATE} max={MAX_DATE}
           value={(isMap2 ? date2 : date1).toISOString().split('T')[0]}
           onChange={e => {
@@ -1425,7 +1416,6 @@ function MapaMonitoreo() {
               }
             }
           }}
-          style={{ background: 'var(--bg-app)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: '"Space Grotesk", sans-serif', fontSize: '13px', padding: '4px 6px' }}
         />
       </div>
     </div>
@@ -1629,47 +1619,47 @@ function MapaMonitoreo() {
 
         {/* ─── PANELES DE CONTROL (Time Machine & Timeline) ─── */}
 
-        {/* Selector Rápido Superior (Time Machine) -> Reubicado Abajo a la Derecha */}
-        <Draggable className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
-          position: 'absolute', top: '220px', left: `calc(var(--sidebar-width, 232px) + 15px)`, zIndex: 20, 
-          padding: '1.25rem',
-          minWidth: '220px',
-          maxHeight: 'calc(100vh - 280px)',
-          overflowY: 'auto'
-        }}>
-          <h3 className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Modo Histórico</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Modo Histórico — Panel lateral derecho */}
+        <Draggable className="modo-historico-panel">
+          <div className="mh-title">
+            <span className="mh-title-icon">🕐</span>
+            <span className="mh-title-text">Modo Histórico</span>
+          </div>
+          <div className="mh-actions">
             <button
               onClick={() => setIsComparing(!isComparing)}
-              className={`px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] ${isComparing ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
+              className={isComparing ? 'map-overlay-btn-secondary' : 'map-overlay-btn-primary'}
             >
-              {isComparing ? 'Desactivar Comparación' : 'Comparar Mapas'}
+              {isComparing ? '✕ Desactivar Comparación' : '⚖️ Comparar Mapas'}
             </button>
             <button
               onClick={() => navigate('/reportes')}
-              className="px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]"
+              className="map-overlay-btn-secondary"
             >
-              Ir a Reportes
+              📊 Ir a Reportes
             </button>
-            
-            {isComparing && (
-              <div className="flex flex-col gap-2 p-2 rounded-[6px] bg-[var(--bg-app)] border border-[var(--border-color)]">
-                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
-                  <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
-                  Sincronizar Tiempo
-                </label>
-                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
-                  <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
-                  Sincronizar Vistas
-                </label>
-              </div>
-            )}
-            <label className="flex flex-col text-xs font-medium text-[var(--text-primary)] mt-2">
-              Variable Atmosférica:
+          </div>
+          
+          {isComparing && (
+            <div className="mh-sync-options">
+              <label>
+                <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
+                Sincronizar Tiempo
+              </label>
+              <label>
+                <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
+                Sincronizar Vistas
+              </label>
+            </div>
+          )}
+
+          <div className="mh-variable-section">
+            <label>
+              Variable Atmosférica
               <select
                 value={activeLayer}
                 onChange={e => setActiveLayer(e.target.value)}
-                className="mt-1 px-2 py-1 bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-[6px] outline-none cursor-pointer text-[13px]"
+                className="map-overlay-select"
               >
                 <option value="visibilidad">Visibilidad</option>
                 <option value="viento">Velocidad del Viento</option>
@@ -1687,33 +1677,26 @@ function MapaMonitoreo() {
         </Draggable>
 
         {/* Barra de Reproducción Inferior (Timeline UI) */}
-        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
-          position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 10,
-          padding: '16px 24px',
-          display: 'flex', flexDirection: 'column', gap: '15px',
-          width: '90%', maxWidth: '800px'
-        }}>
-          {/* Fila superior: Info de Fecha (Estilo Meteored) */}
-          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '18px', letterSpacing: '0.5px', color: 'var(--text-primary)' }}>
+        <div className="timeline-bar">
+          <div className="timeline-date-display">
             {finalFormattedText}
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="timeline-controls-row">
             <button 
               onClick={() => setIsPlaying(!isPlaying)}
-              className={`px-4 py-2 rounded-[6px] cursor-pointer font-bold text-[15px] min-w-[90px] transition-all duration-200 ${isPlaying ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
+              className={`timeline-play-btn ${isPlaying ? 'paused' : 'active'}`}
             >
-              {isPlaying ? 'Pausa' : 'Play'}
+              {isPlaying ? '⏸ Pausa' : '▶ Play'}
             </button>
             {(!isComparing || syncTime) ? (
               renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)
             ) : (
-              <div style={{ flex: 1, display: 'flex', width: '100%', gap: '20px', overflow: 'hidden' }}>
+              <div style={{ flex: 1, display: 'flex', width: '100%', gap: '14px', overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                   {renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)}
                 </div>
-                <div style={{ width: '2px', background: 'var(--line)', margin: '10px 0' }} />
+                <div style={{ width: '1px', background: 'var(--border-color)' }} />
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                   {renderTimeline(date2, setDate2, timelineAnchorDate2, setTimelineAnchorDate2, false)}
                 </div>
