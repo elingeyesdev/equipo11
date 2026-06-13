@@ -65,7 +65,7 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   border: 1px solid var(--border-color);
-  #0B132B-space: nowrap;
+  white-space: nowrap;
 }
 
 /* ─── Placeholder card (editorial) ─── */
