@@ -18,6 +18,7 @@ import { Marker } from 'react-map-gl/mapbox';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
+import Draggable from '../../components/Draggable/Draggable';
 import { METRICAS_UNIDADES, formatearValor } from '../../utils/unidades';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -1379,15 +1380,26 @@ function MapaMonitoreo() {
   };
 
   const renderFloatingControls = (isMap2) => (
-    <>
-      <div style={{ position: 'absolute', top: '90px', left: isMap2 ? '20px' : 'calc(var(--sidebar-width, 250px) + 20px)', zIndex: 50 }}>
+    <div style={{ 
+      position: 'absolute', 
+      top: '90px', 
+      left: isMap2 ? '20px' : 'calc(var(--sidebar-width, 250px) + 20px)', 
+      zIndex: 50,
+      display: 'flex',
+      gap: '12px',
+      alignItems: 'center',
+      pointerEvents: 'none'
+    }}>
+      <div style={{ pointerEvents: 'auto' }}>
         <BuscadorEspacial mapRef={isMap2 ? map2InstanceRef : map1InstanceRef} />
       </div>
 
       <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[6px] text-[var(--text-primary)]" style={{
-        position: 'absolute', top: '90px', right: '120px', zIndex: 50,
-        padding: '8px 12px',
-        pointerEvents: 'auto'
+        padding: '6px 10px',
+        pointerEvents: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <input 
           type="date" 
@@ -1416,7 +1428,7 @@ function MapaMonitoreo() {
           style={{ background: 'var(--bg-app)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: '"Space Grotesk", sans-serif', fontSize: '13px', padding: '4px 6px' }}
         />
       </div>
-    </>
+    </div>
   );
 
   const renderMapContent = (isMap2) => (
@@ -1618,7 +1630,7 @@ function MapaMonitoreo() {
         {/* ─── PANELES DE CONTROL (Time Machine & Timeline) ─── */}
 
         {/* Selector Rápido Superior (Time Machine) -> Reubicado Abajo a la Derecha */}
-        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
+        <Draggable className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
           position: 'absolute', bottom: '130px', right: 20, zIndex: 20, 
           padding: '1.25rem',
           minWidth: '220px'
@@ -1670,7 +1682,7 @@ function MapaMonitoreo() {
             </label>
           </div>
           {renderLegend()}
-        </div>
+        </Draggable>
 
         {/* Barra de Reproducción Inferior (Timeline UI) */}
         <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
