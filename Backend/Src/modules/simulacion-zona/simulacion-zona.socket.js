@@ -66,20 +66,27 @@ function registerZonaSocketEvents(io) {
           (tickPayload) => {
             io.emit('zona:tick', tickPayload);
             if (tickPayload.zonas && tickPayload.zonas.length > 0) {
+              const alertasService = require('../alertas/alertas.service');
               const notificacionesService = require('../notificaciones/notificaciones.service');
-              tickPayload.zonas.forEach(z => {
-                if (z.severidad === 'critica' || z.severidad === 'emergencia') {
-                  notificacionesService.notifyAlertByCoordinates({
-                    lat: z.centroide.lat,
-                    lng: z.centroide.lng,
-                    metrica: tickPayload.metricaClave,
-                    valor: z.valor,
-                    label: z.umbralLabel,
-                    severidad: z.severidad,
-                    source: `Simulación de Zona: ${z.nombre}`
-                  }).catch(err => logger.error('[zona:tick] Error enviando alerta geográfica:', err.message));
+              
+              const tickData = {
+                cities: tickPayload.zonas.map(z => ({
+                  localidadId: z.localidadId,
+                  name: z.nombre,
+                  data: { [tickPayload.metricaClave]: z.valor }
+                }))
+              };
+
+              alertasService.evaluarTick(tickData).then(async (alertasNuevas) => {
+                if (alertasNuevas.length > 0) {
+                  await alertasService.guardarAlertas(alertasNuevas, { isManual: false });
+                  const paraEmitir = alertasService.filtrarParaEmision(alertasNuevas);
+                  if (paraEmitir.length > 0) {
+                    io.emit('alertas:nueva', paraEmitir);
+                    paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta));
+                  }
                 }
-              });
+              }).catch(err => logger.error('[zona:tick] Error evaluando alertas:', err.message));
             }
           },
           // onComplete: emitir estado cuando la simulación termina automáticamente

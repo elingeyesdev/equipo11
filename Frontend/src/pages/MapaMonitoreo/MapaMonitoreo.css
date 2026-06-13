@@ -1807,3 +1807,109 @@ input:checked+.slider:before {
 .z2-marker {
   background-color: #a855f7;
 }
+
+/* Estilos para el banner de selección en el mapa */
+.map-selection-banner-container {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: 90%;
+  max-width: 480px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.map-selection-banner {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.1);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: #fff;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  pointer-events: auto;
+  animation: slideDownBanner 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDownBanner {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cancel-selection-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancel-selection-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #fff;
+}
+
+/* MQTT Custom Sensor Markers style */
+.mqtt-marker-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+.custom-marker--mqtt {
+  font-size: 1.8rem;
+  cursor: pointer;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+  animation: mqttPulse 2s infinite ease-in-out;
+  transition: transform 0.2s ease;
+}
+
+.custom-marker--mqtt:hover {
+  transform: scale(1.2);
+}
+
+.mqtt-marker-label {
+  font-size: 0.7rem;
+  background: rgba(15, 23, 42, 0.85);
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  font-weight: 700;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  font-family: var(--font-sans), sans-serif;
+}
+
+@keyframes mqttPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.7));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 1));
+  }
+}

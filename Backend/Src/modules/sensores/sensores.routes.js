@@ -4,6 +4,12 @@ const { getSensoresCache, estimarDatosPuntoArbitrario } = require('./sensores.se
 const { estimateICA, estimateRuido } = require('../../utils/estimadores');
 const { METRIC_LIMITS } = require('../../constants/metricas');
 const { success, error } = require('../../utils/response');
+const {
+  crearSensorController,
+  eliminarSensorController,
+  getSensoresMqttController
+} = require('./sensores.controller');
+const { verificarToken } = require('../auth/auth.middleware');
 
 /**
  * GET /api/sensores
@@ -17,6 +23,24 @@ router.get('/', async (req, res) => {
     error(res, 'Error obteniendo sensores: ' + err.message, 500);
   }
 });
+
+/**
+ * POST /api/sensores
+ * Agrega un nuevo sensor MQTT administrado.
+ */
+router.post('/', verificarToken, crearSensorController);
+
+/**
+ * GET /api/sensores/mqtt
+ * Obtiene todos los sensores MQTT configurados.
+ */
+router.get('/mqtt', verificarToken, getSensoresMqttController);
+
+/**
+ * DELETE /api/sensores/mqtt/:id
+ * Elimina un sensor MQTT configurado.
+ */
+router.delete('/mqtt/:id', verificarToken, eliminarSensorController);
 
 /**
  * GET /api/sensores/punto?lat=X&lng=Y

@@ -56,6 +56,7 @@ export default defineConfig({
     },
     watch: {
       usePolling: true,
+      ignored: ['**/node_modules/**', '**/.pnpm-store/**', '**/dist/**'],
     },
     proxy: {
       '/api': {

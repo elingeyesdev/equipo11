@@ -4,6 +4,7 @@ import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 export default function ControlPanel({
   activeControlsCount,
   setIsInjectModalOpen,
+  setIsSensorModalOpen,
   isSimMode, handleToggleSimMode,
   isParticlesActive, setIsParticlesActive,
   isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric,
@@ -42,6 +43,15 @@ export default function ControlPanel({
         title="Inyectar datos manualmente"
       >
         <span className="controls-toggle-icon">💉</span>
+      </button>
+
+      <button
+        className="controls-toggle-btn"
+        style={{ marginLeft: '10px' }}
+        onClick={() => setIsSensorModalOpen(true)}
+        title="Agregar Sensor MQTT"
+      >
+        <span className="controls-toggle-icon">📡</span>
       </button>
 
       {isOpen && (

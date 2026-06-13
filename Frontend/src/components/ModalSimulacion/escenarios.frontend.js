@@ -32,7 +32,7 @@ const escenariosFrontend = [
         niveles: {
           bajo: { inicio: 18, fin: 12, rangoLabel: '18 °C → 12 °C' },
           medio: { inicio: 8, fin: 2, rangoLabel: '8 °C → 2 °C' },
-          alto: { inicio: 2, fin: -10, rangoLabel: '2 °C → -10 °C (Dispara Alarma)' }
+          alto: { inicio: 2, fin: -15, rangoLabel: '2 °C → -15 °C (Dispara Alarma)' }
         }
       },
       {
@@ -46,7 +46,7 @@ const escenariosFrontend = [
         niveles: {
           bajo: { inicio: 22, fin: 26, rangoLabel: '22 °C → 26 °C' },
           medio: { inicio: 26, fin: 32, rangoLabel: '26 °C → 32 °C' },
-          alto: { inicio: 28, fin: 41, rangoLabel: '28 °C → 41 °C (Dispara Alarma)' }
+          alto: { inicio: 28, fin: 43, rangoLabel: '28 °C → 43 °C (Dispara Alarma)' }
         }
       }
     ],
@@ -190,7 +190,7 @@ const escenariosFrontend = [
         niveles: {
           bajo: { inicio: 30, fin: 45, rangoLabel: '30 dB → 45 dB' },
           medio: { inicio: 45, fin: 60, rangoLabel: '45 dB → 60 dB' },
-          alto: { inicio: 40, fin: 78, rangoLabel: '40 dB → 78 dB (Dispara Alarma)' }
+          alto: { inicio: 40, fin: 88, rangoLabel: '40 dB → 88 dB (Dispara Alarma)' }
         }
       }
     ],

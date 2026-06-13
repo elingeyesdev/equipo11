@@ -215,6 +215,7 @@ async function iniciarSimulacionZona(config, onTick, onComplete) {
     const tickFrame = [];
     for (const z of zonasLecturas) {
       tickFrame.push({
+        localidadId: z.localidadId,
         nombre: z.nombre,
         centroide: z.centroide,
         valor: z.lecturas[i].valor,

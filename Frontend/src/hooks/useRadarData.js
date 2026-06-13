@@ -39,7 +39,7 @@ export default function useRadarData({ isParticlesActive, isCompareMode, compare
   // Fetch available dates from backend
   const fetchAvailableDates = useCallback(async () => {
     try {
-      const { data } = await httpClient.get('/radar/available-dates');
+      const { data } = await httpClient.get('/radar/available-dates', { cacheTTL: false });
       setAvailableRadarDates(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
       console.error('Error fetching available dates', e);

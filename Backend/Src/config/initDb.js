@@ -62,6 +62,19 @@ async function initDatabase() {
         actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS sensores_mqtt (
+        sensor_id   TEXT PRIMARY KEY,
+        nombre      TEXT NOT NULL,
+        latitud     DECIMAL(10,6) NOT NULL,
+        longitud    DECIMAL(10,6) NOT NULL,
+        topic_temperatura TEXT,
+        topic_humedad     TEXT,
+        topic_aqi         TEXT,
+        topic_ruido       TEXT,
+        topic_ica         TEXT,
+        creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS fcm_tokens (
         id SERIAL PRIMARY KEY,
         usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -121,6 +134,19 @@ async function initDatabase() {
     }
   } catch (err) {
     logger.warn('⚠️ No se pudo inicializar umbrales (posiblemente la tabla o métricas no existen aún):', err.message);
+  }
+
+  // Asegurar severidad 'critica' para los umbrales extremos de humedad
+  try {
+    await db.query(`
+      UPDATE umbrales 
+      SET severidad = 'critica' 
+      WHERE metrica_id = (SELECT id FROM metricas WHERE clave = 'humedad') 
+        AND nivel IN (1, 5)
+    `);
+    logger.info('[DB Init] Severidad de humedad (niveles 1 y 5) actualizada a critica.');
+  } catch (err) {
+    logger.warn('[DB Init] No se pudo actualizar severidad de humedad:', err.message);
   }
 }
 

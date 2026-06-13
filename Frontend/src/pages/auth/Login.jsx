@@ -165,7 +165,7 @@ function Login() {
                 {apiError && <div className="auth-api-error">{apiError}</div>}
 
                 <button type="submit" className="auth-btn" disabled={loading}>
-                  {loading ? 'Ingresando...' : 'Ingresar →'}
+                  {loading ? 'Ingresando...' : 'Ingresar'}
                 </button>
               </form>
 

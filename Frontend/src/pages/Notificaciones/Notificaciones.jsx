@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Map, { Marker } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import httpClient from '../../config/httpClient';
 import { useTheme } from '../../context/ThemeContext';
+import { del } from 'idb-keyval';
 import './Notificaciones.css';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -25,6 +26,7 @@ const Notificaciones = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [isQrZoomed, setIsQrZoomed] = useState(false);
+  const saveTimerRef = useRef(null);
 
   // Vista del mapa
   const [viewState, setViewState] = useState({
@@ -53,58 +55,10 @@ const Notificaciones = () => {
     return JSON.stringify(form) !== JSON.stringify(originalForm);
   }, [form, originalForm]);
 
-  // Auto-guardado al cambiar la configuración
-  useEffect(() => {
-    if (loading) return;
-    if (!hasChanges) return;
-
-    const timer = setTimeout(() => {
-      const performSave = async () => {
-        setSaving(true);
-        try {
-          const payload = { ...form };
-          // Si no tiene ubicación válida, forzar notificaciones a false
-          if (payload.latitud === null || payload.longitud === null) {
-            payload.notif_email = false;
-            payload.notif_whatsapp = false;
-            payload.notif_telegram = false;
-          }
-          const { data } = await httpClient.put('/usuarios/preferencias', payload);
-          if (data.ok) {
-            const updatedUser = data.data?.usuario || data.usuario || payload;
-            const updatedForm = {
-              latitud: updatedUser.latitud !== null ? parseFloat(updatedUser.latitud) : null,
-              longitud: updatedUser.longitud !== null ? parseFloat(updatedUser.longitud) : null,
-              notif_email: !!updatedUser.notif_email,
-              notif_whatsapp: !!updatedUser.notif_whatsapp,
-              whatsapp_destino: updatedUser.whatsapp_destino || '',
-              notif_telegram: !!updatedUser.notif_telegram,
-              telegram_destino: updatedUser.telegram_destino || '',
-              email: form.email // mantener email original
-            };
-            setForm(updatedForm);
-            setOriginalForm(updatedForm);
-          }
-        } catch (err) {
-          console.error('Error saving settings:', err);
-          setMessage({ text: 'Error al guardar automáticamente', type: 'error' });
-        } finally {
-          setSaving(false);
-        }
-      };
-      performSave();
-    }, 1000); // Guardado automático después de 1 segundo de inactividad
-
-    return () => clearTimeout(timer);
-  }, [form, loading, hasChanges]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  // Cargar preferencias del usuario
+  const fetchSettings = useCallback(async () => {
     try {
-      const { data } = await httpClient.get('/usuarios/preferencias');
+      const { data } = await httpClient.get('/usuarios/preferencias', { cacheTTL: false });
       const userPrefs = data.data || data;
       const initialForm = {
         latitud: userPrefs.latitud !== null ? parseFloat(userPrefs.latitud) : null,
@@ -133,7 +87,80 @@ const Notificaciones = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchSettings();
+  }, [fetchSettings]);
+
+  // Guardar preferencias del usuario (manual o silencioso)
+  const handleSave = useCallback(async (silent = false) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    setSaving(true);
+    try {
+      const payload = { ...form };
+      // Si no tiene ubicación válida, forzar notificaciones a false
+      if (payload.latitud === null || payload.longitud === null) {
+        payload.notif_email = false;
+        payload.notif_whatsapp = false;
+        payload.notif_telegram = false;
+      }
+      const { data } = await httpClient.put('/usuarios/preferencias', payload);
+      if (data.ok) {
+        try {
+          await del('http_cache:/usuarios/preferencias:{}');
+        } catch (cacheErr) {
+          console.warn('Error invalidating preferences cache:', cacheErr);
+        }
+        const updatedUser = data.data?.usuario || data.usuario || payload;
+        const updatedForm = {
+          latitud: updatedUser.latitud !== null ? parseFloat(updatedUser.latitud) : null,
+          longitud: updatedUser.longitud !== null ? parseFloat(updatedUser.longitud) : null,
+          notif_email: !!updatedUser.notif_email,
+          notif_whatsapp: !!updatedUser.notif_whatsapp,
+          whatsapp_destino: updatedUser.whatsapp_destino || '',
+          notif_telegram: !!updatedUser.notif_telegram,
+          telegram_destino: updatedUser.telegram_destino || '',
+          email: form.email // mantener email original
+        };
+        setForm(updatedForm);
+        setOriginalForm(updatedForm);
+        if (!silent) {
+          setMessage({ text: 'Configuración guardada exitosamente.', type: 'success' });
+          setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setMessage({ text: 'Error al guardar la configuración.', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  }, [form]);
+
+  // Auto-guardado al cambiar la configuración
+  useEffect(() => {
+    if (loading) return;
+    if (!hasChanges) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      handleSave(true);
+    }, 1500); // Guardado automático después de 1.5 segundos de inactividad
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [loading, hasChanges, handleSave]);
 
   const handleToggle = (field) => {
     if (form.latitud === null || form.longitud === null) {
@@ -264,7 +291,7 @@ const Notificaciones = () => {
           </p>
         </div>
 
-        <div className="notif-header-actions">
+        <div className="notif-header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <div className="notif-status-indicator">
             {saving ? (
               <span className="notif-status-saving">
@@ -276,6 +303,26 @@ const Notificaciones = () => {
               <span className="notif-status-saved">✅ Guardado automáticamente</span>
             )}
           </div>
+
+          <button
+            type="button"
+            className={`notif-btn-save-header ${hasChanges ? 'notif-btn-save--pending' : ''}`}
+            onClick={() => handleSave(false)}
+            disabled={saving || !hasChanges}
+          >
+            <span className="notif-btn-content">
+              {saving ? (
+                <>
+                  <span className="notif-spinner" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }}></span>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  💾 Guardar Cambios
+                </>
+              )}
+            </span>
+          </button>
         </div>
       </div>
 

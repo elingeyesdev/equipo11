@@ -89,9 +89,18 @@ function resolverUnidad(metricKey, unitKey) {
   return cfg.unidades.find(u => u.key === unitKey) ?? cfg.unidades[0]
 }
 
-export function formatearValor(metricKey, rawValue, unitKey) {
+export function formatearValor(metricKey, rawValue, unitKey, isMqttSensor = false) {
+  if (rawValue == null || typeof rawValue !== 'number' || isNaN(rawValue)) return '—'
+
+  if (metricKey === 'aqi' && isMqttSensor) {
+    if (rawValue < 51) return 'Bueno';
+    if (rawValue < 101) return 'Moderado';
+    if (rawValue < 201) return 'Malo';
+    return 'Peligroso';
+  }
+
   const unit = resolverUnidad(metricKey, unitKey)
-  if (!unit || rawValue == null || typeof rawValue !== 'number' || isNaN(rawValue)) return '—'
+  if (!unit) return '—'
   return `${unit.convertir(rawValue).toFixed(unit.precision)}${unit.sufijo}`
 }
 

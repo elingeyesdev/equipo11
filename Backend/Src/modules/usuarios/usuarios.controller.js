@@ -73,6 +73,7 @@ const updateUsuarioEstado = async (req, res) => {
 const updatePreferencias = async (req, res) => {
   try {
     const userId = req.usuario.id
+    console.log(">>> [updatePreferencias] RECEIVED BODY:", req.body);
     let {
       latitud,
       longitud,
@@ -95,6 +96,18 @@ const updatePreferencias = async (req, res) => {
       notif_telegram = false;
     }
 
+    const queryParams = [
+      parsedLat,
+      parsedLng,
+      !!notif_email,
+      !!notif_whatsapp,
+      whatsapp_destino || null,
+      !!notif_telegram,
+      telegram_destino || null,
+      userId
+    ];
+    console.log(">>> [updatePreferencias] QUERY PARAMS:", queryParams);
+
     const { rows } = await db.query(
       `UPDATE usuarios
        SET latitud = $1,
@@ -109,17 +122,10 @@ const updatePreferencias = async (req, res) => {
                  latitud, longitud,
                  notif_email, notif_whatsapp, whatsapp_destino,
                  notif_telegram, telegram_destino`,
-      [
-        parsedLat,
-        parsedLng,
-        !!notif_email,
-        !!notif_whatsapp,
-        whatsapp_destino || null,
-        !!notif_telegram,
-        telegram_destino || null,
-        userId
-      ]
+      queryParams
     )
+
+    console.log(">>> [updatePreferencias] UPDATED ROW:", rows[0]);
 
     if (rows.length === 0) {
       return error(res, 'Usuario no encontrado', 404)

@@ -46,7 +46,7 @@ function CityHistoryPanel({
                 {activeCity.isLoading
                   ? <div className="panel-skeleton-value" />
                   : <span className="data-value" style={{ color: getDynamicColor(key, activeCity.data[key]), fontWeight: 'bold' }}>
-                    {formatearValor(key, activeCity.data[key], unit)}
+                    {formatearValor(key, activeCity.data[key], unit, activeCity.id?.toString().startsWith('mqtt_'))}
                   </span>
                 }
               </div>

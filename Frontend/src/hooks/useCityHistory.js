@@ -10,7 +10,7 @@ export default function useCityHistory({ isHistoricalMode, selectedCity }) {
     if (isHistoricalMode && selectedCity) {
       const fetchHistory = async () => {
         try {
-          const { data } = await httpClient.get('/historial');
+          const { data } = await httpClient.get('/historial', { cacheTTL: false });
           const allData = data.data || [];
           if (allData && allData.length > 0) {
             const fallbackMapped = allData.map((snapshot, idx) => {

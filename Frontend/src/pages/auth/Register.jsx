@@ -9,18 +9,18 @@ import './Auth.css'
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
 
 const CODES = [
-  { code: '+591', name: 'Bolivia 🇧🇴' },
-  { code: '+54', name: 'Argentina 🇦🇷' },
-  { code: '+55', name: 'Brasil 🇧🇷' },
-  { code: '+56', name: 'Chile 🇨🇱' },
-  { code: '+57', name: 'Colombia 🇨🇴' },
-  { code: '+51', name: 'Perú 🇵🇪' },
-  { code: '+593', name: 'Ecuador 🇪🇨' },
-  { code: '+595', name: 'Paraguay 🇵y' },
-  { code: '+598', name: 'Uruguay 🇺🇾' },
-  { code: '+58', name: 'Venezuela 🇻🇪' },
-  { code: '+52', name: 'México 🇲🇽' },
-  { code: '+34', name: 'España 🇪🇸' },
+  { code: '+591', name: 'Bolivia' },
+  { code: '+54', name: 'Argentina' },
+  { code: '+55', name: 'Brasil' },
+  { code: '+56', name: 'Chile' },
+  { code: '+57', name: 'Colombia' },
+  { code: '+51', name: 'Perú' },
+  { code: '+593', name: 'Ecuador' },
+  { code: '+595', name: 'Paraguay' },
+  { code: '+598', name: 'Uruguay' },
+  { code: '+58', name: 'Venezuela' },
+  { code: '+52', name: 'México' },
+  { code: '+34', name: 'España' },
 ]
 
 const VALIDACIONES = {
@@ -244,10 +244,10 @@ function Register() {
 
             {!MAPBOX_TOKEN ? (
               <div className="auth-info-banner" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.05)', color: '#ef4444' }}>
-                ⚠️ Mapbox Token no configurado. Activa VITE_MAPBOX_TOKEN en tu archivo .env
+                Mapbox Token no configurado. Activa VITE_MAPBOX_TOKEN en tu archivo .env
               </div>
             ) : (
-              <div style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line-soft)', position: 'relative', marginBottom: '8px' }}>
+              <div style={{ width: '100%', height: '200px', overflow: 'hidden', border: '1px solid var(--line-soft)', position: 'relative', marginBottom: '8px' }}>
                 <Map
                   {...viewState}
                   onMove={evt => setViewState(evt.viewState)}
@@ -262,7 +262,7 @@ function Register() {
                       longitude={form.longitud}
                       anchor="bottom"
                     >
-                      <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>📍</div>
+                      <div className="custom-map-pin"></div>
                     </Marker>
                   )}
                 </Map>
@@ -289,7 +289,7 @@ function Register() {
 
             {!hasLocation ? (
               <div className="auth-info-banner">
-                💡 Haz clic en el mapa de arriba para seleccionar tu ubicación y habilitar las alertas.
+                Haz clic en el mapa de arriba para seleccionar tu ubicación y habilitar las alertas.
               </div>
             ) : (
               <div className="auth-notif-options">
@@ -362,14 +362,14 @@ function Register() {
                     />
                     {errors.telegram_destino && <span className="auth-error-msg">{errors.telegram_destino}</span>}
 
-                    <div className="telegram-qr-register-box" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--paper-2)', padding: '10px', borderRadius: '8px', border: '1px solid var(--line-soft)', marginTop: '8px' }}>
+                    <div className="telegram-qr-register-box" style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--paper-2)', padding: '10px', border: '1px solid var(--line-soft)', marginTop: '8px' }}>
                       <img
                         src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https://t.me/envirosense_e11_bot"
                         alt="QR Telegram"
-                        style={{ width: '80px', height: '80px', borderRadius: '4px' }}
+                        style={{ width: '80px', height: '80px' }}
                       />
                       <div style={{ fontSize: '11.5px', color: 'var(--ink-mute)', lineHeight: '1.3' }}>
-                        <strong>¡Activa Telegram!</strong> Escanea este QR para iniciar el bot <b>@envirosense_e11_bot</b>. Envía <code>/start</code> y te dará tu ID para ingresarlo en el campo de arriba.
+                        <strong>Activa Telegram</strong> Escanea este QR para iniciar el bot <b>@envirosense_e11_bot</b>. Envía <code>/start</code> y te dará tu ID para ingresarlo en el campo de arriba.
                       </div>
                     </div>
                   </div>

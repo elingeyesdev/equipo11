@@ -18,6 +18,7 @@ import { useMapVisuals } from '../../context/MapVisualsContext';
 import { useTheme } from '../../context/ThemeContext';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
+import ModalSensor from '../../components/ModalSensor/ModalSensor';
 import Timeline from '../../components/Timeline/Timeline';
 import TimePlayer from '../../components/TimePlayer/TimePlayer';
 import { getWeatherAtLocation, getPlaceName, getFullDataForPoint } from '../../utils/weatherApi';
@@ -132,6 +133,10 @@ function MapaMonitoreo() {
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
+  const [isSensorModalOpen, setIsSensorModalOpen] = useState(false);
+  const [isSelectingSensorLocation, setIsSelectingSensorLocation] = useState(false);
+  const [sensorCoords, setSensorCoords] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [injectedCityId, setInjectedCityId] = useState(null);
   const [activeUmbralFilter, setActiveUmbralFilter] = useState(null);
@@ -194,7 +199,7 @@ function MapaMonitoreo() {
     isFetchingRadar, setCorruptedDates
   } = useRadarData({ isParticlesActive, isCompareMode, compareIndexA, compareIndexB, isDynamicHistoricalMode });
 
-  const { iotSensors, iotLoading, dynamicWindLabels, citiesData } = useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters });
+  const { iotSensors, iotLoading, dynamicWindLabels, citiesData, addSensorLocally } = useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters, refreshTrigger });
 
   const mapDebounceRef = useRef(null);
   const mapRef = useRef(null);
@@ -390,6 +395,14 @@ function MapaMonitoreo() {
   const handleMapClick = async (evt) => {
     const { lng, lat } = evt.lngLat;
     console.log("[DEBUG DRAW] handleMapClick triggered:", { lng, lat, isSimMode, activeDrawingZone, zona1CfgPoints: zona1Cfg?.manualPoints });
+
+    // ─── Modo Selección de Ubicación de Sensor ───
+    if (isSelectingSensorLocation) {
+      setSensorCoords({ lat, lng });
+      setIsSelectingSensorLocation(false);
+      setIsSensorModalOpen(true);
+      return;
+    }
 
     // ─── Modo Simulación ───
     if (isSimMode) {
@@ -681,6 +694,47 @@ function MapaMonitoreo() {
         isOpen={isInjectModalOpen}
         onClose={() => setIsInjectModalOpen(false)}
       />
+      <ModalSensor
+        isOpen={isSensorModalOpen}
+        onClose={() => setIsSensorModalOpen(false)}
+        initialCoordinates={sensorCoords}
+        onSelectOnMap={() => {
+          setIsSensorModalOpen(false);
+          setIsSelectingSensorLocation(true);
+        }}
+        onSensorAdded={(newSensor) => {
+          setRefreshTrigger(prev => prev + 1);
+          setIsSensorModalOpen(false);
+          if (newSensor?.latitude && newSensor?.longitude) {
+            // Optimistic update: show the marker immediately without waiting for the fetch
+            const optimisticSensor = {
+              id: newSensor.id || `mqtt_pending_${Date.now()}`,
+              name: newSensor.name,
+              latitude: newSensor.latitude,
+              longitude: newSensor.longitude,
+              data: { temperatura: null, humedad: null, aqi: null, ica: null, ruido: null }
+            };
+            addSensorLocally(optimisticSensor);
+            mapRef.current?.flyTo({
+              center: [newSensor.longitude, newSensor.latitude],
+              zoom: 10,
+              duration: 1500
+            });
+            setSelectedCity(optimisticSensor);
+          }
+        }}
+      />
+
+      {isSelectingSensorLocation && (
+        <div className="map-selection-banner-container">
+          <div className="map-selection-banner">
+            <span>📍 Haz clic en el mapa para establecer la ubicación del sensor</span>
+            <button className="cancel-selection-btn" onClick={() => setIsSelectingSensorLocation(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
       {!MAPBOX_TOKEN && (
         <div className="missing-token-banner">
           ⚠️ VITE_MAPBOX_TOKEN no está definido en el archivo .env
@@ -772,6 +826,7 @@ function MapaMonitoreo() {
               particleFilters={particleFilters}
               dynamicWindLabels={dynamicWindLabels}
               scannedGrid={isCompareMode ? scannedGridA.data : scannedGrid.data}
+              onCityClick={handleCityClick}
             />
 
             {/* Dibujo Manual Zona 1 */}
@@ -931,6 +986,7 @@ function MapaMonitoreo() {
         <ControlPanel
           activeControlsCount={activeControlsCount}
           setIsInjectModalOpen={setIsInjectModalOpen}
+          setIsSensorModalOpen={setIsSensorModalOpen}
           isSimMode={isSimMode} handleToggleSimMode={handleToggleSimMode}
           isParticlesActive={isParticlesActive} setIsParticlesActive={setIsParticlesActive}
           isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}

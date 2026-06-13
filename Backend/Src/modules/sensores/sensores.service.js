@@ -293,4 +293,86 @@ function stopSensorCron() {
   }
 }
 
-module.exports = { startSensorCron, stopSensorCron, getSensoresCache, estimarDatosPuntoArbitrario };
+async function crearSensorMqtt({ nombre, latitud, longitud, topic_temperatura, topic_humedad, topic_aqi, topic_ruido, topic_ica }) {
+  const sensor_id = 'mqtt_' + Math.random().toString(36).substring(2, 9);
+
+  await pool.query(`
+    INSERT INTO sensores_mqtt (
+      sensor_id, nombre, latitud, longitud,
+      topic_temperatura, topic_humedad, topic_aqi, topic_ruido, topic_ica
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  `, [
+    sensor_id, nombre, latitud, longitud,
+    topic_temperatura || null, topic_humedad || null, topic_aqi || null, topic_ruido || null, topic_ica || null
+  ]);
+
+  // Insertar en sensores_cache para mostrar en el mapa
+  await pool.query(`
+    INSERT INTO sensores_cache (
+      sensor_id, nombre, latitud, longitud,
+      temperatura, humedad, aqi, ica, ruido, weather_code, actualizado_en
+    ) VALUES ($1, $2, $3, $4, NULL, NULL, NULL, NULL, NULL, 0, NOW())
+  `, [sensor_id, nombre, latitud, longitud]);
+
+  const { subscribeToNewSensor } = require('../../config/mqttClient');
+  subscribeToNewSensor({
+    sensor_id,
+    nombre,
+    latitud,
+    longitud,
+    topic_temperatura,
+    topic_humedad,
+    topic_aqi,
+    topic_ruido,
+    topic_ica
+  });
+
+  return {
+    id: sensor_id,
+    name: nombre,
+    latitude: latitud,
+    longitude: longitud,
+    topic_temperatura,
+    topic_humedad,
+    topic_aqi,
+    topic_ruido,
+    topic_ica
+  };
+}
+
+async function eliminarSensorMqtt(sensorId) {
+  const res = await pool.query('SELECT * FROM sensores_mqtt WHERE sensor_id = $1', [sensorId]);
+  if (res.rows.length > 0) {
+    const { unsubscribeFromSensor } = require('../../config/mqttClient');
+    unsubscribeFromSensor(res.rows[0]);
+  }
+  await pool.query('DELETE FROM sensores_mqtt WHERE sensor_id = $1', [sensorId]);
+  await pool.query('DELETE FROM sensores_cache WHERE sensor_id = $1', [sensorId]);
+  return { sensor_id: sensorId };
+}
+
+async function getSensoresMqtt() {
+  const { rows } = await pool.query('SELECT * FROM sensores_mqtt ORDER BY creado_en DESC');
+  return rows.map(r => ({
+    id: r.sensor_id,
+    name: r.nombre,
+    latitude: Number(r.latitud),
+    longitude: Number(r.longitud),
+    topic_temperatura: r.topic_temperatura,
+    topic_humedad: r.topic_humedad,
+    topic_aqi: r.topic_aqi,
+    topic_ruido: r.topic_ruido,
+    topic_ica: r.topic_ica,
+    creado_en: r.creado_en
+  }));
+}
+
+module.exports = {
+  startSensorCron,
+  stopSensorCron,
+  getSensoresCache,
+  estimarDatosPuntoArbitrario,
+  crearSensorMqtt,
+  eliminarSensorMqtt,
+  getSensoresMqtt
+};

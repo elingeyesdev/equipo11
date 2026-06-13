@@ -16,7 +16,7 @@ async function main() {
       VALUES (
         (SELECT id FROM roles WHERE clave = 'admin'),
         'Admin', 'Sistema', 'luiyimateoencinas@gmail.com',
-        '$2b$10$TPYyzFpx4etM3Da.4zVTXeSAs2sq9QAhWdCQisqAMXW8MvD8JCoGm',
+        '$2b$10$hXd0FIB0cZYfcLAthJ.pqOkPoU0VWoTtIruM69gfOwcK8F8dLxFsa',
         TRUE
       )
       ON CONFLICT (email) DO UPDATE SET 

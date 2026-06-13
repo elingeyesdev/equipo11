@@ -49,7 +49,6 @@ export const getPlaceName = async (lat, lng, mapboxToken) => {
     
     const features = response.data.features;
     if (features && features.length > 0) {
-      // Find the most specific place name
       const place = features.find(f => f.place_type.includes('place') || f.place_type.includes('locality')) || features[0];
       return place.text;
     }
@@ -79,7 +78,6 @@ export const getBulkWeatherForLocations = async (citiesArray) => {
     const results = {};
     const data = response.data;
     
-    // Si OpenMeteo recibe múltiples coordenadas, devuelve un array. Si es una, devuelve un objeto.
     if (Array.isArray(data)) {
       data.forEach((locData, index) => {
         if (locData && locData.current) {
@@ -122,7 +120,6 @@ export const getHistoricalWeatherAtLocation = async (lat, lng) => {
       })
     ]);
     
-    // Transformamos el dato masivo de Open-Meteo al formato Timeline
     const { time, temperature_2m, relative_humidity_2m, weather_code } = weatherResponse.data.hourly;
     const aqiData = aqiResponse.data?.hourly?.european_aqi || [];
     
@@ -171,7 +168,7 @@ export const getGlobalGridWeather = async (pointsArray) => {
     }));
   } catch (error) {
     console.error("Error bulk fetching grid weather:", error);
-    return null; // Devolver null para no borrar la cuadrícula previa en caso de rate-limit
+    return null;
   }
 };
 
@@ -181,7 +178,6 @@ export const getLatestRadarTimestamp = async () => {
     if (response.data && response.data.radar && response.data.radar.past) {
       const pastFrames = response.data.radar.past;
       if (pastFrames.length > 0) {
-        // Tomamos el cuadro más reciente del pasado (el último del array)
         return pastFrames[pastFrames.length - 1].time;
       }
     }
@@ -197,7 +193,7 @@ export const getLatestRadarTimestamp = async () => {
  */
 export const getSensoresIoT = async () => {
   try {
-    const res = await httpClient.get('/sensores');
+    const res = await httpClient.get(`/sensores?_t=${Date.now()}`, { cacheTTL: false });
     const body = res.data;
     if (body?.data?.data && Array.isArray(body.data.data)) {
       return body.data.data;
@@ -207,43 +203,6 @@ export const getSensoresIoT = async () => {
     console.error('[Sensores IoT] Error al obtener sensores:', err);
     return [];
   }
-};
-/**
- * Estima ICA (calidad del agua, 0–100) a partir de datos climáticos reales.
- * - Humedad alta → más disponibilidad de agua pero potencialmente más contaminada
- * - AQI alto → correlación negativa con calidad del agua
- * - Lluvia (weatherCode 51-82) → leve deterioro por arrastre de sedimentos
- */
-const estimateICA = (humedad, aqi, weatherCode) => {
-  const humNorm = Math.max(0, Math.min(1, humedad / 100));
-  const aqiNorm = Math.max(0, Math.min(1, (aqi || 0) / 200));
-  const isRaining = weatherCode >= 51 && weatherCode <= 82;
-
-  // Base: 80 puntos, baja con AQI alto, sube un poco con humedad
-  let ica = 80 - aqiNorm * 45 + humNorm * 8 - (isRaining ? 4 : 0);
-  // Añadir variación aleatoria pequeña (±3) para no ser perfectamente lineal
-  ica += (Math.random() - 0.5) * 6;
-  return Number(Math.max(10, Math.min(100, ica)).toFixed(1));
-};
-
-/**
- * Estima el nivel de Ruido (dB) basado en la hora del día.
- * Pico en hora punta (7-9h y 17-20h), silencio nocturno (0-6h).
- */
-const estimateRuido = () => {
-  const hour = new Date().getHours();
-  let factor;
-  if (hour >= 0 && hour < 6)        factor = 0.15;  // madrugada
-  else if (hour >= 6 && hour < 7)   factor = 0.35;  // amanecer
-  else if (hour >= 7 && hour <= 9)  factor = 0.85;  // hora punta mañana
-  else if (hour >= 10 && hour < 17) factor = 0.60;  // día laboral
-  else if (hour >= 17 && hour <= 20) factor = 0.90; // hora punta tarde
-  else if (hour >= 21 && hour < 23) factor = 0.45;  // noche
-  else                              factor = 0.20;  // medianoche
-
-  // Rango urbano genérico: 35–85 dB
-  const ruido = 35 + factor * 50 + (Math.random() - 0.5) * 4;
-  return Number(Math.max(30, Math.min(90, ruido)).toFixed(1));
 };
 
 /**
@@ -273,5 +232,35 @@ export const getFullDataForPoint = async (lat, lng) => {
   } catch (err) {
     console.warn('[getFullDataForPoint] Fallback to backend failed:', err.message);
     return null;
+  }
+};
+
+export const crearSensorIoT = async (sensorData) => {
+  try {
+    const res = await httpClient.post('/sensores', sensorData);
+    return res.data;
+  } catch (err) {
+    console.error('[crearSensorIoT] Error creating sensor:', err);
+    throw err;
+  }
+};
+
+export const getSensoresMqttList = async () => {
+  try {
+    const res = await httpClient.get('/sensores/mqtt', { cacheTTL: false });
+    return res.data?.data?.data || [];
+  } catch (err) {
+    console.error('[getSensoresMqttList] Error listing MQTT sensors:', err);
+    return [];
+  }
+};
+
+export const eliminarSensorMqtt = async (id) => {
+  try {
+    const res = await httpClient.delete(`/sensores/mqtt/${id}`);
+    return res.data;
+  } catch (err) {
+    console.error('[eliminarSensorMqtt] Error deleting MQTT sensor:', err);
+    throw err;
   }
 };

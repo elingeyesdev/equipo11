@@ -148,7 +148,7 @@ async function evaluarTick(tickData) {
   const alertasNuevas = []
 
   for (const city of tickData.cities) {
-    const localidadId = dbMapping.localidades[city.name.toLowerCase()]
+    const localidadId = city.localidadId || dbMapping.localidades[city.name.toLowerCase()]
     if (!localidadId) continue
 
     for (const [metricaClave, valor] of Object.entries(city.data)) {

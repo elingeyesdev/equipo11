@@ -6,11 +6,11 @@ const registerController = async (req, res) => {
   // Paso 1: Validar datos con Zod
   const parsed = registerSchema.safeParse(req.body)
   if (!parsed.success) {
-    const errores = parsed.error.errors.map(e => ({
+    const errores = (parsed.error.issues || []).map(e => ({
       campo: e.path[0],
       mensaje: e.message
     }))
-    return error(res, errores[0].mensaje, 400)
+    return error(res, errores[0]?.mensaje || 'Datos inválidos', 400)
   }
 
   // Paso 2: Procesar registro con datos validados
@@ -26,11 +26,11 @@ const loginController = async (req, res) => {
   // Paso 1: Validar datos con Zod
   const parsed = loginSchema.safeParse(req.body)
   if (!parsed.success) {
-    const errores = parsed.error.errors.map(e => ({
+    const errores = (parsed.error.issues || []).map(e => ({
       campo: e.path[0],
       mensaje: e.message
     }))
-    return error(res, errores[0].mensaje, 400)
+    return error(res, errores[0]?.mensaje || 'Datos inválidos', 400)
   }
 
   // Paso 2: Procesar login con datos validados
@@ -45,7 +45,7 @@ const loginController = async (req, res) => {
 const forgotPasswordController = async (req, res) => {
   const parsed = forgotPasswordSchema.safeParse(req.body)
   if (!parsed.success) {
-    return error(res, parsed.error.errors[0].message, 400)
+    return error(res, parsed.error.issues?.[0]?.message || 'Datos inválidos', 400)
   }
 
   try {
@@ -59,7 +59,7 @@ const forgotPasswordController = async (req, res) => {
 const resetPasswordController = async (req, res) => {
   const parsed = resetPasswordSchema.safeParse(req.body)
   if (!parsed.success) {
-    return error(res, parsed.error.errors[0].message, 400)
+    return error(res, parsed.error.issues?.[0]?.message || 'Datos inválidos', 400)
   }
 
   try {

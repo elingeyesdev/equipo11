@@ -44,18 +44,36 @@ export default function MapLayers({
             currentZoom={currentZoom} onCityClick={onCityClick}
           />
         ) : (
-          citiesData.map((city) => (
-            <Marker
-              key={`marker-${idPrefix}-${city.id}`}
-              longitude={city.longitude} latitude={city.latitude}
-              anchor="bottom"
-              onClick={async (e) => { e.originalEvent.stopPropagation(); onCityClick(city); }}
-            >
-              <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
-                <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
-              </div>
-            </Marker>
-          ))
+          citiesData.map((city) => {
+            const isMqtt = city.id?.toString().startsWith('mqtt_');
+            return (
+              <Marker
+                key={`marker-${idPrefix}-${city.id}`}
+                longitude={city.longitude} latitude={city.latitude}
+                anchor="bottom"
+                onClick={async (e) => { e.originalEvent.stopPropagation(); onCityClick && onCityClick(city); }}
+              >
+                {isMqtt ? (
+                  <div className="mqtt-marker-container">
+                    <span
+                      className="custom-marker--mqtt"
+                      role="img"
+                      aria-label="mqtt-sensor"
+                    >
+                      📶
+                    </span>
+                    <span className="mqtt-marker-label">
+                      {city.name}
+                    </span>
+                  </div>
+                ) : (
+                  <div className={`custom-marker sensor-iot-marker${injectedCityId === city.id ? ' custom-marker--injected' : ''}`}>
+                    <span role="img" aria-label="sensor" style={{ fontSize: '20px', filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.8))' }}>📡</span>
+                  </div>
+                )}
+              </Marker>
+            );
+          })
         )
       )}
 
