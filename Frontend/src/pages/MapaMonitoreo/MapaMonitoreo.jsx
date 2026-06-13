@@ -1631,9 +1631,11 @@ function MapaMonitoreo() {
 
         {/* Selector Rápido Superior (Time Machine) -> Reubicado Abajo a la Derecha */}
         <Draggable className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
-          position: 'absolute', bottom: '130px', right: 20, zIndex: 20, 
+          position: 'absolute', top: '220px', left: `calc(var(--sidebar-width, 232px) + 15px)`, zIndex: 20, 
           padding: '1.25rem',
-          minWidth: '220px'
+          minWidth: '220px',
+          maxHeight: 'calc(100vh - 280px)',
+          overflowY: 'auto'
         }}>
           <h3 className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Modo Histórico</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

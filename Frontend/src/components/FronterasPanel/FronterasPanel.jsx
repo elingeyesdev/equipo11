@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSimulacion } from '../../context/SimulacionContext'
 import { useToast } from '../Toast/Toast'
 import { calcCenter } from '../../utils/geo'
+import Draggable from '../Draggable/Draggable'
 import './FronterasPanel.css'
 
 const COUNTRIES_API = 'https://countriesnow.space/api/v0.1'
@@ -511,7 +512,7 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
   )
 
   return (
-    <div className="fronteras-panel">
+    <Draggable className="fronteras-panel">
       <div className="fronteras-header">
         <h4>Fronteras de Simulación</h4>
         {loadingList && <span className="fronteras-spinner"></span>}
@@ -530,16 +531,16 @@ export default function FronterasPanel({ onBoundarySelect, onStartSimulation, is
             }} />
             Comparar con otra frontera
           </label>
-
+ 
           {isComparing && renderFronteraForm(zona2, setZona2, true)}
         </div>
       </div>
-
+ 
       <div className="fronteras-footer">
         <button className="fp-btn-start" onClick={handleStart} disabled={isRunning || !zona1.result || (isComparing && !zona2.result)}>
           {isRunning ? 'Simulación en progreso...' : 'Configurar Simulación'}
         </button>
       </div>
-    </div>
+    </Draggable>
   )
 }

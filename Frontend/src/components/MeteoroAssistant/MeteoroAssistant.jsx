@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import httpClient from '../../config/httpClient';
 import { useToast } from '../Toast/Toast';
 import './MeteoroAssistant.css';
+import Draggable from '../Draggable/Draggable';
 
 export default function MeteoroAssistant({ 
   cityContext = 'Bolivia', 
@@ -151,75 +152,114 @@ export default function MeteoroAssistant({
         onClick={() => setIsExpanded(true)}
         title="Abrir Asistente Meteoro"
       >
-        <div className="meteoro-avatar">🤖</div>
-        <span className="meteoro-tooltip-badge">Pregúntale a Meteoro</span>
+        <div className="meteoro-avatar">🌦️</div>
+        <span className="meteoro-tooltip-badge">Meteoro IA</span>
       </div>
     );
   }
 
-  return (
-    <div className={`meteoro-assistant ${globalMode ? 'global-mode' : 'embedded-mode'}`}>
+  const assistantContent = (
+    <>
+      {/* Header label (global mode only) */}
       {globalMode && (
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsExpanded(false);
-          }} 
-          className="meteoro-close-btn"
-          title="Colapsar asistente"
-        >
-          ✕
-        </button>
-      )}
-      <div className="meteoro-avatar">
-        🤖
-      </div>
-      <div className="meteoro-dialogue">
-        {isListening ? (
-          <p className="listening-text">Escuchando... {transcript}</p>
-        ) : isProcessing ? (
-          <p className="processing-text">Analizando escenario...</p>
-        ) : meteoroMessage ? (
-          <div style={{display: 'flex', flexDirection: 'column', gap: '5px', paddingRight: globalMode ? '15px' : '0'}}>
-             <p className="response-text">{meteoroMessage}</p>
-             <button onClick={() => setMeteoroMessage('')} style={{background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0}}>Descartar mensaje</button>
+        <div style={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+          width: '100%', marginBottom: '8px', paddingBottom: '8px', 
+          borderBottom: '1px solid var(--border-color)' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '16px' }}>🌦️</span>
+            <span style={{ 
+              fontFamily: 'var(--font-sans)', fontWeight: 700, 
+              fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.01em'
+            }}>Meteoro <span style={{ color: 'var(--accent)', fontWeight: 600 }}>IA</span></span>
+            <span style={{
+              background: 'var(--primary-extra-light)', color: 'var(--accent)',
+              border: '1px solid rgba(91, 192, 190, 0.3)', borderRadius: '4px',
+              fontSize: '9px', fontWeight: 700, padding: '1px 5px', letterSpacing: '0.06em',
+              textTransform: 'uppercase'
+            }}>Asistente</span>
           </div>
-        ) : (
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (transcript.trim().length > 0) {
-              procesarComandoVoz(transcript);
-            }
-          }}>
-            <input 
-              type="text" 
-              className="prompt-input" 
-              placeholder="Hazme una pregunta..." 
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              disabled={isProcessing}
-            />
-          </form>
-        )}
-      </div>
-      
-      {!isListening && !isProcessing && transcript.length > 0 && !meteoroMessage && (
-        <button 
-          className="send-button"
-          onClick={() => procesarComandoVoz(transcript)}
-        >
-          ➤
-        </button>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }} 
+            className="meteoro-close-btn"
+            style={{ position: 'static', fontSize: '11px', padding: '2px 5px' }}
+            title="Colapsar"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
-      <button 
-        className={`mic-button ${isListening ? 'listening' : ''}`} 
-        onClick={toggleListening}
-        disabled={isProcessing}
-        title="Usar micrófono"
-      >
-        {isListening ? '⏹' : '🎤'}
-      </button>
+      {/* Main content row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+        {!globalMode && (
+          <div className="meteoro-avatar">
+            🌦️
+          </div>
+        )}
+        <div className="meteoro-dialogue">
+          {isListening ? (
+            <p className="listening-text">🎙 Escuchando... {transcript}</p>
+          ) : isProcessing ? (
+            <p className="processing-text">⏳ Analizando escenario...</p>
+          ) : meteoroMessage ? (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
+               <p className="response-text">{meteoroMessage}</p>
+               <button onClick={() => setMeteoroMessage('')} style={{background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)'}}>Descartar ×</button>
+            </div>
+          ) : (
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (transcript.trim().length > 0) {
+                procesarComandoVoz(transcript);
+              }
+            }}>
+              <input 
+                type="text" 
+                className="prompt-input" 
+                placeholder="Pregunta sobre el clima, zonas, alertas..." 
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                disabled={isProcessing}
+              />
+            </form>
+          )}
+        </div>
+        
+        {!isListening && !isProcessing && transcript.length > 0 && !meteoroMessage && (
+          <button 
+            className="send-button"
+            onClick={() => procesarComandoVoz(transcript)}
+            title="Enviar"
+          >
+            ➤
+          </button>
+        )}
+
+        <button 
+          className={`mic-button ${isListening ? 'listening' : ''}`} 
+          onClick={toggleListening}
+          disabled={isProcessing}
+          title={isListening ? 'Detener' : 'Usar micrófono'}
+        >
+          {isListening ? '⏹' : '🎤'}
+        </button>
+      </div>
+    </>
+  );
+
+  if (globalMode) {
+    return (
+      <Draggable className="meteoro-assistant global-mode" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+        {assistantContent}
+      </Draggable>
+    );
+  }
+
+  return (
+    <div className="meteoro-assistant embedded-mode">
+      {assistantContent}
     </div>
   );
 }

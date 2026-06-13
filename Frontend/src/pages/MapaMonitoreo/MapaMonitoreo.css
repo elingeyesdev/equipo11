@@ -1502,20 +1502,20 @@ input:checked+.slider:before {
    ================================================================ */
 .zona-sim-status-panel {
   position: absolute;
-  top: 80px;
+  top: 150px;
   right: 16px;
   z-index: 200;
   width: 280px;
-  background: rgba(12, 17, 14, 0.94);
+  background: var(--bg-panel);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.08);
+  box-shadow: var(--shadow-lg);
   animation: panelSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

@@ -1,10 +1,10 @@
 .fronteras-panel {
   position: absolute;
-  top: 16px;
+  top: 100px;
   right: 16px;
   left: auto;
   width: 320px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 200px);
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);

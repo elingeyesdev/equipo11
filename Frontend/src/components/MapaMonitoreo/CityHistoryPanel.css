@@ -4,7 +4,7 @@
 .city-info-panel-wrapper {
   position: absolute;
   top: 68px;
-  left: 15px;
+  left: calc(var(--sidebar-width, 232px) + 15px);
   z-index: 20;
   cursor: grab;
 }
