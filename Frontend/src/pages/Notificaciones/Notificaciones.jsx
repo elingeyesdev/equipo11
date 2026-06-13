@@ -34,18 +34,18 @@ const Notificaciones = () => {
   });
 
   const CODES = [
-    { code: '+591', name: 'Bolivia 🇧🇴' },
-    { code: '+54', name: 'Argentina 🇦🇷' },
-    { code: '+55', name: 'Brasil 🇧🇷' },
-    { code: '+56', name: 'Chile 🇨🇱' },
-    { code: '+57', name: 'Colombia 🇨🇴' },
-    { code: '+51', name: 'Perú 🇵🇪' },
-    { code: '+593', name: 'Ecuador 🇪🇨' },
+    { code: '+591', name: 'Bolivia' },
+    { code: '+54', name: 'Argentina' },
+    { code: '+55', name: 'Brasil' },
+    { code: '+56', name: 'Chile' },
+    { code: '+57', name: 'Colombia' },
+    { code: '+51', name: 'Perú' },
+    { code: '+593', name: 'Ecuador' },
     { code: '+595', name: 'Paraguay 🇵y' },
-    { code: '+598', name: 'Uruguay 🇺🇾' },
-    { code: '+58', name: 'Venezuela 🇻🇪' },
-    { code: '+52', name: 'México 🇲🇽' },
-    { code: '+34', name: 'España 🇪🇸' },
+    { code: '+598', name: 'Uruguay' },
+    { code: '+58', name: 'Venezuela' },
+    { code: '+52', name: 'México' },
+    { code: '+34', name: 'España' },
   ];
 
   // Detectar si hay cambios comparando con el estado original
@@ -193,10 +193,10 @@ const Notificaciones = () => {
 
   const getIcon = (tipo) => {
     switch (tipo) {
-      case 'email': return '📧';
-      case 'whatsapp': return '📱';
-      case 'telegram': return '✈️';
-      default: return '🔔';
+      case 'email': return <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+      case 'whatsapp': return <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>;
+      case 'telegram': return <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>;
+      default: return <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
     }
   };
 
@@ -224,7 +224,7 @@ const Notificaciones = () => {
     {
       tipo: 'email',
       label: 'Correo Electrónico (Gmail)',
-      icon: '📧',
+      icon: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
       habilitado: form.notif_email,
       destino: form.email,
       placeholder: 'ejemplo@correo.com',
@@ -234,7 +234,7 @@ const Notificaciones = () => {
     {
       tipo: 'whatsapp',
       label: 'WhatsApp',
-      icon: '📱',
+      icon: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>,
       habilitado: form.notif_whatsapp,
       destino: form.whatsapp_destino,
       placeholder: '70000000',
@@ -243,7 +243,7 @@ const Notificaciones = () => {
     {
       tipo: 'telegram',
       label: 'Telegram',
-      icon: '✈️',
+      icon: <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
       habilitado: form.notif_telegram,
       destino: form.telegram_destino,
       placeholder: '123456789',
@@ -254,12 +254,11 @@ const Notificaciones = () => {
   const mapStyle = theme === 'dark' ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/streets-v12';
 
   return (
-    <div className="notif-container">
+    <div className="notif-container w-full max-w-7xl mx-auto p-6 md:p-10">
       <div className="notif-header">
         <div className="notif-header-content">
-          <span className="notif-eyebrow">Perfil de Usuario</span>
-          <h1 className="notif-title">Preferencias y <em>Localidad</em></h1>
-          <p className="notif-subtitle">
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Preferencias y <span className="text-[var(--accent)]">Localidad</span></h1>
+          <p className="text-base text-[var(--text-secondary)] mb-8">
             Ubica tu área de interés en el mapa y activa los canales para recibir alertas climáticas regionales en tiempo real.
           </p>
         </div>
@@ -271,9 +270,9 @@ const Notificaciones = () => {
                 <span className="notif-spinner"></span> Guardando...
               </span>
             ) : hasChanges ? (
-              <span className="notif-status-pending">⏳ Cambios pendientes...</span>
+              <span className="notif-status-pending"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{marginRight: '6px', display: 'inline-block', animation: 'spin 2s linear infinite'}}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Cambios pendientes...</span>
             ) : (
-              <span className="notif-status-saved">✅ Guardado automáticamente</span>
+              <span className="notif-status-saved"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Guardado automáticamente</span>
             )}
           </div>
         </div>
@@ -289,11 +288,11 @@ const Notificaciones = () => {
         {/* Tarjeta de Localización */}
         <div className="notif-location-card">
           <div className="notif-card-header" style={{ borderBottom: '1px solid var(--line-soft)', paddingBottom: '1rem' }}>
-            <div className="notif-card-icon">📍</div>
+            <div className="notif-card-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
             <div className="notif-card-info">
               <h3>Ubicación en el Mapa</h3>
               <span className="notif-card-status">
-                {hasLocation ? '✓ Ubicación Configurada' : '⚠ Ubicación Requerida (Alertas deshabilitadas)'}
+                {hasLocation ? '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Ubicación Configurada' : '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Ubicación Requerida (Alertas deshabilitadas)'}
               </span>
             </div>
           </div>
@@ -306,7 +305,7 @@ const Notificaciones = () => {
               
               {!MAPBOX_TOKEN ? (
                 <div className="notif-hint-alert" style={{ color: '#ef4444' }}>
-                  ⚠️ Token de Mapbox no configurado en variables de entorno.
+                  <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Token de Mapbox no configurado en variables de entorno.
                 </div>
               ) : (
                 <div style={{ width: '100%', height: '240px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--line-soft)', position: 'relative' }}>
@@ -324,7 +323,7 @@ const Notificaciones = () => {
                         longitude={form.longitud}
                         anchor="bottom"
                       >
-                        <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>📍</div>
+                        <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
                       </Marker>
                     )}
                   </Map>
@@ -377,7 +376,7 @@ const Notificaciones = () => {
         {/* Banner informativo de ubicación */}
         {!hasLocation && (
           <div className="notif-info-box" style={{ gridColumn: '1 / -1', background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.2)', color: '#d97706', marginBottom: '2rem' }}>
-            <div className="notif-info-icon">⚠️</div>
+            <div className="notif-info-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
             <div className="notif-info-text">
               <strong>Ubicación Requerida:</strong> Debes ingresar tus coordenadas marcando el mapa para habilitar los canales de notificación.
             </div>
@@ -456,7 +455,7 @@ const Notificaciones = () => {
                         className="notif-qr-image"
                         style={{ filter: hasLocation ? 'none' : 'grayscale(100%)' }}
                       />
-                      {hasLocation && <div className="notif-qr-overlay">🔍</div>}
+                      {hasLocation && <div className="notif-qr-overlay"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>}
                     </div>
                     <div className="notif-qr-text">
                       <p><strong>Escanea para iniciar</strong></p>
@@ -464,7 +463,7 @@ const Notificaciones = () => {
                     </div>
                   </div>
                   <div className="notif-hint-alert">
-                    ⚠️ Dale a <strong>"Iniciar"</strong> y el bot te dirá tu ID automáticamente.
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Dale a <strong>"Iniciar"</strong> y el bot te dirá tu ID automáticamente.
                   </div>
                 </div>
               )}
@@ -474,7 +473,7 @@ const Notificaciones = () => {
       </div>
 
       <div className="notif-info-box">
-        <div className="notif-info-icon">💡</div>
+        <div className="notif-info-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></div>
         <div className="notif-info-text">
           <strong>¿Cómo funcionan las alertas?</strong> Las notificaciones se disparan automáticamente cuando un sensor o una simulación de zona supera los umbrales de nivel <em>crítico</em> o <em>emergencia</em> en un radio de 50 Km de tus coordenadas registradas.
         </div>

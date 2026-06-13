@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useMultiForecastData } from '../../hooks/useMultiForecastData';
 import ReactECharts from 'echarts-for-react';
 import { useToast } from '../../components/Toast/Toast';
 import './Reportes.css';
+import { useZonaSim } from '../../context/ZonaSimContext';
+import MeteoroAssistant from '../../components/MeteoroAssistant/MeteoroAssistant';
+import httpClient from '../../config/httpClient';
 
 const CIUDADES_BOLIVIA = [
   { nombre: 'La Paz',       latitude: -16.4897, longitude: -68.1193 },
@@ -18,8 +21,6 @@ const CIUDADES_BOLIVIA = [
 
 function TabDashboard() {
   const { addToast } = useToast();
-  
-  // State for locality filter
   const [selectedCities, setSelectedCities] = useState(CIUDADES_BOLIVIA.map(c => c.nombre));
 
   const filteredCities = useMemo(() => {
@@ -110,11 +111,11 @@ function TabDashboard() {
       data: dataMap[city].map(d => d.temperatura)
     }));
     return {
-      tooltip: { trigger: 'axis', backgroundColor: '#1e293b', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
-      legend: { textStyle: { color: '#94a3b8' }, type: 'scroll', top: 0 },
+      tooltip: { trigger: 'axis', backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
+      legend: { textStyle: { color: 'var(--text-secondary)' }, type: 'scroll', top: 0 },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: timeLabels, axisLabel: { color: '#94a3b8' } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1e293b' } }, axisLabel: { color: '#94a3b8' } },
+      xAxis: { type: 'category', boundaryGap: false, data: timeLabels, axisLabel: { color: 'var(--text-secondary)' } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-secondary)' } },
       dataZoom: [{ type: 'inside', start: 0, end: 100 }, { start: 0, end: 100 }],
       series
     };
@@ -126,13 +127,13 @@ function TabDashboard() {
       return { name: city, value: avg.toFixed(1) };
     });
     return {
-      tooltip: { trigger: 'item', formatter: '{b}: {c}°C ({d}%)', backgroundColor: '#1e293b', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
-      legend: { orient: 'vertical', left: 'left', textStyle: { color: '#94a3b8' }, type: 'scroll' },
+      tooltip: { trigger: 'item', formatter: '{b}: {c}°C ({d}%)', backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
+      legend: { orient: 'vertical', left: 'left', textStyle: { color: 'var(--text-secondary)' }, type: 'scroll' },
       series: [{
         name: 'Temperatura Promedio', type: 'pie', radius: ['40%', '70%'],
-        avoidLabelOverlap: false, itemStyle: { borderRadius: 10, borderColor: '#1e293b', borderWidth: 2 },
+        avoidLabelOverlap: false, itemStyle: { borderRadius: 10, borderColor: 'var(--bg-card)', borderWidth: 2 },
         label: { show: false, position: 'center' },
-        emphasis: { label: { show: true, fontSize: '20', fontWeight: 'bold', color: '#fff' } },
+        emphasis: { label: { show: true, fontSize: '20', fontWeight: 'bold', color: 'var(--text-primary)' } },
         labelLine: { show: false }, data: pieData
       }]
     };
@@ -149,11 +150,11 @@ function TabDashboard() {
       rainData.push((maxRain * 10).toFixed(2));
     });
     return {
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1e293b', borderColor: '#334155', textStyle: { color: '#f8fafc' } },
-      legend: { textStyle: { color: '#94a3b8' }, top: 0 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
+      legend: { textStyle: { color: 'var(--text-secondary)' }, top: 0 },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', data: cities, axisLabel: { color: '#94a3b8', interval: 0, rotate: 30 } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1e293b' } }, axisLabel: { color: '#94a3b8' } },
+      xAxis: { type: 'category', data: cities, axisLabel: { color: 'var(--text-secondary)', interval: 0, rotate: 30 } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'var(--border-color)' } }, axisLabel: { color: 'var(--text-secondary)' } },
       series: [
         { name: 'Viento Máx (km/h)', type: 'bar', stack: 'total', barWidth: '60%', data: windData },
         { name: 'Lluvia Máx (escala visual)', type: 'bar', stack: 'total', barWidth: '60%', data: rainData }
@@ -167,16 +168,22 @@ function TabDashboard() {
         <div className="bi-header-titles">
           <h1>Dashboard Analítico Global</h1>
           <p>Comparativa macroeconómica de variables meteorológicas</p>
-          {loading && <span style={{ color: '#f59e0b', fontSize: '14px', marginLeft: '10px' }}>Sincronizando...</span>}
+          {loading && <span style={{ color: 'var(--accent)', fontSize: '14px', marginLeft: '10px' }}>Sincronizando...</span>}
         </div>
         <div className="bi-export-actions">
-          <button className="btn-bi-export pdf" onClick={() => handleExport('pdf')} disabled={loading}>Descargar PDF</button>
-          <button className="btn-bi-export excel" onClick={() => handleExport('excel')} disabled={loading}>Exportar Excel</button>
+          <button className="rep-export-btn rep-export-pdf" onClick={() => handleExport('pdf')} disabled={loading}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+            Descargar PDF
+          </button>
+          <button className="rep-export-btn rep-export-xl" onClick={() => handleExport('excel')} disabled={loading}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 3v18" /></svg>
+            Exportar Excel
+          </button>
         </div>
       </div>
 
       <div className="bi-filter-panel">
-        <h4 style={{ margin: '0 0 10px 0', color: '#f8fafc' }}>Filtro de Localidades</h4>
+        <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>Filtro de Localidades</h4>
         <div className="bi-city-tags">
           {CIUDADES_BOLIVIA.map(city => {
             const isSelected = selectedCities.includes(city.nombre);
@@ -230,11 +237,11 @@ function TabDashboard() {
               {tableData.map((row, idx) => (
                 <tr key={idx}>
                   <td className="bi-td-highlight">{row.city}</td>
-                  <td>{row.dateLabel}</td>
-                  <td style={{ color: '#94a3b8' }}>{row.timeLabel}</td>
-                  <td style={{ color: '#f59e0b', fontWeight: 'bold' }}>{row.t.toFixed(2)}</td>
-                  <td style={{ color: '#3b82f6' }}>{row.r.toFixed(3)}</td>
-                  <td style={{ color: '#10b981' }}>{row.w.toFixed(2)}</td>
+                  <td style={{ color: 'var(--text-primary)' }}>{row.dateLabel}</td>
+                  <td style={{ color: 'var(--text-secondary)' }}>{row.timeLabel}</td>
+                  <td style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{row.t.toFixed(2)}</td>
+                  <td style={{ color: 'var(--color-water)' }}>{row.r.toFixed(3)}</td>
+                  <td style={{ color: 'var(--color-air)' }}>{row.w.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -245,19 +252,16 @@ function TabDashboard() {
   );
 }
 
-import MeteoroAssistant from '../../components/MeteoroAssistant/MeteoroAssistant';
-
 function TabSimulador() {
   const [selectedCityIdx, setSelectedCityIdx] = useState(0);
   const [selectedVariable, setSelectedVariable] = useState('temperatura');
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [simulatedData, setSimulatedData] = useState(null); // Para los datos proyectados por Meteoro
+  const [simulatedData, setSimulatedData] = useState(null);
   const { addToast } = useToast();
   
   const selectedCity = CIUDADES_BOLIVIA[selectedCityIdx];
   const { dataMap, loading } = useMultiForecastData([selectedCity]);
-  
   const forecastData = dataMap[selectedCity.nombre] || [];
 
   const timeLabels = forecastData.map(d => 
@@ -323,16 +327,15 @@ function TabSimulador() {
       {
         name, type: 'line', data: seriesData,
         symbol: 'diamond', symbolSize: 10,
-        itemStyle: { color: '#dd0000', borderColor: '#880000', borderWidth: 1 }, 
-        lineStyle: { color: '#dd0000', width: 4 }
+        itemStyle: { color: 'var(--accent)', borderColor: 'var(--accent)', borderWidth: 1 }, 
+        lineStyle: { color: 'var(--accent)', width: 4 }
       }
     ];
 
     if (simulatedData) {
-      // Map the simulated data to the timeline array
       const simSeries = forecastData.map(d => {
         const isoStr = new Date(d.forecast_time).toISOString();
-        return simulatedData[isoStr] !== undefined ? simulatedData[isoStr] : null; // If null, ECharts skips it or connects
+        return simulatedData[isoStr] !== undefined ? simulatedData[isoStr] : null;
       });
       seriesArray.push({
         name: 'Proyección IA (Meteoro)', type: 'line', data: simSeries,
@@ -344,38 +347,28 @@ function TabSimulador() {
     }
 
     return {
-      backgroundColor: '#ffffff',
+      backgroundColor: 'transparent',
       title: {
         text: name.toUpperCase(),
         left: 'center',
         top: 10,
-        textStyle: { color: '#000000', fontSize: 24, fontWeight: 'bold' }
+        textStyle: { color: 'var(--text-primary)', fontSize: 20, fontWeight: 'bold' }
       },
-      tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.9)', borderColor: '#ccc', textStyle: { color: '#000' } },
+      tooltip: { trigger: 'axis', backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
       grid: { left: '5%', right: '5%', bottom: '10%', top: '20%', containLabel: true },
       xAxis: { 
-        type: 'category', 
-        boundaryGap: false, 
-        data: timeLabels, 
-        axisLabel: { color: '#000', rotate: 45, fontWeight: 'bold', fontSize: 11 },
-        axisLine: { lineStyle: { color: '#000', width: 2 } },
-        axisTick: { alignWithLabel: true, lineStyle: { color: '#000' } }
+        type: 'category', boundaryGap: false, data: timeLabels, 
+        axisLabel: { color: 'var(--text-secondary)', rotate: 45, fontSize: 11 },
+        axisLine: { lineStyle: { color: 'var(--border-color)' } }
       },
       yAxis: { 
         type: 'value', 
-        splitLine: { lineStyle: { color: '#aaaaaa', width: 1 } }, 
-        axisLabel: { color: '#000', fontWeight: 'bold', fontSize: 12 },
-        axisLine: { show: true, lineStyle: { color: '#000', width: 2 } },
+        splitLine: { lineStyle: { color: 'var(--border-color)' } }, 
+        axisLabel: { color: 'var(--text-secondary)' },
         min: function (value) { return Math.floor(value.min - (value.max - value.min) * 0.1); },
         max: function (value) { return Math.ceil(value.max + (value.max - value.min) * 0.1); }
       },
       dataZoom: [{ type: 'inside', start: 0, end: 100 }],
-      graphic: [
-        {
-          type: 'text', left: '5%', top: '10%',
-          style: { text: `MÁX: ${maxVal.toFixed(1)}\nMIN: ${minVal.toFixed(1)}\nPROM: ${avgVal}`, fill: '#000', font: 'bold 12px sans-serif' }
-        }
-      ],
       series: seriesArray
     };
   };
@@ -389,7 +382,7 @@ function TabSimulador() {
         </div>
         
         <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select className="bi-select" value={selectedCityIdx} onChange={(e) => setSelectedCityIdx(Number(e.target.value))}>
+          <select className="rep-select" value={selectedCityIdx} onChange={(e) => setSelectedCityIdx(Number(e.target.value))}>
             {CIUDADES_BOLIVIA.map((city, idx) => <option key={city.nombre} value={idx}>{city.nombre}</option>)}
           </select>
 
@@ -403,21 +396,22 @@ function TabSimulador() {
           <button 
             onClick={requestAiAnalysis} 
             disabled={isAnalyzing || loading || forecastData.length === 0}
-            style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', color: '#fff', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            className="rep-rango-btn"
+            style={{ border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', color: '#fff' }}
           >
             {isAnalyzing ? 'Analizando con DeepSeek...' : '✨ Solicitar Análisis IA'}
           </button>
         </div>
       </div>
 
-      <div className="bi-chart-card" style={{ minHeight: '400px', backgroundColor: '#e2e8f0', padding: '10px' }}>
-        <div className="bi-chart-header" style={{ borderBottomColor: '#cbd5e1', marginBottom: 0 }}>
-          <span className="bi-chart-title" style={{ color: '#0f172a' }}>Proyección Meteorológica Profesional</span>
-          {loading && <span style={{ color: '#ea580c', fontSize: '14px', fontWeight: 'bold' }}>Cargando 96 horas...</span>}
+      <div className="bi-chart-card" style={{ minHeight: '400px' }}>
+        <div className="bi-chart-header">
+          <span className="bi-chart-title">Proyección Meteorológica Profesional</span>
+          {loading && <span style={{ color: 'var(--accent)', fontSize: '14px', fontWeight: 'bold' }}>Cargando 96 horas...</span>}
         </div>
         {forecastData.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: '8px', padding: '10px', marginTop: '10px', border: '1px solid #94a3b8' }}>
-            <ReactECharts option={getSimuladorChartOption()} style={{ height: '400px' }} />
+          <div style={{ background: 'var(--bg-panel)', borderRadius: '8px', padding: '10px', marginTop: '10px', border: '1px solid var(--border-color)' }}>
+            <ReactECharts option={getSimuladorChartOption()} style={{ height: '400px' }} theme="dark" />
           </div>
         )}
       </div>
@@ -434,10 +428,28 @@ function TabSimulador() {
 
 export default function Reportes() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { zonaSimActiva } = useZonaSim();
 
   return (
-    <div className="bi-dashboard-dark">
-      {/* TABS NAVIGATION */}
+    <div className="page reportes-page w-full max-w-7xl mx-auto p-6 md:p-10">
+      {/* ─── Header de Partner ─────────────────────────────────────────── */}
+      <div className="page-header mb-8">
+        <div>
+          <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-2">Reportes <span className="text-[var(--accent)]">Ambientales</span></h1>
+          <p className="text-base text-[var(--text-secondary)] mb-8">
+            Explora el historial de lecturas por localidad, visualiza tendencias estadísticas y utiliza nuestra IA predictiva.
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {zonaSimActiva && (
+            <span className="page-tag" style={{ background: 'rgba(251, 146, 60, 0.15)', color: '#fb923c', borderColor: 'rgba(251, 146, 60, 0.3)' }}>
+              <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{marginRight: '6px', display: 'inline-block', animation: 'spin 2s linear infinite'}}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg> Simulación en curso…
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* TABS NAVIGATION ADAPTADO */}
       <div className="bi-tabs-nav">
         <button 
           className={`bi-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}

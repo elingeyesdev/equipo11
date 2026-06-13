@@ -162,7 +162,7 @@ export default function ReportTemplateBuilder() {
                   />
 
                   <button type="button" className="rep-rango-btn" onClick={() => handleRemoveCondition(i)} style={{ padding: '0.4rem 0.6rem' }}>
-                    ✕
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                   </button>
                 </div>
               ))}

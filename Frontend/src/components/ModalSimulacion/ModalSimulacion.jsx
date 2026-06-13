@@ -177,7 +177,7 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
       iniciarZona(config);
       onClose();
     } catch (err) {
-      console.error('❌ Error al iniciar simulación:', err);
+      console.error('<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Error al iniciar simulación:', err);
       addToast('No se pudo iniciar la simulación. Revisa la consola.', 'error');
     } finally {
       setIsLaunching(false);
@@ -284,9 +284,9 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
                 }}
                 onClick={() => updateCfg('intensidad', lvl)}
               >
-                {lvl === 'bajo' && '🟢 Bajo'}
-                {lvl === 'medio' && '🟡 Medio'}
-                {lvl === 'alto' && '🔴 Alto'}
+                {lvl === 'bajo' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#10b981" stroke="none"/></svg> Bajo'}
+                {lvl === 'medio' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="none"/></svg> Medio'}
+                {lvl === 'alto' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ef4444" stroke="none"/></svg> Alto'}
               </button>
             ))}
           </div>

@@ -39,7 +39,7 @@ export default function AlertHistoryView() {
 
       {alertas.length === 0 ? (
         <div className="mobile-placeholder-card">
-          <span className="mobile-placeholder-icon">✅</span>
+          <span className="mobile-placeholder-icon"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
           <h3>Sin alertas</h3>
           <p>No hay alertas registradas. Todo se encuentra dentro de los parámetros normales.</p>
         </div>
