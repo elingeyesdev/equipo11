@@ -690,7 +690,6 @@
 .map-controls-toolbar {
   position: fixed;
   bottom: 25px;
-  /* Altura cómoda sobre el timeline si existe */
   left: calc(var(--sidebar-width, 232px) + 15px);
   right: auto;
   z-index: 20;
@@ -698,14 +697,12 @@
   flex-direction: column;
   gap: 0;
   align-items: flex-start;
-  /* Alineado a la izquierda, con offset del sidebar */
 }
 
 .controls-toggle-btn {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 50%;
-  /* Ahora es un círculo */
   width: 44px;
   height: 44px;
   box-shadow: var(--shadow-md);
@@ -723,7 +720,6 @@
 
 .controls-toggle-icon {
   font-size: 1.4rem;
-  /* Más grande */
   transition: transform 0.5s ease;
 }
 
@@ -1502,20 +1498,20 @@ input:checked+.slider:before {
    ================================================================ */
 .zona-sim-status-panel {
   position: absolute;
-  top: 80px;
+  top: 150px;
   right: 16px;
   z-index: 200;
   width: 280px;
-  background: rgba(12, 17, 14, 0.94);
+  background: var(--bg-panel);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(56, 189, 248, 0.08);
+  box-shadow: var(--shadow-lg);
   animation: panelSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1807,3 +1803,396 @@ input:checked+.slider:before {
 .z2-marker {
   background-color: #a855f7;
 }
+
+/* ==========================================================
+   BUSCADOR ESPACIAL — Panel de búsqueda geográfica
+   ========================================================== */
+.buscador-espacial {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 210px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.buscador-espacial .buscador-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 2px;
+}
+
+.buscador-espacial .buscador-header-icon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+}
+
+.buscador-espacial .buscador-header-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Selects y inputs dentro de paneles de mapa */
+.map-overlay-select {
+  width: 100%;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  padding-right: 28px;
+}
+.map-overlay-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(91, 192, 190, 0.15);
+}
+.map-overlay-select:hover {
+  border-color: var(--accent);
+}
+
+/* Botones primarios de paneles del mapa */
+.map-overlay-btn-primary {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: var(--accent);
+  color: var(--paper);
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+}
+.map-overlay-btn-primary:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.map-overlay-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Botones secundarios de paneles del mapa */
+.map-overlay-btn-secondary {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  transition: all 0.15s ease;
+}
+.map-overlay-btn-secondary:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* ==========================================================
+   DATE PICKER FLOTANTE
+   ========================================================== */
+.map-date-input-wrapper {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-date-input-wrapper svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.map-date-input {
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  width: 115px;
+}
+.map-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+}
+
+.modo-historico-panel {
+  position: absolute;
+  top: 100px;
+  right: 16px;
+  left: auto;
+  z-index: 20;
+  width: 240px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modo-historico-panel .mh-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+  margin: 0;
+}
+.modo-historico-panel .mh-title-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-extra-light);
+  border: 1.5px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.modo-historico-panel .mh-title-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.modo-historico-panel .mh-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Leyenda de capa activa ─── */
+.mh-legend-section {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.mh-legend-label {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mh-legend-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+.mh-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ─── Sección Variable Atmosférica ─── */
+.mh-variable-section label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ─── Opciones de sincronización ─── */
+.mh-sync-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+}
+.mh-sync-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.mh-sync-options input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* ==========================================================
+   TIMELINE BAR — Barra de reproducción inferior
+   ========================================================== */
+.timeline-bar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: calc(100% - 520px);
+  max-width: 700px;
+  min-width: 400px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.timeline-date-display {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.timeline-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.timeline-play-btn {
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 80px;
+  transition: all 0.15s ease;
+  text-align: center;
+  flex-shrink: 0;
+}
+.timeline-play-btn.active {
+  background: var(--accent);
+  color: var(--paper);
+  border: none;
+}
+.timeline-play-btn.paused {
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+.timeline-play-btn:hover {
+  opacity: 0.88;
+}
+
+/* ==========================================================
+   TIMELINE SLIDER — Picker de horas desplazable
+   ========================================================== */
+.timeline-slider-container {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 10px 0 5px 0;
+  user-select: none;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.timeline-slider-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.timeline-day-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-day-label {
+  align-self: flex-start;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.timeline-tick-row {
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-tick {
+  min-width: 42px;
+  padding: 5px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  border: 1px solid transparent;
+}
+
+.timeline-tick.active {
+  background: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(91, 192, 190, 0.4);
+}
+
+.timeline-tick.inactive {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  font-weight: 500;
+}
+
+.timeline-tick.inactive:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}

@@ -21,8 +21,15 @@ httpClient.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Solo cacheamos llamadas GET
-  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false) {
+  // Solo cacheamos llamadas GET que no sean dinámicas
+  const isDynamic = config.url && (
+    config.url.includes('/sensores') ||
+    config.url.includes('/alertas') ||
+    config.url.includes('/notificaciones') ||
+    config.url.includes('/simulacion')
+  );
+
+  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false && !isDynamic) {
     const cacheKey = `http_cache:${config.url}:${JSON.stringify(config.params || {})}`;
     
     try {
@@ -58,7 +65,14 @@ httpClient.interceptors.request.use(async (config) => {
 httpClient.interceptors.response.use(async (response) => {
   const { config } = response;
   
-  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false) {
+  const isDynamic = config.url && (
+    config.url.includes('/sensores') ||
+    config.url.includes('/alertas') ||
+    config.url.includes('/notificaciones') ||
+    config.url.includes('/simulacion')
+  );
+
+  if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false && !isDynamic) {
     const cacheKey = `http_cache:${config.url}:${JSON.stringify(config.params || {})}`;
     const ttl = config.cacheTTL || DEFAULT_TTL;
     

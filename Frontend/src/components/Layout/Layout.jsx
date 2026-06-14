@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import Navbar from '../Navbar/Navbar'
 import Sidebar from '../Sidebar/Sidebar'
 import AlertaNotificacion from '../AlertaNotificacion/AlertaNotificacion'
+import MeteoroAssistant from '../MeteoroAssistant/MeteoroAssistant'
 import './Layout.css'
 
 import { useState } from 'react'
@@ -32,6 +33,8 @@ function Layout() {
       </div>
       {/* Notificaciones de alertas — visibles en todas las páginas */}
       <AlertaNotificacion />
+      {/* Asistente Meteoro Global */}
+      <MeteoroAssistant globalMode={true} />
     </div>
   )
 }

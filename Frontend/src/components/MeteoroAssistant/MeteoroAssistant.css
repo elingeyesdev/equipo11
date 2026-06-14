@@ -1,0 +1,270 @@
+/* ============================================================
+   MeteoroAssistant — Alineado con el sistema de diseño
+   Palette: --paper, --card, --ink, --accent (#5BC0BE), --border-color
+   ============================================================ */
+
+.meteoro-assistant {
+  display: flex;
+  align-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  font-family: var(--font-sans);
+}
+
+.meteoro-assistant.global-mode {
+  position: fixed;
+  bottom: 24px;
+  left: calc(var(--sidebar-width, 232px) + 24px);
+  z-index: 50;
+  display: flex;
+  max-width: 340px;
+  width: calc(100vw - 50px);
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ─── Collapsed bubble ─── */
+.meteoro-assistant-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(91, 192, 190, 0.3);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.meteoro-assistant-collapsed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(91, 192, 190, 0.4);
+}
+
+.meteoro-assistant-collapsed .meteoro-avatar {
+  font-size: 22px;
+}
+
+.meteoro-assistant-collapsed.global-mode {
+  position: fixed;
+  bottom: 170px;
+  right: 16px;
+  z-index: 1000;
+}
+
+/* ─── Tooltip badge ─── */
+.meteoro-tooltip-badge {
+  position: absolute;
+  right: 56px;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  font-family: var(--font-sans);
+}
+
+.meteoro-assistant-collapsed:hover .meteoro-tooltip-badge {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ─── Close button ─── */
+.meteoro-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.meteoro-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* ─── Embedded mode ─── */
+.meteoro-assistant.embedded-mode {
+  width: 100%;
+  max-width: 600px;
+  margin: 16px 0;
+  border-radius: var(--radius);
+}
+
+/* ─── Avatar ─── */
+.meteoro-avatar {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--primary-extra-light);
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  flex-shrink: 0;
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ─── Dialogue area ─── */
+.meteoro-dialogue {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.meteoro-dialogue p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  font-family: var(--font-sans);
+}
+
+/* ─── Status texts ─── */
+.listening-text {
+  color: var(--amber);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.processing-text {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+.response-text {
+  color: var(--text-primary);
+  font-weight: 500;
+  word-break: break-word;
+  font-size: 12.5px;
+}
+
+/* ─── Mic button ─── */
+.mic-button {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mic-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.mic-button.listening {
+  background: var(--rust);
+  color: white;
+  border-color: var(--rust);
+  animation: pulse-red 1.5s infinite;
+}
+
+.mic-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Prompt input ─── */
+.prompt-input {
+  width: 100%;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  padding: 7px 11px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  font-family: var(--font-sans);
+}
+
+.prompt-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(91, 192, 190, 0.15);
+}
+
+.prompt-input::placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ─── Send button ─── */
+.send-button {
+  background: var(--accent);
+  color: var(--paper);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.send-button:hover {
+  opacity: 0.88;
+  transform: scale(1.05);
+}
+
+/* ─── Keyframes ─── */
+@keyframes float {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes pulse-red {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}

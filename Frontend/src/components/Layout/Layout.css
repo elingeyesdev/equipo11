@@ -9,7 +9,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: var(--sidebar-width);
+  margin-left: var(--sidebar-width, 232px);
   overflow: hidden;
   transition: margin-left 0.3s ease;
   min-width: 0;

@@ -59,7 +59,9 @@ async function initDatabase() {
         weather_code INT,
         wind_speed   DECIMAL(5,2),
         wind_direction INT,
-        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        es_custom    BOOLEAN DEFAULT FALSE,
+        topics       JSONB DEFAULT '{}'::jsonb
       );
 
       CREATE TABLE IF NOT EXISTS fcm_tokens (
@@ -78,6 +80,13 @@ async function initDatabase() {
         configuracion JSONB NOT NULL
       );
     `);
+
+    // Asegurar que las columnas existan en bases de datos existentes
+    await db.query(`
+      ALTER TABLE sensores_cache ADD COLUMN IF NOT EXISTS es_custom BOOLEAN DEFAULT FALSE;
+      ALTER TABLE sensores_cache ADD COLUMN IF NOT EXISTS topics JSONB DEFAULT '{}'::jsonb;
+    `);
+
     logger.info('✅ Tablas de caché y fcm_tokens verificadas/creadas.');
   } catch (err) {
     logger.error('❌ Error creando tablas de caché/fcm_tokens:', err.message);

@@ -21,6 +21,7 @@ const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
 const { startSensorCron, stopSensorCron } = require('./Src/modules/sensores/sensores.service')
 const { startAqiCron, stopAqiCron } = require('./Src/modules/calidad_aire/aqi.service')
+const { initMqtt, stopMqtt } = require('./Src/modules/sensores/mqtt.service')
 const logger = require('./Src/utils/logger');
 const pool = require('./Src/config/db');
 
@@ -84,6 +85,8 @@ server.listen(PORT, async () => {
   await alertasService.cargarUmbralesCache()
   // Iniciar el bot de Telegram en modo escucha
   startTelegramListener()
+  // Iniciar el cliente MQTT para sensores custom
+  initMqtt()
 })
 
 // ────────────────────────────────────────────────────────────
@@ -92,9 +95,10 @@ server.listen(PORT, async () => {
 function gracefulShutdown(signal) {
   logger.info(`Recibido ${signal}, cerrando servidor ordenadamente...`);
 
-  // 1. Detener cron de sensores y AQI
+  // 1. Detener cron de sensores, AQI y detener MQTT
   stopSensorCron();
   stopAqiCron();
+  stopMqtt();
 
   // 2. Cerrar servidor HTTP (rechaza nuevas conexiones, cierra WebSockets)
   server.close(() => {

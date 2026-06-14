@@ -33,7 +33,7 @@ function registerSocketEvents(io) {
           if (paraEmitir.length > 0) {
             io.emit('alertas:nueva', paraEmitir)
             // Enviar notificaciones externas (email, wa, tg)
-            paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta))
+            paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta, { isSimulation: true }))
           }
         }
       })
@@ -75,7 +75,7 @@ function registerSocketEvents(io) {
             if (paraEmitir.length > 0) {
               io.emit('alertas:nueva', paraEmitir)
               // Enviar notificaciones externas (email, wa, tg)
-              paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta))
+              paraEmitir.forEach(alerta => notificacionesService.notifyAlert(alerta, { isSimulation: true }))
             }
           }
         }

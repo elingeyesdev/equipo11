@@ -36,22 +36,6 @@ function Navbar({ onMenuToggle }) {
         </p>
       </div>
       <div className="navbar-right">
-        <div className="navbar-badge navbar-badge--air">
-          <span className="badge-dot"></span>
-          Aire
-        </div>
-        <div className="navbar-badge navbar-badge--water">
-          <span className="badge-dot"></span>
-          Agua
-        </div>
-        <div className="navbar-badge navbar-badge--noise">
-          <span className="badge-dot"></span>
-          Ruido
-        </div>
-        <div className="navbar-badge navbar-badge--climate">
-          <span className="badge-dot"></span>
-          Clima
-        </div>
         <div className="navbar-user">
           <button className="navbar-theme-toggle" onClick={toggleTheme} title="Cambiar tema">
             {theme === 'dark' ? <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg> : <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>}

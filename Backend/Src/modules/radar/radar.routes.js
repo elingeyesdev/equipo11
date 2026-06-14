@@ -137,4 +137,21 @@ router.get('/prediction', async (req, res) => {
   }
 });
 
+// ─── Endpoint de Series de Tiempo (Timeline Google Weather) ─────────
+router.get('/forecast', async (req, res) => {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+    if (isNaN(lat) || isNaN(lon)) {
+      return error(res, 'Parámetros lat y lon requeridos', 400);
+    }
+    const { getAiRefinedForecast } = require('./weather_ai.service');
+    const data = await getAiRefinedForecast(lat, lon);
+    success(res, data);
+  } catch (err) {
+    logger.error('Error fetching forecast timeseries:', err);
+    error(res, 'Error obteniendo serie de tiempo de pronóstico', 500);
+  }
+});
+
 module.exports = router;

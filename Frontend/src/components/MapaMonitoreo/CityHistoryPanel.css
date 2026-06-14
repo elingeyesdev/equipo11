@@ -3,10 +3,12 @@
    ========================================================== */
 .city-info-panel-wrapper {
   position: absolute;
-  top: 68px;
-  left: 15px;
+  top: 16px;
+  right: 60px;
+  left: auto;
   z-index: 20;
   cursor: grab;
+  width: 290px;
 }
 .city-info-panel-wrapper:active { cursor: grabbing; }
 

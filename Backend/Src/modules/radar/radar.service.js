@@ -524,8 +524,13 @@ const scrapeFutureForecasts = async () => {
   const result = await getLatestNOAAUrl(); // Usar el ciclo más reciente
   const { dateStr, hour } = result;
 
-  // Offsets a descargar: cada 3 horas hasta las 24h
-  const offsets = ['f003', 'f006', 'f009', 'f012', 'f015', 'f018', 'f021', 'f024'];
+  // Offsets a descargar: cada 3 horas hasta las 96h (4 días)
+  const offsets = [
+    'f003', 'f006', 'f009', 'f012', 'f015', 'f018', 'f021', 'f024',
+    'f027', 'f030', 'f033', 'f036', 'f039', 'f042', 'f045', 'f048',
+    'f051', 'f054', 'f057', 'f060', 'f063', 'f066', 'f069', 'f072',
+    'f075', 'f078', 'f081', 'f084', 'f087', 'f090', 'f093', 'f096'
+  ];
 
   for (const offset of offsets) {
     const url = buildNOAAUrl(dateStr, hour, offset);

@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as turf from '@turf/turf';
 import Map, { NavigationControl, FullscreenControl, Popup, Layer, Source } from 'react-map-gl/mapbox';
@@ -10,6 +11,7 @@ import { useUmbrales } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
+import ModalIoT from '../../components/ModalIoT/ModalIoT';
 import MarkersLayer from './layers/MarkersLayer';
 import VoronoiLayer from './layers/VoronoiLayer';
 import useSensors from '../../hooks/useSensors';
@@ -18,6 +20,7 @@ import { Marker } from 'react-map-gl/mapbox';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
+import Draggable from '../../components/Draggable/Draggable';
 import { METRICAS_UNIDADES, formatearValor } from '../../utils/unidades';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -69,28 +72,31 @@ function BuscadorEspacial({ mapRef }) {
   };
 
   return (
-    <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]" style={{
-      position: 'absolute', top: 20, left: 20, zIndex: 10,
-      padding: '10px', display: 'flex', flexDirection: 'column', gap: '5px', width: '200px'
-    }}>
-      <select value={pais} onChange={handlePaisChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-        <option value="">-- País --</option>
+    <div className="buscador-espacial">
+      <div className="buscador-header">
+        <span className="buscador-header-icon">
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </span>
+        <span className="buscador-header-text">Navegación</span>
+      </div>
+      <select value={pais} onChange={handlePaisChange} className="map-overlay-select">
+        <option value="">— País —</option>
         {paises.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
       </select>
       {pais && (
-        <select value={depto} onChange={handleDeptoChange} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-          <option value="">-- Departamento --</option>
+        <select value={depto} onChange={handleDeptoChange} className="map-overlay-select">
+          <option value="">— Departamento —</option>
           {departamentos.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
         </select>
       )}
       {depto && (
-        <select value={prov} onChange={(e) => setProv(e.target.value)} className="bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-md p-1 outline-none">
-          <option value="">-- Provincia --</option>
+        <select value={prov} onChange={(e) => setProv(e.target.value)} className="map-overlay-select">
+          <option value="">— Provincia —</option>
           {provincias.map(pr => <option key={pr} value={pr}>{pr}</option>)}
         </select>
       )}
-      <button onClick={handleFly} disabled={!pais || loading} className={`p-1 rounded-md cursor-pointer transition-colors ${(!pais || loading) ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)] opacity-50 cursor-not-allowed' : 'bg-[#5BC0BE] text-[#0B132B] font-bold border-none'}`}>
-        {loading ? 'Buscando...' : 'Ir a destino'}
+      <button onClick={handleFly} disabled={!pais || loading} className="map-overlay-btn-primary">
+        {loading ? '⏳ Buscando...' : '📍 Ir a destino'}
       </button>
     </div>
   );
@@ -390,13 +396,8 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
-      style={{
-        flex: 1, display: 'flex', overflowX: 'auto',
-        gap: '6px', padding: '15px 0 5px 0',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none',
-        scrollbarWidth: 'none', msOverflowStyle: 'none'
-      }}
+      className="timeline-slider-container"
+      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
     >
       {(() => {
         const groups = {};
@@ -415,15 +416,11 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
           const weekday = dayNames[sample.getUTCDay()];
 
           return (
-            <div key={dayKey} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-              <span style={{
-                alignSelf: 'flex-start', marginLeft: '4px',
-                fontSize: '10px', fontWeight: 600, letterSpacing: '0.3px',
-                color: 'var(--text-secondary)', whiteSpace: 'nowrap', pointerEvents: 'none'
-              }}>
+            <div key={dayKey} className="timeline-day-group">
+              <span className="timeline-day-label">
                 {weekday} {dayNum}/{monthNum}
               </span>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div className="timeline-tick-row">
                 {ticks.map((tickDate) => {
                   const isSelected = tickDate.getTime() === date.getTime();
                   const hr = String(tickDate.getUTCHours()).padStart(2, '0');
@@ -432,9 +429,9 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
                       key={tickDate.getTime()}
                       id={`${idPrefix}-tick-${tickDate.getTime()}`}
                       onClick={() => setDate(tickDate)}
-                      className={`min-w-[38px] p-1 rounded-[6px] flex items-center justify-center cursor-pointer transition-all duration-150 ${isSelected ? 'bg-[#5BC0BE] text-[#0B132B]' : 'bg-[#3A506B] text-white'}`}
+                      className={`timeline-tick ${isSelected ? 'active' : 'inactive'}`}
                     >
-                      <span className="text-xs pointer-events-none" style={{ fontWeight: isSelected ? 'bold' : 'normal' }}>
+                      <span className="pointer-events-none">
                         {hr}:00
                       </span>
                     </div>
@@ -574,20 +571,46 @@ function MapaMonitoreo() {
 
 
   // --- MIGRATION CONTEXTS ---
-  const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas, zona1Cfg, zona2Cfg } = useSimulacion();
+  const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
-  const { isParticlesActive, setIsParticlesActive, particleFilters, setParticleFilters, showSensors, setShowSensors, isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric, isChoroplethActive, setIsChoroplethActive } = useMapVisuals();
+  const { 
+    isParticlesActive, setIsParticlesActive, 
+    particleFilters, setParticleFilters, 
+    showSensors, setShowSensors, 
+    isHeatmapActive, setIsHeatmapActive, 
+    heatmapMetric, setHeatmapMetric, 
+    isChoroplethActive, setIsChoroplethActive,
+    isHistoricalMode: _isHistoricalMode, setIsHistoricalMode,
+    isDynamicHistoricalMode: _isDynamicHistoricalMode, setIsDynamicHistoricalMode
+  } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades } = useUnidades();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
+  const [isIoTModalOpen, setIsIoTModalOpen] = useState(false);
+  const [sensorTrigger, setSensorTrigger] = useState(0);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
 
-  const { citiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters });
+  const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters, trigger: sensorTrigger });
+  
+  const [meteoroOverrides, setMeteoroOverrides] = useState(null);
 
+  const citiesData = useMemo(() => {
+    if (!meteoroOverrides) return baseCitiesData;
+    return baseCitiesData.map(city => {
+      if (meteoroOverrides.datos[city.nombre] !== undefined) {
+        return { ...city, [meteoroOverrides.metrica]: meteoroOverrides.datos[city.nombre] };
+      }
+      return city;
+    });
+  }, [baseCitiesData, meteoroOverrides]);
 
+  const activeCityDetails = useMemo(() => {
+    if (!selectedCity) return null;
+    return citiesData.find(c => c.id === selectedCity.id) || selectedCity;
+  }, [selectedCity, citiesData]);
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
     if (active) setSelectedCity(null);
@@ -610,7 +633,7 @@ function MapaMonitoreo() {
   const globalIsDraggingRef = useRef(false);
   const [date1, setDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [date2, setDate2] = useState(new Date('2024-01-01T00:00:00Z'));
-  const [timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
+  const [_timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -646,6 +669,91 @@ function MapaMonitoreo() {
 
   const [timelineAnchorDate1, setTimelineAnchorDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [timelineAnchorDate2, setTimelineAnchorDate2] = useState(new Date('2024-01-01T00:00:00Z'));
+
+  // ─── Event Bus para Comandos de IA (Meteoro) ───
+  useEffect(() => {
+    const handleMeteoroAction = (e) => {
+      const acciones = e.detail;
+      if (!acciones || !Array.isArray(acciones)) return;
+
+      acciones.forEach(acc => {
+        if (acc.comando === 'activar_modo_historico') {
+          setIsHistoricalMode(true);
+          setIsDynamicHistoricalMode(true);
+        }
+        if (acc.comando === 'set_fecha' && acc.valor) {
+          try {
+            const newDate = new Date(acc.valor);
+            if (!isNaN(newDate)) {
+              setDate1(newDate);
+              setTimelineAnchorDate1(newDate);
+              setTimelineAnchorDate(newDate); // En caso de que se use un solo timeline
+            }
+          } catch {
+            console.error('Fecha inválida desde IA', acc.valor);
+          }
+        }
+        if (acc.comando === 'reproducir_simulacion') {
+          setIsPlaying(true);
+        }
+        if (acc.comando === 'set_capa' && acc.valor) {
+          const capaMapeo = {
+            'lluvia': 'lluvia',
+            'temperatura': 'temperatura',
+            'viento': 'viento',
+            'aqi': 'aqi',
+            'humedad': 'humedad',
+            'ica': 'ica'
+          };
+          if (capaMapeo[acc.valor]) setActiveLayer(capaMapeo[acc.valor]);
+        }
+        if (acc.comando === 'activar_comparativo') {
+          setIsComparing(true);
+          setIsHistoricalMode(true);
+        }
+        if (acc.comando === 'set_fecha_comparativa' && acc.valor1 && acc.valor2) {
+          try {
+            const newDate1 = new Date(acc.valor1);
+            const newDate2 = new Date(acc.valor2);
+            if (!isNaN(newDate1)) setDate1(newDate1);
+            if (!isNaN(newDate2)) setDate2(newDate2);
+          } catch {
+            console.error('Fechas comparativas inválidas desde IA');
+          }
+        }
+        if (acc.comando === 'simular_heatmap' && acc.metrica && acc.datos) {
+          setMeteoroOverrides({ metrica: acc.metrica, datos: acc.datos });
+          setIsHeatmapActive(true);
+          setHeatmapMetric(acc.metrica);
+        }
+        if (acc.comando === 'limpiar_simulacion') {
+          setMeteoroOverrides(null);
+          setIsHeatmapActive(false);
+          setIsComparing(false);
+        }
+      });
+    };
+
+    window.addEventListener('meteoro_action', handleMeteoroAction);
+    
+    const pendingActions = localStorage.getItem('pending_meteoro_actions');
+    if (pendingActions) {
+      try {
+        const parsed = JSON.parse(pendingActions);
+        handleMeteoroAction({ detail: parsed });
+        localStorage.removeItem('pending_meteoro_actions');
+      } catch {
+        localStorage.removeItem('pending_meteoro_actions');
+      }
+    }
+
+    return () => window.removeEventListener('meteoro_action', handleMeteoroAction);
+  }, [
+    setIsHistoricalMode, setIsDynamicHistoricalMode, setIsPlaying, 
+    setActiveLayer, setIsComparing, setDate1, setDate2, 
+    setTimelineAnchorDate1, setTimelineAnchorDate, setIsHeatmapActive, setHeatmapMetric
+  ]);
+  // -------------------------
 
   // ─── Toggles de Sincronización ───
   const [syncTime, setSyncTime] = useState(true);
@@ -706,7 +814,7 @@ function MapaMonitoreo() {
         if (loc.geometry && (loc.geometry.type === 'Polygon' || loc.geometry.type === 'MultiPolygon' || loc.geometry.type === 'Feature' || loc.geometry.type === 'FeatureCollection')) {
           try {
             bbox = turf.bbox(loc.geometry);
-          } catch (e) { }
+          } catch { /* ignore */ }
         }
 
         // Timeout para asegurar que la referencia del mapa esté lista
@@ -785,6 +893,7 @@ function MapaMonitoreo() {
         setTimelineAnchorDate2(snapped2);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLayer]);
 
   // ─── Lógica de Renderizado de Timeline ───
@@ -1131,7 +1240,7 @@ function MapaMonitoreo() {
             const layerId = idx === 0 ? 'historico-custom-webgl-1' : 'historico-custom-webgl-2';
             if (map.getLayer(layerId)) map.removeLayer(layerId);
             if (map.getLayer('historico-coastline')) map.removeLayer('historico-coastline');
-          } catch (_) { /* ignore */ }
+          } catch { /* ignore */ }
         }
       });
       layerMap1Ref.current = null;
@@ -1233,20 +1342,20 @@ function MapaMonitoreo() {
     const leg = legends[activeLayer];
     if (!leg) return null;
     return (
-      <div style={{ marginTop: '20px' }}>
-        <p style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>Leyenda</p>
-        <div style={{ width: '100%', height: '14px', background: leg.gradient, borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+      <div className="mh-legend-section">
+        <p className="mh-legend-label">Leyenda</p>
+        <div className="mh-legend-bar" style={{ background: leg.gradient }} />
+        <div className="mh-legend-labels">
           {leg.labels.map((lbl, i) => <span key={i}>{lbl}</span>)}
         </div>
       </div>
     );
   };
 
-  const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
-  const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-  const totalHours = Math.floor((maxTimeGlobal - minTimeGlobal) / (1000 * 60 * 60));
-  const currentHourOffset = Math.floor((date1.getTime() - minTimeGlobal) / (1000 * 60 * 60));
+  // const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
+  // const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
+  // const totalHours = Math.floor((maxTimeGlobal - minTimeGlobal) / (1000 * 60 * 60));
+  // const currentHourOffset = Math.floor((date1.getTime() - minTimeGlobal) / (1000 * 60 * 60));
 
   const formattedDateString = new Intl.DateTimeFormat("es-ES", {
     weekday: 'long',
@@ -1260,33 +1369,41 @@ function MapaMonitoreo() {
   const formattedText = formattedDateString.replace(', ', ' - ') + ' UTC';
   const finalFormattedText = formattedText.charAt(0).toUpperCase() + formattedText.slice(1);
 
-  const handlePanTimeline = (direction) => {
-    setTimelineAnchorDate(prev => {
-      const nextDate = new Date(prev);
-      nextDate.setUTCHours(nextDate.getUTCHours() + (direction * 24));
-
-      const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
-      const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-
-      if (nextDate.getTime() > maxTime) return new Date(maxTime);
-      if (nextDate.getTime() < minTime) return new Date(minTime);
-      return nextDate;
-    });
-  };
+  // const handlePanTimeline = (direction) => {
+  //   setTimelineAnchorDate(prev => {
+  //     const nextDate = new Date(prev);
+  //     nextDate.setUTCHours(nextDate.getUTCHours() + (direction * 24));
+  //
+  //     const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
+  //     const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
+  //
+  //     if (nextDate.getTime() > maxTime) return new Date(maxTime);
+  //     if (nextDate.getTime() < minTime) return new Date(minTime);
+  //     return nextDate;
+  //   });
+  // };
 
   const renderFloatingControls = (isMap2) => (
-    <>
-      <div style={{ position: 'absolute', top: '90px', left: isMap2 ? '20px' : 'calc(var(--sidebar-width, 250px) + 20px)', zIndex: 50 }}>
+    <div style={{ 
+      position: 'absolute', 
+      top: '16px', 
+      left: isMap2 ? '25%' : 'calc(50% + (var(--sidebar-width, 232px) / 2))', 
+      transform: 'translateX(-50%)',
+      zIndex: 50,
+      display: 'flex',
+      gap: '10px',
+      alignItems: 'flex-start',
+      pointerEvents: 'none'
+    }}>
+      <div style={{ pointerEvents: 'auto' }}>
         <BuscadorEspacial mapRef={isMap2 ? map2InstanceRef : map1InstanceRef} />
       </div>
 
-      <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[6px] text-[var(--text-primary)]" style={{
-        position: 'absolute', top: '90px', right: '120px', zIndex: 50,
-        padding: '8px 12px',
-        pointerEvents: 'auto'
-      }}>
+      <div className="map-date-input-wrapper" style={{ pointerEvents: 'auto', marginTop: '16px' }}>
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <input 
-          type="date" 
+          type="date"
+          className="map-date-input"
           min={MIN_DATE} max={MAX_DATE}
           value={(isMap2 ? date2 : date1).toISOString().split('T')[0]}
           onChange={e => {
@@ -1309,10 +1426,9 @@ function MapaMonitoreo() {
               }
             }
           }}
-          style={{ background: 'var(--bg-app)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', cursor: 'pointer', fontFamily: '"Space Grotesk", sans-serif', fontSize: '13px', padding: '4px 6px' }}
         />
       </div>
-    </>
+    </div>
   );
 
   const renderMapContent = (isMap2) => (
@@ -1444,6 +1560,11 @@ function MapaMonitoreo() {
             isOpen={isInjectModalOpen}
             onClose={() => setIsInjectModalOpen(false)}
           />
+          <ModalIoT
+            isOpen={isIoTModalOpen}
+            onClose={() => setIsIoTModalOpen(false)}
+            onSensorChange={() => setSensorTrigger(prev => prev + 1)}
+          />
 
           {renderFloatingControls(false)}
           <Map
@@ -1483,7 +1604,7 @@ function MapaMonitoreo() {
 
 
         <CityHistoryPanel
-          activeCity={selectedCity}
+          activeCity={activeCityDetails}
           setSelectedCity={setSelectedCity}
           isRunning={zonaSimActiva}
           unidades={unidades}
@@ -1494,6 +1615,7 @@ function MapaMonitoreo() {
         <ControlPanel
           activeControlsCount={[isParticlesActive, isHeatmapActive, isChoroplethActive, showSensors, isSimMode].filter(Boolean).length}
           setIsInjectModalOpen={setIsInjectModalOpen}
+          setIsIoTModalOpen={setIsIoTModalOpen}
           isSimMode={isSimMode} handleToggleSimMode={handleToggleSimMode}
           isParticlesActive={isParticlesActive} setIsParticlesActive={setIsParticlesActive}
           isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}
@@ -1513,45 +1635,47 @@ function MapaMonitoreo() {
 
         {/* ─── PANELES DE CONTROL (Time Machine & Timeline) ─── */}
 
-        {/* Selector Rápido Superior (Time Machine) -> Reubicado Abajo a la Derecha */}
-        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
-          position: 'absolute', bottom: '130px', right: 20, zIndex: 20, 
-          padding: '1.25rem',
-          minWidth: '220px'
-        }}>
-          <h3 className="text-[15px] font-semibold text-[var(--text-primary)] mb-3">Modo Histórico</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Modo Histórico — Panel lateral derecho */}
+        <Draggable className="modo-historico-panel">
+          <div className="mh-title">
+            <span className="mh-title-icon">🕐</span>
+            <span className="mh-title-text">Modo Histórico</span>
+          </div>
+          <div className="mh-actions">
             <button
               onClick={() => setIsComparing(!isComparing)}
-              className={`px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] ${isComparing ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
+              className={isComparing ? 'map-overlay-btn-secondary' : 'map-overlay-btn-primary'}
             >
-              {isComparing ? 'Desactivar Comparación' : 'Comparar Mapas'}
+              {isComparing ? '✕ Desactivar Comparación' : '⚖️ Comparar Mapas'}
             </button>
             <button
               onClick={() => navigate('/reportes')}
-              className="px-3 py-2 rounded-[6px] font-bold cursor-pointer transition-all duration-200 text-[13px] bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]"
+              className="map-overlay-btn-secondary"
             >
-              Ir a Reportes
+              📊 Ir a Reportes
             </button>
-            
-            {isComparing && (
-              <div className="flex flex-col gap-2 p-2 rounded-[6px] bg-[var(--bg-app)] border border-[var(--border-color)]">
-                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
-                  <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
-                  Sincronizar Tiempo
-                </label>
-                <label className="flex items-center gap-2 text-xs cursor-pointer text-[var(--text-primary)]">
-                  <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
-                  Sincronizar Vistas
-                </label>
-              </div>
-            )}
-            <label className="flex flex-col text-xs font-medium text-[var(--text-primary)] mt-2">
-              Variable Atmosférica:
+          </div>
+          
+          {isComparing && (
+            <div className="mh-sync-options">
+              <label>
+                <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
+                Sincronizar Tiempo
+              </label>
+              <label>
+                <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
+                Sincronizar Vistas
+              </label>
+            </div>
+          )}
+
+          <div className="mh-variable-section">
+            <label>
+              Variable Atmosférica
               <select
                 value={activeLayer}
                 onChange={e => setActiveLayer(e.target.value)}
-                className="mt-1 px-2 py-1 bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)] rounded-[6px] outline-none cursor-pointer text-[13px]"
+                className="map-overlay-select"
               >
                 <option value="visibilidad">Visibilidad</option>
                 <option value="viento">Velocidad del Viento</option>
@@ -1566,36 +1690,29 @@ function MapaMonitoreo() {
             </label>
           </div>
           {renderLegend()}
-        </div>
+        </Draggable>
 
         {/* Barra de Reproducción Inferior (Timeline UI) */}
-        <div className="bg-[var(--bg-panel)] border border-[var(--border-color)] rounded-[8px] text-[var(--text-primary)]" style={{
-          position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 10,
-          padding: '16px 24px',
-          display: 'flex', flexDirection: 'column', gap: '15px',
-          width: '90%', maxWidth: '800px'
-        }}>
-          {/* Fila superior: Info de Fecha (Estilo Meteored) */}
-          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '18px', letterSpacing: '0.5px', color: 'var(--text-primary)' }}>
+        <div className="timeline-bar">
+          <div className="timeline-date-display">
             {finalFormattedText}
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div className="timeline-controls-row">
             <button 
               onClick={() => setIsPlaying(!isPlaying)}
-              className={`px-4 py-2 rounded-[6px] cursor-pointer font-bold text-[15px] min-w-[90px] transition-all duration-200 ${isPlaying ? 'bg-[var(--bg-app)] border border-[var(--border-color)] text-[var(--text-primary)]' : 'bg-[#5BC0BE] text-[#0B132B] border-none'}`}
+              className={`timeline-play-btn ${isPlaying ? 'paused' : 'active'}`}
             >
-              {isPlaying ? 'Pausa' : 'Play'}
+              {isPlaying ? '⏸ Pausa' : '▶ Play'}
             </button>
             {(!isComparing || syncTime) ? (
               renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)
             ) : (
-              <div style={{ flex: 1, display: 'flex', width: '100%', gap: '20px', overflow: 'hidden' }}>
+              <div style={{ flex: 1, display: 'flex', width: '100%', gap: '14px', overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                   {renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)}
                 </div>
-                <div style={{ width: '2px', background: 'var(--line)', margin: '10px 0' }} />
+                <div style={{ width: '1px', background: 'var(--border-color)' }} />
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                   {renderTimeline(date2, setDate2, timelineAnchorDate2, setTimelineAnchorDate2, false)}
                 </div>
