@@ -208,13 +208,14 @@ export const getSensoresIoT = async () => {
     return [];
   }
 };
+
 /**
  * Estima ICA (calidad del agua, 0–100) a partir de datos climáticos reales.
  * - Humedad alta → más disponibilidad de agua pero potencialmente más contaminada
  * - AQI alto → correlación negativa con calidad del agua
  * - Lluvia (weatherCode 51-82) → leve deterioro por arrastre de sedimentos
  */
-const estimateICA = (humedad, aqi, weatherCode) => {
+export const estimateICA = (humedad, aqi, weatherCode) => {
   const humNorm = Math.max(0, Math.min(1, humedad / 100));
   const aqiNorm = Math.max(0, Math.min(1, (aqi || 0) / 200));
   const isRaining = weatherCode >= 51 && weatherCode <= 82;
@@ -230,7 +231,7 @@ const estimateICA = (humedad, aqi, weatherCode) => {
  * Estima el nivel de Ruido (dB) basado en la hora del día.
  * Pico en hora punta (7-9h y 17-20h), silencio nocturno (0-6h).
  */
-const estimateRuido = () => {
+export const estimateRuido = () => {
   const hour = new Date().getHours();
   let factor;
   if (hour >= 0 && hour < 6)        factor = 0.15;  // madrugada

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import * as turf from '@turf/turf';
@@ -10,6 +11,7 @@ import { useUmbrales } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
+import ModalIoT from '../../components/ModalIoT/ModalIoT';
 import MarkersLayer from './layers/MarkersLayer';
 import VoronoiLayer from './layers/VoronoiLayer';
 import useSensors from '../../hooks/useSensors';
@@ -569,7 +571,7 @@ function MapaMonitoreo() {
 
 
   // --- MIGRATION CONTEXTS ---
-  const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas, zona1Cfg, zona2Cfg } = useSimulacion();
+  const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
   const { 
     isParticlesActive, setIsParticlesActive, 
@@ -578,18 +580,20 @@ function MapaMonitoreo() {
     isHeatmapActive, setIsHeatmapActive, 
     heatmapMetric, setHeatmapMetric, 
     isChoroplethActive, setIsChoroplethActive,
-    isHistoricalMode, setIsHistoricalMode,
-    isDynamicHistoricalMode, setIsDynamicHistoricalMode
+    isHistoricalMode: _isHistoricalMode, setIsHistoricalMode,
+    isDynamicHistoricalMode: _isDynamicHistoricalMode, setIsDynamicHistoricalMode
   } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades } = useUnidades();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
+  const [isIoTModalOpen, setIsIoTModalOpen] = useState(false);
+  const [sensorTrigger, setSensorTrigger] = useState(0);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
 
-  const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters });
+  const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters, trigger: sensorTrigger });
   
   const [meteoroOverrides, setMeteoroOverrides] = useState(null);
 
@@ -602,6 +606,11 @@ function MapaMonitoreo() {
       return city;
     });
   }, [baseCitiesData, meteoroOverrides]);
+
+  const activeCityDetails = useMemo(() => {
+    if (!selectedCity) return null;
+    return citiesData.find(c => c.id === selectedCity.id) || selectedCity;
+  }, [selectedCity, citiesData]);
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
     if (active) setSelectedCity(null);
@@ -624,7 +633,7 @@ function MapaMonitoreo() {
   const globalIsDraggingRef = useRef(false);
   const [date1, setDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [date2, setDate2] = useState(new Date('2024-01-01T00:00:00Z'));
-  const [timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
+  const [_timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -680,7 +689,7 @@ function MapaMonitoreo() {
               setTimelineAnchorDate1(newDate);
               setTimelineAnchorDate(newDate); // En caso de que se use un solo timeline
             }
-          } catch (err) {
+          } catch {
             console.error('Fecha inválida desde IA', acc.valor);
           }
         }
@@ -708,7 +717,7 @@ function MapaMonitoreo() {
             const newDate2 = new Date(acc.valor2);
             if (!isNaN(newDate1)) setDate1(newDate1);
             if (!isNaN(newDate2)) setDate2(newDate2);
-          } catch (err) {
+          } catch {
             console.error('Fechas comparativas inválidas desde IA');
           }
         }
@@ -733,7 +742,7 @@ function MapaMonitoreo() {
         const parsed = JSON.parse(pendingActions);
         handleMeteoroAction({ detail: parsed });
         localStorage.removeItem('pending_meteoro_actions');
-      } catch (err) {
+      } catch {
         localStorage.removeItem('pending_meteoro_actions');
       }
     }
@@ -805,7 +814,7 @@ function MapaMonitoreo() {
         if (loc.geometry && (loc.geometry.type === 'Polygon' || loc.geometry.type === 'MultiPolygon' || loc.geometry.type === 'Feature' || loc.geometry.type === 'FeatureCollection')) {
           try {
             bbox = turf.bbox(loc.geometry);
-          } catch (e) { }
+          } catch { /* ignore */ }
         }
 
         // Timeout para asegurar que la referencia del mapa esté lista
@@ -884,6 +893,7 @@ function MapaMonitoreo() {
         setTimelineAnchorDate2(snapped2);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLayer]);
 
   // ─── Lógica de Renderizado de Timeline ───
@@ -1230,7 +1240,7 @@ function MapaMonitoreo() {
             const layerId = idx === 0 ? 'historico-custom-webgl-1' : 'historico-custom-webgl-2';
             if (map.getLayer(layerId)) map.removeLayer(layerId);
             if (map.getLayer('historico-coastline')) map.removeLayer('historico-coastline');
-          } catch (_) { /* ignore */ }
+          } catch { /* ignore */ }
         }
       });
       layerMap1Ref.current = null;
@@ -1342,10 +1352,10 @@ function MapaMonitoreo() {
     );
   };
 
-  const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
-  const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-  const totalHours = Math.floor((maxTimeGlobal - minTimeGlobal) / (1000 * 60 * 60));
-  const currentHourOffset = Math.floor((date1.getTime() - minTimeGlobal) / (1000 * 60 * 60));
+  // const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
+  // const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
+  // const totalHours = Math.floor((maxTimeGlobal - minTimeGlobal) / (1000 * 60 * 60));
+  // const currentHourOffset = Math.floor((date1.getTime() - minTimeGlobal) / (1000 * 60 * 60));
 
   const formattedDateString = new Intl.DateTimeFormat("es-ES", {
     weekday: 'long',
@@ -1359,19 +1369,19 @@ function MapaMonitoreo() {
   const formattedText = formattedDateString.replace(', ', ' - ') + ' UTC';
   const finalFormattedText = formattedText.charAt(0).toUpperCase() + formattedText.slice(1);
 
-  const handlePanTimeline = (direction) => {
-    setTimelineAnchorDate(prev => {
-      const nextDate = new Date(prev);
-      nextDate.setUTCHours(nextDate.getUTCHours() + (direction * 24));
-
-      const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
-      const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-
-      if (nextDate.getTime() > maxTime) return new Date(maxTime);
-      if (nextDate.getTime() < minTime) return new Date(minTime);
-      return nextDate;
-    });
-  };
+  // const handlePanTimeline = (direction) => {
+  //   setTimelineAnchorDate(prev => {
+  //     const nextDate = new Date(prev);
+  //     nextDate.setUTCHours(nextDate.getUTCHours() + (direction * 24));
+  //
+  //     const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
+  //     const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
+  //
+  //     if (nextDate.getTime() > maxTime) return new Date(maxTime);
+  //     if (nextDate.getTime() < minTime) return new Date(minTime);
+  //     return nextDate;
+  //   });
+  // };
 
   const renderFloatingControls = (isMap2) => (
     <div style={{ 
@@ -1550,6 +1560,11 @@ function MapaMonitoreo() {
             isOpen={isInjectModalOpen}
             onClose={() => setIsInjectModalOpen(false)}
           />
+          <ModalIoT
+            isOpen={isIoTModalOpen}
+            onClose={() => setIsIoTModalOpen(false)}
+            onSensorChange={() => setSensorTrigger(prev => prev + 1)}
+          />
 
           {renderFloatingControls(false)}
           <Map
@@ -1589,7 +1604,7 @@ function MapaMonitoreo() {
 
 
         <CityHistoryPanel
-          activeCity={selectedCity}
+          activeCity={activeCityDetails}
           setSelectedCity={setSelectedCity}
           isRunning={zonaSimActiva}
           unidades={unidades}
@@ -1600,6 +1615,7 @@ function MapaMonitoreo() {
         <ControlPanel
           activeControlsCount={[isParticlesActive, isHeatmapActive, isChoroplethActive, showSensors, isSimMode].filter(Boolean).length}
           setIsInjectModalOpen={setIsInjectModalOpen}
+          setIsIoTModalOpen={setIsIoTModalOpen}
           isSimMode={isSimMode} handleToggleSimMode={handleToggleSimMode}
           isParticlesActive={isParticlesActive} setIsParticlesActive={setIsParticlesActive}
           isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}

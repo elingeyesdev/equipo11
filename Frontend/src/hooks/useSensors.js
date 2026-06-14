@@ -1,24 +1,25 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo } from 'react';
 import { getSensoresIoT } from '../utils/weatherApi';
 import { FALLBACK_DATA } from '../data/fallbackData';
 import { getImageDataArray, sampleWindBilinear } from '../utils/windMath';
 
-export default function useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters }) {
+export default function useSensors({ scannedGrid, simulatedCities, isParticlesActive, particleFilters, trigger }) {
   const [iotSensors, setIotSensors] = useState([]);
   const [iotLoading, setIotLoading] = useState(true);
   const [dynamicWindLabels, setDynamicWindLabels] = useState(null);
 
   useEffect(() => {
-    const loadSensors = async () => {
-      setIotLoading(true);
+    const loadSensors = async (isInitial = false) => {
+      if (isInitial) setIotLoading(true);
       const data = await getSensoresIoT();
-      if (data && data.length > 0) setIotSensors(data);
-      setIotLoading(false);
+      if (data) setIotSensors(data);
+      if (isInitial) setIotLoading(false);
     };
-    loadSensors();
-    const interval = setInterval(loadSensors, 15 * 60 * 1000);
+    loadSensors(true);
+    const interval = setInterval(() => loadSensors(false), 10 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [trigger]);
 
   // Extraer pixel data del wind PNG una sola vez
   const windPixelData = useMemo(() => {

@@ -150,7 +150,7 @@ async function getSensoresCache() {
     const { rows } = await pool.query(`
       SELECT sensor_id as id, nombre as name, latitud as latitude, longitud as longitude,
              temperatura, humedad, aqi, ica, ruido, weather_code,
-             wind_speed, wind_direction, actualizado_en
+             wind_speed, wind_direction, actualizado_en, es_custom, topics
       FROM sensores_cache
       ORDER BY nombre
     `);
@@ -163,6 +163,8 @@ async function getSensoresCache() {
       wind_speed: r.wind_speed !== null ? Number(r.wind_speed) : null,
       wind_direction: r.wind_direction !== null ? Number(r.wind_direction) : null,
       actualizado_en: r.actualizado_en,
+      es_custom: !!r.es_custom,
+      topics: r.topics || {},
       data: {
         temperatura: r.temperatura !== null ? Number(r.temperatura) : null,
         humedad:     r.humedad     !== null ? Number(r.humedad)     : null,

@@ -76,7 +76,8 @@ function registerZonaSocketEvents(io) {
                     valor: z.valor,
                     label: z.umbralLabel,
                     severidad: z.severidad,
-                    source: `Simulación de Zona: ${z.nombre}`
+                    source: `Simulación de Zona: ${z.nombre}`,
+                    isSimulation: true
                   }).catch(err => logger.error('[zona:tick] Error enviando alerta geográfica:', err.message));
                 }
               });

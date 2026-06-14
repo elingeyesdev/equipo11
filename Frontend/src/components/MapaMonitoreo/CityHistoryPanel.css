@@ -8,6 +8,7 @@
   left: auto;
   z-index: 20;
   cursor: grab;
+  width: 290px;
 }
 .city-info-panel-wrapper:active { cursor: grabbing; }
 

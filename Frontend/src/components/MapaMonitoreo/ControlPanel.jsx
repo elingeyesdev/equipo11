@@ -1,25 +1,16 @@
 import { useState } from 'react';
-import { useMapVisuals } from '../../context/MapVisualsContext.jsx';
 import Draggable from '../Draggable/Draggable';
 
 export default function ControlPanel({
   activeControlsCount,
   setIsInjectModalOpen,
+  setIsIoTModalOpen,
   isSimMode, handleToggleSimMode,
-  isParticlesActive, setIsParticlesActive,
   isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric,
-  isChoroplethActive, setIsChoroplethActive,
-  isHistoricalMode, setIsHistoricalMode,
   showSensors, setShowSensors, setSelectedCity,
   iotLoading,
   unidades, cambiarUnidad, METRICAS_UNIDADES,
-  isDynamicHistoricalMode, setIsDynamicHistoricalMode,
-  isCompareMode, setIsCompareMode,
-  compareIndexA, compareIndexB, setCompareIndexA, setCompareIndexB,
-  globalTimelineIndex, globalHistoryArray,
-  particleFilters, setParticleFilters,
 }) {
-  const { snowMapType, setSnowMapType } = useMapVisuals();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('capas');
 
@@ -43,6 +34,22 @@ export default function ControlPanel({
         title="Inyectar datos manualmente"
       >
         <span className="controls-toggle-icon"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg></span>
+      </button>
+
+      <button
+        className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
+        style={{ marginLeft: '10px' }}
+        onClick={() => setIsIoTModalOpen(true)}
+        title="Configurar Sensores IoT (MQTT)"
+      >
+        <span className="controls-toggle-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+            <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+            <path d="M8.58 16.14a6 6 0 0 1 6.84 0" />
+            <circle cx="12" cy="20" r="1.5" />
+          </svg>
+        </span>
       </button>
 
       {isOpen && (

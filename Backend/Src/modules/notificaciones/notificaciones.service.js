@@ -26,7 +26,7 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
 /**
  * Notifica a los usuarios activos que se encuentran a menos de 50km de un foco de alerta.
  */
-const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, severidad, source }) => {
+const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, severidad, source, isSimulation }) => {
   try {
     // Solo notificar umbrales altos (critica o emergencia)
     if (severidad !== 'critica' && severidad !== 'emergencia') {
@@ -57,6 +57,10 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
     const usuariosEnZona = usuarios.filter(u => {
       if (u.latitud === null || u.longitud === null) {
         return true; // No tiene ubicación configurada, recibe notificaciones por defecto (suscripción global)
+      }
+      if (isSimulation) {
+        logger.info(`[Notificaciones] Simulacion detectada. Bypaseando limite de 50km para el usuario ${u.email}`);
+        return true;
       }
       const dist = getDistanceKm(numericLat, numericLng, parseFloat(u.latitud), parseFloat(u.longitud));
       return dist <= 50; // radio de 50 km
@@ -143,7 +147,7 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
 /**
  * Notifica a través del canal tradicional basándose en la localidad de la alerta.
  */
-const notifyAlert = async (alerta) => {
+const notifyAlert = async (alerta, options = {}) => {
   try {
     const { rows: locInfo } = await db.query(
       `SELECT latitud::float AS lat, longitud::float AS lng, nombre 
@@ -165,7 +169,8 @@ const notifyAlert = async (alerta) => {
       valor: alerta.valor,
       label: alerta.label,
       severidad: alerta.severidad,
-      source: `Sensor en ${nombre}`
+      source: options.isSimulation ? `Simulación en ${nombre}` : `Sensor en ${nombre}`,
+      isSimulation: options.isSimulation
     });
   } catch (err) {
     logger.error('[Notificaciones] Error en notifyAlert:', err.message);

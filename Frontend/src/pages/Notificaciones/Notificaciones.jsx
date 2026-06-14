@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo } from 'react';
 import Map, { Marker } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -53,54 +54,41 @@ const Notificaciones = () => {
     return JSON.stringify(form) !== JSON.stringify(originalForm);
   }, [form, originalForm]);
 
-  // Auto-guardado al cambiar la configuración
-  useEffect(() => {
-    if (loading) return;
-    if (!hasChanges) return;
-
-    const timer = setTimeout(() => {
-      const performSave = async () => {
-        setSaving(true);
-        try {
-          const payload = { ...form };
-          // Si no tiene ubicación válida, forzar notificaciones a false
-          if (payload.latitud === null || payload.longitud === null) {
-            payload.notif_email = false;
-            payload.notif_whatsapp = false;
-            payload.notif_telegram = false;
-          }
-          const { data } = await httpClient.put('/usuarios/preferencias', payload);
-          if (data.ok) {
-            const updatedUser = data.data?.usuario || data.usuario || payload;
-            const updatedForm = {
-              latitud: updatedUser.latitud !== null ? parseFloat(updatedUser.latitud) : null,
-              longitud: updatedUser.longitud !== null ? parseFloat(updatedUser.longitud) : null,
-              notif_email: !!updatedUser.notif_email,
-              notif_whatsapp: !!updatedUser.notif_whatsapp,
-              whatsapp_destino: updatedUser.whatsapp_destino || '',
-              notif_telegram: !!updatedUser.notif_telegram,
-              telegram_destino: updatedUser.telegram_destino || '',
-              email: form.email // mantener email original
-            };
-            setForm(updatedForm);
-            setOriginalForm(updatedForm);
-          }
-        } catch (err) {
-          console.error('Error saving settings:', err);
-          setMessage({ text: 'Error al guardar automáticamente', type: 'error' });
-        } finally {
-          setSaving(false);
-        }
-      };
-      performSave();
-    }, 1000); // Guardado automático después de 1 segundo de inactividad
-
-    return () => clearTimeout(timer);
-  }, [form, loading, hasChanges]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  // Función de guardado centralizada
+  const savePreferencias = async (updatedForm) => {
+    setSaving(true);
+    try {
+      const payload = { ...updatedForm };
+      // Si no tiene ubicación válida, forzar notificaciones a false
+      if (payload.latitud === null || payload.longitud === null) {
+        payload.notif_email = false;
+        payload.notif_whatsapp = false;
+        payload.notif_telegram = false;
+      }
+      const { data } = await httpClient.put('/usuarios/preferencias', payload);
+      if (data.ok) {
+        const updatedUser = data.data?.usuario || data.usuario || payload;
+        const newForm = {
+          latitud: updatedUser.latitud !== null ? parseFloat(updatedUser.latitud) : null,
+          longitud: updatedUser.longitud !== null ? parseFloat(updatedUser.longitud) : null,
+          notif_email: !!updatedUser.notif_email,
+          notif_whatsapp: !!updatedUser.notif_whatsapp,
+          whatsapp_destino: updatedUser.whatsapp_destino || '',
+          notif_telegram: !!updatedUser.notif_telegram,
+          telegram_destino: updatedUser.telegram_destino || '',
+          email: form.email // mantener email original
+        };
+        setForm(newForm);
+        setOriginalForm(newForm);
+      }
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setMessage({ text: 'Error al guardar la configuración', type: 'error' });
+      setTimeout(() => setMessage({ text: '', type: '' }), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -135,16 +123,37 @@ const Notificaciones = () => {
     }
   };
 
+  // Auto-guardado al cambiar la configuración (para inputs con debounce)
+  useEffect(() => {
+    if (loading) return;
+    if (!hasChanges) return;
+
+    const timer = setTimeout(() => {
+      savePreferencias(form);
+    }, 1000); // Guardado automático después de 1 segundo de inactividad
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, loading, hasChanges]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
   const handleToggle = (field) => {
     if (form.latitud === null || form.longitud === null) {
       setMessage({ text: 'Debes configurar tu ubicación en el mapa para habilitar notificaciones.', type: 'error' });
       setTimeout(() => setMessage({ text: '', type: '' }), 4000);
       return;
     }
-    setForm(prev => ({
-      ...prev,
-      [field]: !prev[field]
-    }));
+    setForm(prev => {
+      const next = {
+        ...prev,
+        [field]: !prev[field]
+      };
+      savePreferencias(next);
+      return next;
+    });
   };
 
   const handleInputChange = (field, value) => {
@@ -154,24 +163,38 @@ const Notificaciones = () => {
     }));
   };
 
+  const handleInputBlur = () => {
+    if (hasChanges && !saving) {
+      savePreferencias(form);
+    }
+  };
+
   const handleMapClick = (evt) => {
     const { lng, lat } = evt.lngLat;
-    setForm(prev => ({
-      ...prev,
-      latitud: lat,
-      longitud: lng
-    }));
+    setForm(prev => {
+      const next = {
+        ...prev,
+        latitud: lat,
+        longitud: lng
+      };
+      savePreferencias(next);
+      return next;
+    });
   };
 
   const handleClearLocation = () => {
-    setForm(prev => ({
-      ...prev,
-      latitud: null,
-      longitud: null,
-      notif_email: false,
-      notif_whatsapp: false,
-      notif_telegram: false
-    }));
+    setForm(prev => {
+      const next = {
+        ...prev,
+        latitud: null,
+        longitud: null,
+        notif_email: false,
+        notif_whatsapp: false,
+        notif_telegram: false
+      };
+      savePreferencias(next);
+      return next;
+    });
   };
 
   const handleWhatsAppChange = (prefix, number) => {
@@ -180,6 +203,18 @@ const Notificaciones = () => {
       ...prev,
       whatsapp_destino: prefix + cleanNumber
     }));
+  };
+
+  const handleWhatsAppPrefixChange = (prefix, number) => {
+    const cleanNumber = number.replace(/\D/g, '');
+    setForm(prev => {
+      const next = {
+        ...prev,
+        whatsapp_destino: prefix + cleanNumber
+      };
+      savePreferencias(next);
+      return next;
+    });
   };
 
   const splitWhatsApp = (destino) => {
@@ -263,7 +298,7 @@ const Notificaciones = () => {
           </p>
         </div>
 
-        <div className="notif-header-actions">
+        <div className="notif-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="notif-status-indicator">
             {saving ? (
               <span className="notif-status-saving">
@@ -275,6 +310,15 @@ const Notificaciones = () => {
               <span className="notif-status-saved"><svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Guardado automáticamente</span>
             )}
           </div>
+          {hasChanges && (
+            <button
+              onClick={() => savePreferencias(form)}
+              disabled={saving}
+              className="notif-btn-save-header notif-btn-save--pending"
+            >
+              Guardar Cambios
+            </button>
+          )}
         </div>
       </div>
 
@@ -425,7 +469,7 @@ const Notificaciones = () => {
                       <select
                         className="notif-country-select"
                         value={splitWhatsApp(s.destino).prefix}
-                        onChange={(e) => handleWhatsAppChange(e.target.value, splitWhatsApp(s.destino).number)}
+                        onChange={(e) => handleWhatsAppPrefixChange(e.target.value, splitWhatsApp(s.destino).number)}
                         disabled={!s.habilitado || !hasLocation}
                       >
                         {CODES.map(c => (
@@ -439,6 +483,7 @@ const Notificaciones = () => {
                       onChange={(e) => handleWhatsAppChange(splitWhatsApp(s.destino).prefix, e.target.value)}
                       placeholder="70000000"
                       disabled={!s.habilitado || !hasLocation}
+                      onBlur={handleInputBlur}
                     />
                   </div>
                 ) : (
@@ -448,6 +493,7 @@ const Notificaciones = () => {
                     onChange={(e) => handleInputChange(s.tipo === 'email' ? 'email' : 'telegram_destino', e.target.value)}
                     placeholder={getPlaceholder(s.tipo)}
                     disabled={s.disabledDestino || !s.habilitado || !hasLocation}
+                    onBlur={handleInputBlur}
                   />
                 )}
               </div>
