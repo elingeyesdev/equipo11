@@ -1,111 +1,250 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root { /* MODO CLARO - Paleta Invertida */
-  --paper: #FFFFFF;
-  --paper-2: #F9FAFB;
-  --card: #FFFFFF;
-  --white: #FFFFFF;
-  --ink: #0B132B;
-  --ink-2: #1C2541;
-  --ink-mute: #4B5563;
-  --ink-faint: #9CA3AF;
-  --line: #E5E7EB;
-  --line-soft: #F3F4F6;
-  --border: #D1D5DB;
-  --border-color: #D1D5DB;
-  --border-strong: #9CA3AF;
-  --moss: #22C55E;
-  --moss-ink: #14532D;
-  --moss-soft: #DCFCE7;
-  --river: #3B82F6;
-  --river-soft: #DBEAFE;
-  --amber: #F59E0B;
-  --amber-soft: #FEF3C7;
-  --rust: #EF4444;
-  --rust-soft: #FEE2E2;
-  --violet: #8B5CF6;
-  --violet-soft: #EDE9FE;
-  --primary: #5BC0BE;
-  --primary-light: #6BE0DE;
-  --primary-extra-light: #E0F7F6;
-  --primary-dark: #3A9694;
-  --bg-app: #F3F4F6;
-  --bg-panel: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --bg-hover: #F3F4F6;
-  --bg-overlay: rgba(0, 0, 0, 0.4);
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --text-primary: #0B132B; /* Prussian Blue para contraste */
-  --text-secondary: #3A506B; /* Dusk Blue */
-  --text-muted: #6B7280;
-  --accent: #5BC0BE;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --sidebar-width: 232px;
-  --navbar-height: 56px;
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+/* =================================================================
+   ENVIROSENSE · DESIGN TOKEN SYSTEM v1.0
+   Vanilla CSS + CSS Custom Properties · Light/Dark theming
+   ================================================================= */
+
+:root {
+  /* ───── Fuentes ───── */
+  --font-sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif:   'Instrument Serif', Georgia, serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --font-display: 'Space Grotesk', var(--font-sans);
+
+  /* ───── Escala tipográfica (1.250 major third) ───── */
+  --text-xs:   11px;
+  --text-sm:   12.5px;
+  --text-base: 14px;
+  --text-md:   16px;
+  --text-lg:   20px;
+  --text-xl:   26px;
+  --text-2xl:  32px;
+  --text-3xl:  40px;
+
+  /* ───── Spacing scale (8px base) ───── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ───── Radius ───── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius:      8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  /* ───── Elevation / Shadows ───── */
+  --shadow-xs:    0 1px 2px rgba(11, 19, 43, 0.05);
+  --shadow-sm:    0 1px 3px rgba(11, 19, 43, 0.08), 0 1px 2px rgba(11, 19, 43, 0.04);
+  --shadow-md:    0 4px 12px rgba(11, 19, 43, 0.10), 0 2px 4px rgba(11, 19, 43, 0.06);
+  --shadow-lg:    0 12px 32px rgba(11, 19, 43, 0.14), 0 4px 8px rgba(11, 19, 43, 0.08);
+  --shadow-xl:    0 24px 56px rgba(11, 19, 43, 0.20), 0 8px 16px rgba(11, 19, 43, 0.10);
+  --shadow-glow:  0 0 0 3px rgba(91, 192, 190, 0.30);
+
+  /* ───── Motion ───── */
+  --ease-out:     cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:  cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-instant:  80ms;
+  --dur-fast:     140ms;
+  --dur-base:     220ms;
+  --dur-slow:     360ms;
+  --dur-slower:   480ms;
+
+  /* ───── Z-index scale ───── */
+  --z-base:     1;
+  --z-map:      2;
+  --z-overlay:  10;
+  --z-panel:    20;
+  --z-navbar:   40;
+  --z-sidebar:  50;
+  --z-dropdown: 800;
+  --z-modal:    900;
+  --z-toast:    1000;
+  --z-tooltip:  1100;
+
+  /* ───── Layout ───── */
+  --sidebar-width:    232px;
+  --sidebar-collapsed: 72px;
+  --navbar-height:    56px;
+
+  /* ═══════════════════════════════════════════════════════
+     MODO CLARO · Paleta papel/tinta
+     ═══════════════════════════════════════════════════════ */
+
+  --paper:              #FFFFFF;
+  --paper-2:            #F9FAFB;
+  --card:               #FFFFFF;
+  --white:              #FFFFFF;
+  --ink:                #0B132B;
+  --ink-2:              #1C2541;
+  --ink-mute:           #4B5563;
+  --ink-faint:          #9CA3AF;
+  --line:               #E5E7EB;
+  --line-soft:          #F3F4F6;
+  --border:             #D1D5DB;
+  --border-color:       #D1D5DB;
+  --border-strong:      #9CA3AF;
+
+  /* Brand */
+  --primary:            #5BC0BE;
+  --primary-light:      #6BE0DE;
+  --primary-extra-light:#E0F7F6;
+  --primary-dark:       #3A9694;
+  --accent:             #5BC0BE;
+
+  /* Backgrounds */
+  --bg-app:             #F3F4F6;
+  --bg-panel:           #FFFFFF;
+  --bg-card:            #FFFFFF;
+  --bg-hover:           #F3F4F6;
+  --bg-active:          #E5E7EB;
+  --bg-overlay:         rgba(0, 0, 0, 0.4);
+  --bg-glass:           rgba(255, 255, 255, 0.72);
+
+  /* Text */
+  --text-primary:       #0B132B;
+  --text-secondary:     #3A506B;
+  --text-muted:         #6B7280;
+
+  /* Semantic */
+  --moss:               #22C55E;
+  --moss-ink:           #14532D;
+  --moss-soft:          #DCFCE7;
+  --river:              #3B82F6;
+  --river-soft:         #DBEAFE;
+  --amber:              #F59E0B;
+  --amber-soft:         #FEF3C7;
+  --rust:               #EF4444;
+  --rust-soft:          #FEE2E2;
+  --violet:             #8B5CF6;
+  --violet-soft:        #EDE9FE;
+
+  /* ───── Paleta ambiental (EPA AQI estándar) ───── */
+  --aqi-good:           #00E400;
+  --aqi-moderate:       #FFFF00;
+  --aqi-usg:            #FF7E00;
+  --aqi-unhealthy:      #FF0000;
+  --aqi-very:           #8F3F97;
+  --aqi-hazardous:      #7E0023;
+
+  /* ───── Rampa térmica ───── */
+  --temp-frigid:        #5B7FFF;
+  --temp-cold:          #4A90E2;
+  --temp-cool:          #7DD3A0;
+  --temp-mild:          #FACC15;
+  --temp-warm:          #FB923C;
+  --temp-hot:           #FF6B47;
+  --temp-extreme:       #DC2626;
+
+  /* ───── Métricas específicas ───── */
+  --metric-humidity:    #3B82F6;
+  --metric-water:       #06B6D4;
+  --metric-noise:       #A855F7;
+  --metric-pressure:    #64748B;
+
+  color-scheme: light;
 }
 
-.dark, html[data-theme="dark"], [data-theme="dark"] { /* MODO OSCURO - Paleta Corporativa Oficial */
-  --paper: #0B132B;
-  --paper-2: #1C2541;
-  --card: #1C2541;
-  --white: #FFFFFF;
-  --ink: #FFFFFF;
-  --ink-2: #E5E7EB;
-  --ink-mute: #9CA3AF;
-  --ink-faint: #4B5563;
-  --line: #3A506B;
-  --line-soft: #1C2541;
-  --border: #3A506B;
-  --border-color: #3A506B;
-  --border-strong: #5BC0BE;
-  --moss: #22C55E;
-  --moss-ink: #DCFCE7;
-  --moss-soft: #14532D;
-  --river: #3B82F6;
-  --river-soft: #1D4ED8;
-  --amber: #F59E0B;
-  --amber-soft: #78350F;
-  --rust: #EF4444;
-  --rust-soft: #7F1D1D;
-  --violet: #8B5CF6;
-  --violet-soft: #4C1D95;
-  --primary: #5BC0BE;
-  --primary-light: #6BE0DE;
-  --primary-extra-light: #1C2541;
-  --primary-dark: #0B132B;
-  --bg-app: #0B132B;
-  --bg-panel: #1C2541;
-  --bg-card: #1C2541;
-  --bg-hover: #1C2541;
-  --bg-overlay: rgba(0, 0, 0, 0.7);
-  --bg-glass: rgba(11, 19, 43, 0.7);
-  --text-primary: #FFFFFF;
-  --text-secondary: #D1D5DB;
-  --text-muted: #9CA3AF;
-  --accent: #5BC0BE;
+/* ═══════════════════════════════════════════════════════
+   MODO OSCURO · Paleta Prussian/Teal corporativa
+   ═══════════════════════════════════════════════════════ */
+
+.dark,
+html[data-theme="dark"],
+[data-theme="dark"] {
+  --paper:              #0B132B;
+  --paper-2:            #1C2541;
+  --card:               #1C2541;
+  --white:              #FFFFFF;
+  --ink:                #FFFFFF;
+  --ink-2:              #E5E7EB;
+  --ink-mute:           #9CA3AF;
+  --ink-faint:          #6B7280;
+  --line:               #2A3658;
+  --line-soft:          #1C2541;
+  --border:             #3A506B;
+  --border-color:       #3A506B;
+  --border-strong:      #5BC0BE;
+
+  /* Brand */
+  --primary:            #5BC0BE;
+  --primary-light:      #6BE0DE;
+  --primary-extra-light:#1C2541;
+  --primary-dark:       #0B132B;
+  --accent:             #5BC0BE;
+
+  /* Backgrounds — bg-hover DISTINTO de bg-panel (fix bug #3) */
+  --bg-app:             #0B132B;
+  --bg-panel:           #1C2541;
+  --bg-card:            #1C2541;
+  --bg-hover:           #2A3658;
+  --bg-active:          #3A506B;
+  --bg-overlay:         rgba(0, 0, 0, 0.7);
+  --bg-glass:           rgba(11, 19, 43, 0.72);
+
+  /* Text */
+  --text-primary:       #FFFFFF;
+  --text-secondary:     #D1D5DB;
+  --text-muted:         #9CA3AF;
+
+  /* Semantic — luminancia ajustada para dark */
+  --moss:               #4ADE80;
+  --moss-ink:           #DCFCE7;
+  --moss-soft:          #14532D;
+  --river:              #60A5FA;
+  --river-soft:         #1D4ED8;
+  --amber:              #FBBF24;
+  --amber-soft:         #78350F;
+  --rust:               #F87171;
+  --rust-soft:          #7F1D1D;
+  --violet:             #A78BFA;
+  --violet-soft:        #4C1D95;
+
+  /* Ambiental — luminancia ajustada */
+  --aqi-good:           #4ADE80;
+  --aqi-moderate:       #FACC15;
+  --aqi-usg:            #FB923C;
+  --aqi-unhealthy:      #F87171;
+  --aqi-very:           #C084FC;
+  --aqi-hazardous:      #DC2626;
+
+  --temp-frigid:        #93C5FD;
+  --temp-cold:          #60A5FA;
+  --temp-cool:          #86EFAC;
+  --temp-mild:          #FDE047;
+  --temp-warm:          #FDBA74;
+  --temp-hot:           #FCA5A5;
+  --temp-extreme:       #F87171;
+
+  --metric-humidity:    #60A5FA;
+  --metric-water:       #22D3EE;
+  --metric-noise:       #C084FC;
+  --metric-pressure:    #94A3B8;
+
+  color-scheme: dark;
 }
 
-* {
-    font-family: 'Space Grotesk', sans-serif !important;
-}
+/* =================================================================
+   RESET & BASE
+   ================================================================= */
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
-
-
-
-
 
 html,
 body {
@@ -116,9 +255,23 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
 }
 
-/* Utilidades tipográficas reusables */
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+
+/* =================================================================
+   TIPOGRAFÍA · UTILIDADES REUSABLES
+   ================================================================= */
+
 .serif {
   font-family: var(--font-serif);
   font-weight: 400;
@@ -128,14 +281,35 @@ body {
   font-family: var(--font-mono);
 }
 
+.display {
+  font-family: var(--font-display);
+}
+
 .uikick {
   font: 600 10.5px/1 var(--font-sans);
-  letter-spacing: .14em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-mute);
 }
 
-/* Scrollbar editorial */
+.eyebrow {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Para todos los valores numéricos de métricas ambientales */
+.metric-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+
+/* =================================================================
+   SCROLLBAR EDITORIAL
+   ================================================================= */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -147,20 +321,55 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-full);
+  transition: background var(--dur-fast) var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
 }
 
-/* Tematización dinámica de Pop-ups de Mapbox */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* =================================================================
+   FOCUS VISIBLE · Accesibilidad WCAG AA
+   ================================================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+  transition: outline-offset var(--dur-fast) var(--ease-out);
+}
+
+/* =================================================================
+   SELECCIÓN DE TEXTO
+   ================================================================= */
+
+::selection {
+  background: rgba(91, 192, 190, 0.25);
+  color: var(--text-primary);
+}
+
+/* =================================================================
+   MAPBOX · Popups tematizados
+   ================================================================= */
+
 .mapboxgl-popup-content {
   background: var(--bg-card) !important;
   color: var(--text-primary) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-lg) !important;
-  box-shadow: var(--shadow-md) !important;
+  box-shadow: var(--shadow-lg) !important;
   padding: 0 !important;
 }
 
@@ -173,6 +382,7 @@ body {
   color: var(--text-muted);
   font-size: 1.2rem;
   padding: 4px 8px;
+  transition: all var(--dur-fast) var(--ease-out);
 }
 
 .mapboxgl-popup-close-button:hover {
@@ -181,28 +391,79 @@ body {
   border-radius: 0 var(--radius-lg) 0 0;
 }
 
+/* =================================================================
+   NATIVE INPUTS · Dark mode compatibility
+   ================================================================= */
+
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
 [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(100%);
-    cursor: pointer;
+  filter: invert(1) brightness(100%);
+  cursor: pointer;
 }
+
+.dark select,
+[data-theme="dark"] select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: var(--bg-panel) !important;
+  color: var(--text-primary) !important;
+}
+
+/* =================================================================
+   UTILIDADES GLOBALES
+   ================================================================= */
 
 .controls-dropdown {
-    background-color: var(--bg-panel) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-primary) !important;
-    padding: 1rem !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--bg-panel) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  padding: var(--space-4) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-lg) !important;
 }
 
-/* Soporte nativo para modo oscuro en inputs y selects */
-.dark select, [data-theme="dark"] select {
-    color-scheme: dark;
+/* Glass effect */
+.glass {
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
 
-/* Forzar colores en las opciones desplegables */
-select option {
-    background-color: var(--bg-panel) !important;
-    color: var(--text-primary) !important;
+/* =================================================================
+   ANIMACIONES BASE
+   ================================================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+/* =================================================================
+   REDUCED MOTION · Accesibilidad
+   ================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
