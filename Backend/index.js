@@ -16,11 +16,9 @@ const jwt = require('jsonwebtoken')
 const app = require('./Src/app')
 const { registerSocketEvents } = require('./Src/modules/simulacion/simulacion.socket')
 const { registerZonaSocketEvents } = require('./Src/modules/simulacion-zona/simulacion-zona.socket')
-const { runScraper } = require('./Src/modules/radar/radar.service')
 const alertasService = require('./Src/modules/alertas/alertas.service')
 const { startTelegramListener } = require('./Src/modules/notificaciones/telegram.listener')
 const { startSensorCron, stopSensorCron } = require('./Src/modules/sensores/sensores.service')
-const { startAqiCron, stopAqiCron } = require('./Src/modules/calidad_aire/aqi.service')
 const { initMqtt, stopMqtt } = require('./Src/modules/sensores/mqtt.service')
 const logger = require('./Src/utils/logger');
 const pool = require('./Src/config/db');
@@ -75,12 +73,8 @@ server.listen(PORT, async () => {
   }
 
   // 2. DESPUÉS: Iniciar servicios que dependen de la base de datos
-  // Ejecutar el recopilador global una vez que el servidor arranca
-  runScraper()
   // Iniciar sensores IoT — datos reales de Open-Meteo cada 15 minutos
   startSensorCron()
-  // Iniciar scraper de calidad del aire (GEFS-Aerosol) cada 6 horas
-  startAqiCron()
   // Pre-cargar umbrales y mapping de BD para el servicio de alertas
   await alertasService.cargarUmbralesCache()
   // Iniciar el bot de Telegram en modo escucha
@@ -95,9 +89,8 @@ server.listen(PORT, async () => {
 function gracefulShutdown(signal) {
   logger.info(`Recibido ${signal}, cerrando servidor ordenadamente...`);
 
-  // 1. Detener cron de sensores, AQI y detener MQTT
+  // 1. Detener cron de sensores y detener MQTT
   stopSensorCron();
-  stopAqiCron();
   stopMqtt();
 
   // 2. Cerrar servidor HTTP (rechaza nuevas conexiones, cierra WebSockets)
