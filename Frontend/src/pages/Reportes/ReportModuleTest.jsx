@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import Map, { Marker, Source, Layer, useControl } from 'react-map-gl/mapbox';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import * as turf from '@turf/turf';
+import turfCentroid from '@turf/centroid';
 import { exportarAExcel, exportarAExcelMasivo, exportarAPDF } from '../../services/exportService';
 import useFronteras from '../../hooks/useFronteras';
 import { useTheme } from '../../context/ThemeContext';
@@ -167,7 +167,7 @@ const ReportModuleTest = () => {
   // Manejo de Dibujo Libre (MapboxDraw)
   const onDrawCreate = (e) => {
     const polygon = e.features[0];
-    const centroid = turf.centroid(polygon);
+    const centroid = turfCentroid(polygon);
     
     setLat(centroid.geometry.coordinates[1]);
     setLon(centroid.geometry.coordinates[0]);
@@ -220,7 +220,7 @@ const ReportModuleTest = () => {
 
       if (geo.geojson.features && geo.geojson.features.length > 0) {
         geo.geojson.features.forEach((feature, idx) => {
-          const centroid = turf.centroid(feature);
+          const centroid = turfCentroid(feature);
           const cLon = centroid.geometry.coordinates[0];
           const cLat = centroid.geometry.coordinates[1];
           const fName = feature.properties?.name || `${name} - Sector ${idx + 1}`;
@@ -233,7 +233,7 @@ const ReportModuleTest = () => {
           }
         });
       } else if (geo.geojson.type === 'Polygon' || geo.geojson.type === 'MultiPolygon') {
-        const centroid = turf.centroid(geo.geojson);
+        const centroid = turfCentroid(geo.geojson);
         extractedSubRegions.push({ name: name, lat: centroid.geometry.coordinates[1], lon: centroid.geometry.coordinates[0], geometry: geo.geojson });
         mainCentroidLat = centroid.geometry.coordinates[1];
         mainCentroidLon = centroid.geometry.coordinates[0];

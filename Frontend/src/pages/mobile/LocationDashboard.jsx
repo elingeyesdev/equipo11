@@ -82,7 +82,7 @@ export default function LocationDashboard() {
     if (!nearestCity) return
 
     let cancelled = false
-    setDataLoading(true)
+    setTimeout(() => { if (!cancelled) setDataLoading(true) }, 0)
 
     httpClient.get('/sensores')
       .then(async res => {
