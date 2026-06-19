@@ -206,3 +206,18 @@ select option {
     background-color: var(--bg-panel) !important;
     color: var(--text-primary) !important;
 }
+
+/* === LANDING PAGE HELPERS === */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide desktop nav on mobile for landing header */
+@media (max-width: 768px) {
+  .landing-desktop-nav {
+    display: none !important;
+  }
+  .landing-header {
+    padding: 0 1rem !important;
+  }
+}

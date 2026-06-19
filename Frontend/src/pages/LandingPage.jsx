@@ -1,20 +1,31 @@
 import React from 'react';
-import Header from '../components/landing/Header';
-import Hero from '../components/landing/Hero';
-import VariableGrid from '../components/landing/VariableGrid';
-import Stats from '../components/landing/Stats';
-import Footer from '../components/landing/Footer';
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/space-grotesk/700.css';
+
+import LandingHeader  from '../components/landing/LandingHeader';
+import LandingHero    from '../components/landing/LandingHero';
+import LandingFeatures from '../components/landing/LandingFeatures';
+import LandingMetrics  from '../components/landing/LandingMetrics';
+import LandingWhy      from '../components/landing/LandingWhy';
+import LandingSources   from '../components/landing/LandingSources';
+import LandingCTA       from '../components/landing/LandingCTA';
+import LandingFooter    from '../components/landing/LandingFooter';
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-prussian-blue font-sans selection:bg-tropical-teal selection:text-prussian-blue">
-      <Header />
+    <div style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+      <LandingHeader />
       <main>
-        <Hero />
-        <VariableGrid />
-        <Stats />
+        <LandingHero />
+        <LandingSources />
+        <LandingFeatures />
+        <LandingMetrics />
+        <LandingWhy />
+        <LandingCTA />
       </main>
-      <Footer />
+      <LandingFooter />
     </div>
   );
 };
