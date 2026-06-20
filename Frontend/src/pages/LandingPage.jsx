@@ -11,6 +11,7 @@ import LandingFeatures from '../components/landing/LandingFeatures';
 import LandingMetrics  from '../components/landing/LandingMetrics';
 import LandingWhy      from '../components/landing/LandingWhy';
 import LandingSources   from '../components/landing/LandingSources';
+import LandingUseCases from '../components/landing/LandingUseCases';
 import LandingCTA       from '../components/landing/LandingCTA';
 import LandingFooter    from '../components/landing/LandingFooter';
 
@@ -25,6 +26,7 @@ const LandingPage = () => {
         <LandingMap />
         <LandingMetrics />
         <LandingWhy />
+        <LandingUseCases />
         <LandingCTA />
       </main>
       <LandingFooter />
