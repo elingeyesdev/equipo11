@@ -59,6 +59,7 @@ const LandingWhy = () => {
 
   return (
     <section
+      ref={sectionRef}
       style={{
         padding: '7rem 2rem',
         background: '#F9FAFB',
