@@ -6,7 +6,7 @@ import '@fontsource/space-grotesk/700.css';
 
 import LandingHeader  from '../components/landing/LandingHeader';
 import LandingHero    from '../components/landing/LandingHero';
-import LandingInterface from '../components/landing/LandingInterface';
+import LandingMap     from '../components/landing/LandingMap';
 import LandingFeatures from '../components/landing/LandingFeatures';
 import LandingMetrics  from '../components/landing/LandingMetrics';
 import LandingWhy      from '../components/landing/LandingWhy';
@@ -22,7 +22,7 @@ const LandingPage = () => {
         <LandingHero />
         <LandingSources />
         <LandingFeatures />
-        <LandingInterface />
+        <LandingMap />
         <LandingMetrics />
         <LandingWhy />
         <LandingCTA />
