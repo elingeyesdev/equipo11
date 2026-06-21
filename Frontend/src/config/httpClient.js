@@ -32,19 +32,14 @@ httpClient.interceptors.request.use(async (config) => {
   if (config.method?.toLowerCase() === 'get' && config.cacheTTL !== false && !isDynamic) {
     const cacheKey = `http_cache:${config.url}:${JSON.stringify(config.params || {})}`;
     
-    try {
-      const cached = await get(cacheKey);
-      const isOnline = navigator.onLine;
-
-      if (cached) {
-        const { data, expiresAt } = cached;
-        const now = Date.now();
-
-        // Si estamos offline o la caché no ha expirado, resolvemos la petición con la caché
-        if (!isOnline || now < expiresAt) {
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      try {
+        const cached = await get(cacheKey);
+        if (cached) {
           config.adapter = () => {
             return Promise.resolve({
-              data,
+              data: cached.data,
               status: 200,
               statusText: 'OK',
               headers: config.headers,
@@ -52,9 +47,9 @@ httpClient.interceptors.request.use(async (config) => {
             });
           };
         }
+      } catch (err) {
+        console.warn('Error accediendo a IndexedDB Cache:', err);
       }
-    } catch (err) {
-      console.warn('Error accediendo a IndexedDB Cache:', err);
     }
   }
 

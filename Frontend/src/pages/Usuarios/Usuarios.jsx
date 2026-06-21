@@ -24,19 +24,11 @@ function Usuarios() {
   const [usuarios, setUsuarios] = useState([])
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [, setError] = useState('')
   const [search, setSearch] = useState('')
 
   const currentUser = JSON.parse(localStorage.getItem('usuario') || '{}')
   const isAdmin = currentUser.rol === 'admin' || currentUser.rol_clave === 'admin'
-
-  useEffect(() => {
-    if (isAdmin) {
-      cargarDatos()
-    } else {
-      setLoading(false)
-    }
-  }, [isAdmin])
 
   const cargarDatos = async () => {
     setLoading(true)
@@ -52,12 +44,20 @@ function Usuarios() {
       if (dataUsers.ok) setUsuarios(dataUsers.data?.usuarios || [])
       if (dataRoles.ok) setRoles(dataRoles.data?.roles || [])
     } catch (err) {
+      console.error(err)
       setError('Error al cargar datos del servidor')
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    if (isAdmin) {
+      cargarDatos()
+    } else {
+      setTimeout(() => setLoading(false), 0)
+    }
+  }, [isAdmin])
   const handleRoleChange = async (userId, newRoleId) => {
     try {
       const res = await httpClient.put(`/usuarios/${userId}/rol`, { rol_id: newRoleId })
@@ -68,6 +68,7 @@ function Usuarios() {
         addToast('Error al cambiar rol: ' + (body.error || ''), 'error')
       }
     } catch (err) {
+      console.error(err)
       addToast('Error de conexión al cambiar rol', 'error')
     }
   }
@@ -82,6 +83,7 @@ function Usuarios() {
         addToast('Error al cambiar estado: ' + (body.error || ''), 'error')
       }
     } catch (err) {
+      console.error(err)
       addToast('Error de conexión al cambiar estado', 'error')
     }
   }

@@ -2,9 +2,6 @@ import '@fontsource/space-grotesk';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { SimulacionProvider } from './context/SimulacionContext'
-import { ZonaSimProvider } from './context/ZonaSimContext'
-import { MapVisualsProvider } from './context/MapVisualsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { ToastProvider } from './components/Toast/Toast'
 import { PwaProvider } from './context/PwaContext'
@@ -23,13 +20,7 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <ToastProvider>
         <PwaProvider>
-          <SimulacionProvider>
-            <ZonaSimProvider>
-              <MapVisualsProvider>
-                <RouterProvider router={router} />
-              </MapVisualsProvider>
-            </ZonaSimProvider>
-          </SimulacionProvider>
+          <RouterProvider router={router} />
         </PwaProvider>
       </ToastProvider>
     </ThemeProvider>

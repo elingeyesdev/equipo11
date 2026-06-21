@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import * as turf from '@turf/turf';
+import turfBbox from '@turf/bbox';
 import Map, { NavigationControl, FullscreenControl, Popup, Layer, Source } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import { useSimulacion } from '../../context/SimulacionContext';
@@ -813,7 +813,7 @@ function MapaMonitoreo() {
 
         if (loc.geometry && (loc.geometry.type === 'Polygon' || loc.geometry.type === 'MultiPolygon' || loc.geometry.type === 'Feature' || loc.geometry.type === 'FeatureCollection')) {
           try {
-            bbox = turf.bbox(loc.geometry);
+            bbox = turfBbox(loc.geometry);
           } catch { /* ignore */ }
         }
 
