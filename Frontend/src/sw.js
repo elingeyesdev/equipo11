@@ -49,48 +49,4 @@ registerRoute(
   })
 );
 
-// 5. Manejador de Notificaciones Push (Persistencia de Eventos)
-self.addEventListener('push', (event) => {
-  let data = { title: 'Alerta EnviroSense', body: 'Nueva actualización ambiental detectada.' };
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data.body = event.data.text();
-    }
-  }
 
-  const options = {
-    body: data.body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
-    data: data.url || '/alertas',
-    vibrate: [100, 50, 100],
-    actions: [
-      { action: 'open', title: 'Ver Alerta' },
-      { action: 'close', title: 'Cerrar' }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  if (event.action === 'open') {
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window' }).then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.endsWith(event.notification.data) && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        if (self.clients.openWindow) {
-          return self.clients.openWindow(event.notification.data);
-        }
-      })
-    );
-  }
-});
