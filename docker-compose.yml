@@ -1,4 +1,12 @@
 services:
+  data-worker:
+    build: ./data-worker
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ~/.cdsapirc:/root/.cdsapirc:ro   # <--- ESTE ES EL PUENTE
+    container_name: data-worker
+
   # ─── Base de datos PostgreSQL ───
   db:
     image: timescale/timescaledb:2.14.2-pg16

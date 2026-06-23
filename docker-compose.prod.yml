@@ -7,43 +7,33 @@ services:
       POSTGRES_DB: ${DB_NAME:-sistema_ambiental}
       POSTGRES_USER: ${DB_USER:-admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
-      # Pasamos estas variables explícitamente para el healthcheck interno
-      DB_NAME: ${DB_NAME:-sistema_ambiental}
-      DB_USER: ${DB_USER:-admin}
-
-    ports:
-      - "5433:5432"
+    # ELIMINADO EL BLOQUE 'ports'. Solo accesible por la red interna de Docker.
     volumes:
-      # Esquema normalizado y semillas de inicialización que existen
       - ./database/esquema_envirosense.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./database/seeds/01_sudamerica.sql:/docker-entrypoint-initdb.d/02_sudamerica.sql
-      # Volumen persistente para no perder datos
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-admin} -d $${DB_NAME:-sistema_ambiental}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-sistema_ambiental}"]
       interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 300s
-
+      timeout: 5s
+      retries: 5
+      start_period: 60s # Bajado de 300s a 60s para no demorar el despliegue
 
   # ─── Backend (API Node.js + Express) ───
   backend:
     build: ./Backend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # ELIMINADO EL BLOQUE 'ports'. Nginx hablará con él internamente en el puerto 3000.
     environment:
       PORT: 3000
-      DB_HOST: ${DB_HOST:-db}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: db # Apunta directamente al nombre del servicio
+      DB_PORT: 5432 # El puerto interno del contenedor DB
       DB_NAME: ${DB_NAME:-sistema_ambiental}
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-admin123}
       JWT_SECRET: ${JWT_SECRET:-secret_para_tokens_envirosense_2026}
       JWT_EXPIRES_IN: 24h
       CORS_ORIGIN: ${CORS_ORIGIN}
-      # Variables de Notificación
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -52,12 +42,12 @@ services:
       SMTP_FROM: ${SMTP_FROM}
     volumes:
       - whatsapp_session:/app/.wwebjs_auth
-      - data_volume:/app/data
+      - ./data:/app/data   # <--- CORREGIDO: Apunta a tu carpeta física de PNGs
     depends_on:
       db:
         condition: service_healthy
 
-  # ─── Frontend (React + Vite) ───
+  # ─── Frontend (React + Vite + Nginx) ───
   frontend_prod:
     build:
       context: ./Frontend
@@ -75,14 +65,14 @@ services:
     container_name: envirosense_nginx
     restart: always
     ports:
-      - "80:80"
+      - "3080:80"   # <--- PUERTO SEGURO: En Cloudflare pondrás localhost:3080
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data:/app/data:ro
     depends_on:
       - backend
 
-# Volumen nombrado para persistir los datos
 volumes:
   pgdata:
   whatsapp_session:
-  data_volume:
+  # Eliminado data_volume
