@@ -18,6 +18,7 @@ import useSensors from '../../hooks/useSensors';
 import { useUnidades } from '../../hooks/useUnidades';
 import { Marker } from 'react-map-gl/mapbox';
 import CityHistoryPanel from '../../components/MapaMonitoreo/CityHistoryPanel';
+import WeatherWidgetContainer from '../../components/WeatherWidget/WeatherWidgetContainer';
 import ControlPanel from '../../components/MapaMonitoreo/ControlPanel';
 import SimulationStatus from '../../components/MapaMonitoreo/SimulationStatus';
 import Draggable from '../../components/Draggable/Draggable';
@@ -671,10 +672,11 @@ function MapaMonitoreo() {
     particleFilters, setParticleFilters, 
     showSensors, setShowSensors, 
     isHeatmapActive, setIsHeatmapActive, 
-    heatmapMetric, setHeatmapMetric, 
     isChoroplethActive, setIsChoroplethActive,
+    heatmapMetric, setHeatmapMetric,
     isHistoricalMode: _isHistoricalMode, setIsHistoricalMode,
-    isDynamicHistoricalMode: _isDynamicHistoricalMode, setIsDynamicHistoricalMode
+    isDynamicHistoricalMode, setIsDynamicHistoricalMode,
+    setHistoricalDate
   } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades, cambiarUnidad } = useUnidades();
@@ -823,6 +825,12 @@ function MapaMonitoreo() {
   const [date1, setDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [date2, setDate2] = useState(new Date('2024-01-01T00:00:00Z'));
   const [_timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
+  const [isPlaying2, setIsPlaying2] = useState(false);
+
+  useEffect(() => {
+    setHistoricalDate(date1);
+  }, [date1, setHistoricalDate]);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -894,6 +902,15 @@ function MapaMonitoreo() {
             'ica': 'ica'
           };
           if (capaMapeo[acc.valor]) setActiveLayer(capaMapeo[acc.valor]);
+        }
+        if (acc.comando === 'mover_mapa' && acc.lat && acc.lon) {
+          const flyOptions = {
+            center: [acc.lon, acc.lat],
+            zoom: acc.zoom || 5,
+            duration: 2000
+          };
+          if (map1InstanceRef.current) map1InstanceRef.current.flyTo(flyOptions);
+          if (isComparing && map2InstanceRef.current) map2InstanceRef.current.flyTo(flyOptions);
         }
         if (acc.comando === 'activar_comparativo') {
           setIsComparing(true);
@@ -2017,6 +2034,17 @@ function MapaMonitoreo() {
           compareCity={compareCityDetails}
           setCompareCity={setCompareCity}
         />
+
+        {activeCityDetails && (
+          <WeatherWidgetContainer 
+            city={{
+              nombre: activeCityDetails.nombre,
+              lat: activeCityDetails.latitud || activeCityDetails.lat,
+              lon: activeCityDetails.longitud || activeCityDetails.lon
+            }} 
+            onClose={() => setSelectedCity(null)}
+          />
+        )}
 
         <ControlPanel
           activeControlsCount={[isParticlesActive, isHeatmapActive, isChoroplethActive, showSensors, isSimMode].filter(Boolean).length}

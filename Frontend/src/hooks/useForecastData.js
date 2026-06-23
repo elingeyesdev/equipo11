@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import httpClient from '../config/httpClient';
 
 export function useForecastData(lat, lon) {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(null); // Ahora es un objeto {current, hourly, daily}
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -19,26 +19,12 @@ export function useForecastData(lat, lon) {
           params: { lat, lon }
         });
         if (!cancelled) {
-          // El backend retorna { ok: true, data: { status: 'ready', data: [...] } }
-          // o { ok: true, data: [...] } dependiendo de cómo se estructure.
-          // En este caso, getAiRefinedForecast retorna { status: 'ready', data: [...] }
           const payload = res.data?.data;
-          if (payload && Array.isArray(payload.data)) {
-            const mappedData = payload.data.map(d => {
-              let t = Number(d.temperatura);
-              if (t > 150) t = t - 273.15; // Kelvin to Celsius conversion
-              return { ...d, temperatura: t };
-            });
-            setData(mappedData);
-          } else if (Array.isArray(payload)) {
-            const mappedData = payload.map(d => {
-              let t = Number(d.temperatura);
-              if (t > 150) t = t - 273.15; // Kelvin to Celsius conversion
-              return { ...d, temperatura: t };
-            });
-            setData(mappedData);
+          if (payload && payload.hourly && payload.current && payload.daily) {
+            // El backend ya lo retorna en la estructura deseada
+            setData(payload);
           } else {
-            setData([]);
+            setData(null);
           }
         }
       } catch (err) {
@@ -61,3 +47,4 @@ export function useForecastData(lat, lon) {
 
   return { data, loading, error };
 }
+

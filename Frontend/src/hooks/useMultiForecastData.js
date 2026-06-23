@@ -20,18 +20,26 @@ export function useMultiForecastData(cities) {
             params: { lat: city.latitude, lon: city.longitude }
           }).then(res => {
             const payload = res.data?.data;
-            let finalData = [];
-            if (payload && Array.isArray(payload.data)) {
-              finalData = payload.data;
-            } else if (Array.isArray(payload)) {
-              finalData = payload;
+            
+            // La API devuelve res.data = { ok: true, data: { status: 'ready', data: ... } }
+            // O directamente la data
+            const innerData = payload?.data || payload;
+            let hourlyData = [];
+            
+            // Si es el nuevo formato enriquecido
+            if (innerData && innerData.hourly) {
+              hourlyData = innerData.hourly;
+            } 
+            // Fallback al formato viejo
+            else if (innerData && Array.isArray(innerData)) {
+              hourlyData = innerData;
             }
             
             return {
               cityName: city.nombre,
-              data: finalData.map(d => {
+              data: hourlyData.map(d => {
                 let t = Number(d.temperatura);
-                if (t > 150) t = t - 273.15; // Kelvin to Celsius conversion
+                if (t > 150) t = t - 273.15; // Kelvin to Celsius conversion (old fallback)
                 
                 let r = Number(d.rain);
                 if (isNaN(r)) r = 0;
@@ -41,7 +49,8 @@ export function useMultiForecastData(cities) {
                   temperatura: t,
                   rain: r
                 };
-              })
+              }),
+              fullData: innerData // pasamos el objeto {current, hourly, daily} directamente
             };
           })
         );
@@ -51,7 +60,8 @@ export function useMultiForecastData(cities) {
         if (!cancelled) {
           const newMap = {};
           results.forEach(res => {
-            newMap[res.cityName] = res.data;
+            newMap[res.cityName] = res.data; // Mantenemos res.data como array horario para compatibilidad
+            newMap[`${res.cityName}_full`] = res.fullData; // El objeto nuevo completo
           });
           setDataMap(newMap);
         }
@@ -75,3 +85,4 @@ export function useMultiForecastData(cities) {
 
   return { dataMap, loading, error };
 }
+

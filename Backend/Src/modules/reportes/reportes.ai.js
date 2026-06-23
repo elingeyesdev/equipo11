@@ -65,7 +65,8 @@ Por favor, proporciona:
 3. Una recomendación directa y profesional sobre qué acciones tomar si aplica, o simplemente indicar que las condiciones son estables.
 Mantén tu respuesta profesional, directa y no más larga de un párrafo corto.`;
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
+    const response = await fetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,7 +93,7 @@ Mantén tu respuesta profesional, directa y no más larga de un párrafo corto.`
 
     success(res, { recomendacion });
   } catch (err) {
-    logger.error('[AI] Error en obtenerSugerenciaIA:', err);
+    logger.error({ err_code: err.code, err_msg: err.message }, '[AI] Network/Fetch Error en obtenerSugerenciaIA');
     logger.warn('[AI] Usando generador analítico local como fallback debido a excepción.');
     try {
       const { ciudad, variable, datos } = req.body;

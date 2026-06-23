@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import httpClient from '../../config/httpClient';
+import { useMapVisuals } from '../../context/MapVisualsContext';
 import { useToast } from '../Toast/Toast';
 import './MeteoroAssistant.css';
 import Draggable from '../Draggable/Draggable';
@@ -17,6 +18,33 @@ export default function MeteoroAssistant({
   const [isExpanded, setIsExpanded] = useState(!globalMode);
   const { addToast } = useToast();
   
+  // Extraer estado del mapa para enviar contexto
+  const mapVisuals = useMapVisuals();
+  
+  const mapContextString = useMemo(() => {
+    let ctx = "Estado actual del Mapa interactivo: ";
+    if (mapVisuals.isHistoricalMode) {
+      ctx += `[Modo Histórico ACTIVO] mostrando datos del ${mapVisuals.historicalDate.toISOString().split('T')[0]}. `;
+    } else {
+      ctx += `[Modo Tiempo Real] mostrando datos actuales. `;
+    }
+    
+    if (mapVisuals.isHeatmapActive) {
+      ctx += `Capa activa: Mapa de Calor (${mapVisuals.heatmapMetric}). `;
+    } else if (mapVisuals.isChoroplethActive) {
+      ctx += `Capa activa: Divisiones Políticas. `;
+    } else {
+      ctx += `Capa activa: Radar global de clima. `;
+    }
+    return ctx.trim();
+  }, [
+    mapVisuals.isHistoricalMode, 
+    mapVisuals.historicalDate, 
+    mapVisuals.isHeatmapActive, 
+    mapVisuals.heatmapMetric, 
+    mapVisuals.isChoroplethActive
+  ]);
+
   const recognitionRef = useRef(null);
   const synthRef = window.speechSynthesis;
 
@@ -107,7 +135,8 @@ export default function MeteoroAssistant({
       const payload = {
         ciudad: cityContext,
         prompt: prompt,
-        datosContexto: dataContext
+        datosContexto: dataContext,
+        mapContext: mapContextString
       };
       
       const response = await httpClient.post('/reportes/meteoro', payload);

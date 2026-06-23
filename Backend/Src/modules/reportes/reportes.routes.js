@@ -14,12 +14,12 @@ router.post('/ia', verificarToken, obtenerSugerenciaIA);
 
 router.post('/meteoro', verificarToken, async (req, res) => {
     try {
-        const { ciudad, prompt, datosContexto } = req.body;
+        const { ciudad, prompt, datosContexto, mapContext } = req.body;
         if (!ciudad || !prompt) {
             return error(res, 'Faltan parámetros ciudad y prompt', 400);
         }
         
-        const respuesta = await generarRespuestaMeteoro(ciudad, prompt, datosContexto || []);
+        const respuesta = await generarRespuestaMeteoro(ciudad, prompt, datosContexto || [], mapContext);
         success(res, respuesta);
     } catch (err) {
         error(res, err.message, 500);

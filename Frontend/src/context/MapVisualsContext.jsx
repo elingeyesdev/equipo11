@@ -13,6 +13,7 @@ export function MapVisualsProvider({ children }) {
   const [tempUnit, setTempUnit] = useState('C'); // 'C', 'F' o 'K'
   const [isHistoricalMode, setIsHistoricalMode] = useState(false);
   const [isDynamicHistoricalMode, setIsDynamicHistoricalMode] = useState(false);
+  const [historicalDate, setHistoricalDate] = useState(new Date('2024-10-01T00:00:00Z'));
 
   const value = useMemo(() => ({
     isHeatmapActive, setIsHeatmapActive,
@@ -25,7 +26,8 @@ export function MapVisualsProvider({ children }) {
     tempUnit, setTempUnit,
     isHistoricalMode, setIsHistoricalMode,
     isDynamicHistoricalMode, setIsDynamicHistoricalMode,
-  }), [isHeatmapActive, isChoroplethActive, heatmapMetric, showSensors, isParticlesActive, particleFilters, snowMapType, tempUnit, isHistoricalMode, isDynamicHistoricalMode]);
+    historicalDate, setHistoricalDate
+  }), [isHeatmapActive, isChoroplethActive, heatmapMetric, showSensors, isParticlesActive, particleFilters, snowMapType, tempUnit, isHistoricalMode, isDynamicHistoricalMode, historicalDate]);
 
   return (
     <MapVisualsContext.Provider value={value}>

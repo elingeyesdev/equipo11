@@ -6,6 +6,8 @@ import './Reportes.css';
 import { useZonaSim } from '../../context/ZonaSimContext';
 import MeteoroAssistant from '../../components/MeteoroAssistant/MeteoroAssistant';
 import httpClient from '../../config/httpClient';
+import WeatherWidget from '../../components/WeatherWidget/WeatherWidget';
+import AiWeatherAnalysis from '../../components/WeatherWidget/AiWeatherAnalysis';
 
 import { useUnidades } from '../../hooks/useUnidades';
 import { formatearValor } from '../../utils/unidades';
@@ -46,9 +48,13 @@ function TabDashboard() {
   };
 
   const timeLabels = useMemo(() => {
-    const firstCityName = Object.keys(dataMap)[0];
+    // Filtrar claves _full (son objetos, no arrays)
+    const citiesKeys = Object.keys(dataMap).filter(k => !k.endsWith('_full'));
+    const firstCityName = citiesKeys[0];
     if (!firstCityName) return [];
-    return dataMap[firstCityName].map(d => 
+    const arr = dataMap[firstCityName];
+    if (!Array.isArray(arr)) return [];
+    return arr.map(d => 
       new Date(d.forecast_time).toLocaleDateString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
     );
   }, [dataMap]);
@@ -56,6 +62,8 @@ function TabDashboard() {
   const tableData = useMemo(() => {
     const rows = [];
     Object.entries(dataMap).forEach(([city, forecastArray]) => {
+      // Ignorar claves _full (son objetos con {current, hourly, daily})
+      if (city.endsWith('_full') || !Array.isArray(forecastArray)) return;
       forecastArray.forEach(d => {
         rows.push({
           city: city,
@@ -112,10 +120,13 @@ function TabDashboard() {
   };
 
   const getLineChartOption = () => {
-    const series = Object.keys(dataMap).map(city => ({
-      name: city, type: 'line', smooth: true, symbolSize: 6,
-      data: dataMap[city].map(d => d.temperatura)
-    }));
+    // Filtrar claves _full que son objetos, no arrays
+    const series = Object.keys(dataMap)
+      .filter(city => !city.endsWith('_full') && Array.isArray(dataMap[city]))
+      .map(city => ({
+        name: city, type: 'line', smooth: true, symbolSize: 6,
+        data: dataMap[city].map(d => d.temperatura)
+      }));
     return {
       tooltip: { trigger: 'axis', backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
       legend: { textStyle: { color: 'var(--text-secondary)' }, type: 'scroll', top: 0 },
@@ -128,10 +139,13 @@ function TabDashboard() {
   };
 
   const getPieChartOption = () => {
-    const pieData = Object.keys(dataMap).map(city => {
-      const avg = dataMap[city].reduce((acc, val) => acc + val.temperatura, 0) / dataMap[city].length;
-      return { name: city, value: avg.toFixed(1) };
-    });
+    const pieData = Object.keys(dataMap)
+      .filter(city => !city.endsWith('_full') && Array.isArray(dataMap[city]) && dataMap[city].length > 0)
+      .map(city => {
+        const arr = dataMap[city];
+        const avg = arr.reduce((acc, val) => acc + (val.temperatura || 0), 0) / arr.length;
+        return { name: city, value: avg.toFixed(1) };
+      });
     return {
       tooltip: { trigger: 'item', formatter: '{b}: {c}°C ({d}%)', backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border-color)', textStyle: { color: 'var(--text-primary)' } },
       legend: { orient: 'vertical', left: 'left', textStyle: { color: 'var(--text-secondary)' }, type: 'scroll' },
@@ -148,10 +162,12 @@ function TabDashboard() {
   const getBarChartOption = () => {
     const windData = [];
     const rainData = [];
-    const cities = Object.keys(dataMap);
+    // Filtrar claves _full
+    const cities = Object.keys(dataMap).filter(city => !city.endsWith('_full') && Array.isArray(dataMap[city]));
     cities.forEach(city => {
-      const maxWind = Math.max(...dataMap[city].map(d => d.wind_speed));
-      const maxRain = Math.max(...dataMap[city].map(d => d.rain));
+      const arr = dataMap[city];
+      const maxWind = arr.length > 0 ? Math.max(...arr.map(d => d.wind_speed || 0)) : 0;
+      const maxRain = arr.length > 0 ? Math.max(...arr.map(d => d.rain || 0)) : 0;
       windData.push(maxWind.toFixed(1));
       rainData.push((maxRain * 10).toFixed(2));
     });
@@ -206,7 +222,7 @@ function TabDashboard() {
         </div>
       </div>
 
-      {Object.keys(dataMap).length > 0 && (
+      {Object.keys(dataMap).filter(k => !k.endsWith('_full')).length > 0 && (
         <div className="bi-charts-grid">
           <div className="bi-chart-card" style={{ gridColumn: 'span 2' }}>
             <div className="bi-chart-header"><span className="bi-chart-title">Evolución Térmica Comparativa (°C)</span></div>
@@ -269,6 +285,7 @@ function TabSimulador() {
   const selectedCity = CIUDADES_BOLIVIA[selectedCityIdx];
   const { dataMap, loading } = useMultiForecastData([selectedCity]);
   const forecastData = dataMap[selectedCity.nombre] || [];
+  const fullForecastData = dataMap[`${selectedCity.nombre}_full`];
 
   const timeLabels = forecastData.map(d => 
     new Date(d.forecast_time).toLocaleDateString([], { weekday: 'short', hour: '2-digit' })
@@ -381,6 +398,24 @@ function TabSimulador() {
 
   return (
     <div className="bi-dashboard-container">
+      <div style={{ marginBottom: '25px' }}>
+        {fullForecastData && (
+          <WeatherWidget 
+            forecastData={fullForecastData} 
+            cityName={selectedCity.nombre} 
+            isDarkTheme={true} 
+          />
+        )}
+      </div>
+
+      <div style={{ marginBottom: '25px' }}>
+        <AiWeatherAnalysis 
+          ciudad={selectedCity.nombre} 
+          lat={selectedCity.latitude} 
+          lon={selectedCity.longitude} 
+        />
+      </div>
+
       <div className="bi-header" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
         <div className="bi-header-titles">
           <h1>Simulador de Predicciones a 96h</h1>
