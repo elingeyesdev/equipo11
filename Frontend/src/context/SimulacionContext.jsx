@@ -82,6 +82,16 @@ export function SimulacionProvider({ children }) {
   const detener = useCallback(() => { socketRef.current?.emit('simulacion:detener') }, [])
   const inyectar = useCallback((cityId, data) => { socketRef.current?.emit('simulacion:inyectar', { cityId, data }) }, [])
   const dismissAlerta = useCallback((_uid) => { setAlertasPendientes(prev => prev.filter(a => a._uid !== _uid)) }, [])
+  const addAlertaPendiente = useCallback((alerta) => {
+    setAlertasPendientes(prev => {
+      const withUid = {
+        ...alerta,
+        _uid: alerta._uid || `${Date.now()}-${Math.random()}`
+      };
+      if (prev.some(a => a._uid === withUid._uid)) return prev;
+      return [...prev, withUid];
+    });
+  }, [])
   const suscribirAlertas = useCallback((email) => { socketRef.current?.emit('simulacion:alertas', { email }) }, [])
   const simularRango = useCallback(async (startTime, endTime, intervalMinutes) => {
     const res = await httpClient.post('/simulacion/range', { startTime, endTime, intervalMinutes })
@@ -90,12 +100,12 @@ export function SimulacionProvider({ children }) {
 
   const value = useMemo(() => ({
     isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas,
-    iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
+    iniciar, detener, inyectar, alertasPendientes, dismissAlerta, addAlertaPendiente, suscribirAlertas, simularRango,
     fronterasSeleccionadas, setFronterasSeleccionadas, isComparing, setIsComparing,
     zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, isSimMode, setIsSimMode,
     activeDrawingZone, setActiveDrawingZone,
   }), [isConnected, isRunning, cities, tickCount, lastUpdate, interval, emailAlertas,
-      iniciar, detener, inyectar, alertasPendientes, dismissAlerta, suscribirAlertas, simularRango,
+      iniciar, detener, inyectar, alertasPendientes, dismissAlerta, addAlertaPendiente, suscribirAlertas, simularRango,
       fronterasSeleccionadas, isComparing, zona1Cfg, zona2Cfg, isSimMode,
       activeDrawingZone])
 

@@ -56,7 +56,24 @@ const UNIDADES_METRICA = {
 const MAX_TOASTS = 5
 
 export default function AlertaNotificacion() {
-  const { alertasPendientes, dismissAlerta } = useSimulacion()
+  const { alertasPendientes, dismissAlerta, addAlertaPendiente } = useSimulacion()
+
+  useEffect(() => {
+    const handler = (e) => {
+      const { title, body, data } = e.detail;
+      const alerta = {
+        _uid: `push-${Date.now()}`,
+        ciudad_nombre: data?.ciudadNombre || data?.source || 'Alerta Push',
+        metrica_clave: data?.metricaClave || 'desconocido',
+        valor: data?.valor || '',
+        severidad: data?.severidad || 'critica',
+        label: body || title,
+      };
+      addAlertaPendiente(alerta);
+    };
+    window.addEventListener('push-received', handler);
+    return () => window.removeEventListener('push-received', handler);
+  }, [addAlertaPendiente]);
 
   // Separar emergencias del resto
   const emergencias = alertasPendientes.filter(a => a.severidad === 'emergencia')

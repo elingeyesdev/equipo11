@@ -3,6 +3,8 @@ const { sendEmail } = require('../../utils/mailer');
 const { sendWhatsAppMessage } = require('../../utils/whatsapp');
 const { sendTelegramMessage } = require('../../utils/telegram');
 const logger = require('../../utils/logger');
+const { getSubscriberTokensByUserId } = require('../notifications/notification.model');
+const { sendPushNotification } = require('../notifications/notification.service');
 
 // Cooldown para evitar spam de alertas (especialmente durante la simulación de ticks continuos)
 const ultimoUserNotifyTime = new Map(); // Llave: "userId:metrica", Valor: timestamp
@@ -136,6 +138,26 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
         } catch (tgErr) {
           logger.error(`[Notificaciones] Error enviando Telegram a ${u.telegram_destino}:`, tgErr.message);
         }
+      }
+
+      // Canal Push (FCM)
+      try {
+        const tokens = await getSubscriberTokensByUserId(u.id);
+        if (tokens.length > 0) {
+          await sendPushNotification(tokens, {
+            title: `Alerta ${severidad.toUpperCase()} en tu zona`,
+            body: `${metrica.toUpperCase()} = ${valor} (${label})`,
+            data: {
+              metricaClave: metrica,
+              valor: String(valor),
+              severidad,
+              source: source || 'coordenadas'
+            }
+          });
+          logger.info(`[Notificaciones] Push enviado a ${tokens.length} token(s) para usuario ${u.id}`);
+        }
+      } catch (pushErr) {
+        logger.error(`[Notificaciones] Error push a usuario ${u.id}:`, pushErr.message);
       }
     }
 

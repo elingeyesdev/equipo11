@@ -4,6 +4,7 @@ import Map, { Marker } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import httpClient from '../../config/httpClient';
 import { useTheme } from '../../context/ThemeContext';
+import PushSubscriptionManager from '../../components/MobileCards/PushSubscriptionManager';
 import './Notificaciones.css';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -524,6 +525,9 @@ const Notificaciones = () => {
             </div>
           </div>
         ))}
+        
+        {/* Gestor de suscripción push para escritorio */}
+        <PushSubscriptionManager />
       </div>
 
       <div className="notif-info-box">
