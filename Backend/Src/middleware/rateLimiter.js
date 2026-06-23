@@ -10,10 +10,13 @@ const rateLimitHandler = (req, res, next, options) => {
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000, // relaxed limit to allow 5s polling dashboard
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.originalUrl.startsWith('/api/radar') || req.originalUrl.startsWith('/api/calidad-aire'),
+  skip: (req) => 
+    req.originalUrl.startsWith('/api/radar') || 
+    req.originalUrl.startsWith('/api/calidad-aire') || 
+    req.originalUrl.startsWith('/api/sensores'),
   message: { ok: false, error: 'Too many requests, try again later' },
   handler: rateLimitHandler,
 });

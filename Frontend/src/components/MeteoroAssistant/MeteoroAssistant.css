@@ -20,11 +20,12 @@
 .meteoro-assistant.global-mode {
   position: fixed;
   bottom: 24px;
-  left: calc(var(--sidebar-width, 232px) + 24px);
-  z-index: 50;
+  right: 24px;
+  left: auto;
+  z-index: 940;
   display: flex;
-  max-width: 340px;
-  width: calc(100vw - 50px);
+  max-width: 350px;
+  width: calc(100vw - 48px);
   background: var(--bg-panel);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -57,9 +58,9 @@
 
 .meteoro-assistant-collapsed.global-mode {
   position: fixed;
-  bottom: 170px;
-  right: 16px;
-  z-index: 1000;
+  bottom: 24px;
+  right: 24px;
+  z-index: 950;
 }
 
 /* ─── Tooltip badge ─── */

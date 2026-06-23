@@ -11,7 +11,7 @@ const SOCKET_URL = API_URL
 
 export function SimulacionProvider({ children }) {
   const { addToast } = useToast()
-  const socketRef = useRef(null)
+  const [socket, setSocket] = useState(null)
   const reconnectAttempt = useRef(0)
   const [isConnected, setIsConnected] = useState(false)
   const [isRunning, setIsRunning]     = useState(false)
@@ -31,7 +31,7 @@ export function SimulacionProvider({ children }) {
   const [isSimMode, setIsSimMode] = useState(false)
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
+    const socketInstance = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 10000,
@@ -40,49 +40,49 @@ export function SimulacionProvider({ children }) {
         token: localStorage.getItem('token')
       }
     })
-    socketRef.current = socket
+    setSocket(socketInstance)
 
-    socket.on('connect', () => {
+    socketInstance.on('connect', () => {
       setIsConnected(true)
       reconnectAttempt.current = 0
     })
-    socket.on('disconnect', () => setIsConnected(false))
+    socketInstance.on('disconnect', () => setIsConnected(false))
 
-    socket.on('reconnect_attempt', (attempt) => {
+    socketInstance.on('reconnect_attempt', (attempt) => {
       reconnectAttempt.current = attempt
     })
 
-    socket.on('simulacion:estado', (payload) => {
+    socketInstance.on('simulacion:estado', (payload) => {
       setIsRunning(payload.running)
       if (payload.cities) setCities(payload.cities)
       if (payload.tickCount) setTickCount(payload.tickCount)
     })
-    socket.on('simulacion:alertas:ok', (payload) => setEmailAlertas(payload.email))
-    socket.on('simulacion:datos', (payload) => {
+    socketInstance.on('simulacion:alertas:ok', (payload) => setEmailAlertas(payload.email))
+    socketInstance.on('simulacion:datos', (payload) => {
       setCities(payload.cities)
       setTickCount(payload.tickCount)
       setLastUpdate(payload.timestamp)
     })
-    socket.on('alertas:nueva', (nuevas) => {
+    socketInstance.on('alertas:nueva', (nuevas) => {
       const withUid = nuevas.map(a => ({ ...a, _uid: `${Date.now()}-${Math.random()}` }))
       setAlertasPendientes(prev => [...prev, ...withUid])
     })
-    socket.on('zona:error', (payload) => {
+    socketInstance.on('zona:error', (payload) => {
       addToast(`Error en simulación: ${payload.message}`, 'error')
     })
 
-    return () => { socket.disconnect() }
+    return () => { socketInstance.disconnect() }
   }, [])
 
   const iniciar = useCallback((ms = interval) => {
     setIntervalVal(ms)
-    socketRef.current?.emit('simulacion:iniciar', { interval: ms })
-  }, [interval])
+    socket?.emit('simulacion:iniciar', { interval: ms })
+  }, [interval, socket])
 
-  const detener = useCallback(() => { socketRef.current?.emit('simulacion:detener') }, [])
-  const inyectar = useCallback((cityId, data) => { socketRef.current?.emit('simulacion:inyectar', { cityId, data }) }, [])
+  const detener = useCallback(() => { socket?.emit('simulacion:detener') }, [socket])
+  const inyectar = useCallback((cityId, data) => { socket?.emit('simulacion:inyectar', { cityId, data }) }, [socket])
   const dismissAlerta = useCallback((_uid) => { setAlertasPendientes(prev => prev.filter(a => a._uid !== _uid)) }, [])
-  const suscribirAlertas = useCallback((email) => { socketRef.current?.emit('simulacion:alertas', { email }) }, [])
+  const suscribirAlertas = useCallback((email) => { socket?.emit('simulacion:alertas', { email }) }, [socket])
   const simularRango = useCallback(async (startTime, endTime, intervalMinutes) => {
     const res = await httpClient.post('/simulacion/range', { startTime, endTime, intervalMinutes })
     return res.data
@@ -101,7 +101,7 @@ export function SimulacionProvider({ children }) {
 
   return (
     <SimulacionContext.Provider value={value}>
-      <SocketContext.Provider value={socketRef.current}>
+      <SocketContext.Provider value={socket}>
         {children}
       </SocketContext.Provider>
     </SimulacionContext.Provider>

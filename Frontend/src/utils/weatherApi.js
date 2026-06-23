@@ -197,7 +197,7 @@ export const getLatestRadarTimestamp = async () => {
  */
 export const getSensoresIoT = async () => {
   try {
-    const res = await httpClient.get('/sensores');
+    const res = await httpClient.get(`/sensores?t=${Date.now()}`);
     const body = res.data;
     if (body?.data?.data && Array.isArray(body.data.data)) {
       return body.data.data;

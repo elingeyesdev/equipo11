@@ -17,7 +17,7 @@ export default function useSensors({ scannedGrid, simulatedCities, isParticlesAc
       if (isInitial) setIotLoading(false);
     };
     loadSensors(true);
-    const interval = setInterval(() => loadSensors(false), 10 * 1000);
+    const interval = setInterval(() => loadSensors(false), 5 * 1000);
     return () => clearInterval(interval);
   }, [trigger]);
 

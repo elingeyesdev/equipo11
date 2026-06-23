@@ -6,6 +6,7 @@ export default function ControlPanel({
   setIsInjectModalOpen,
   setIsIoTModalOpen,
   isSimMode, handleToggleSimMode,
+  isHistoricalMode, setIsHistoricalMode,
   isHeatmapActive, setIsHeatmapActive, heatmapMetric, setHeatmapMetric,
   showSensors, setShowSensors, setSelectedCity,
   iotLoading,
@@ -29,7 +30,6 @@ export default function ControlPanel({
 
       <button
         className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
-        style={{ marginLeft: '10px' }}
         onClick={() => setIsInjectModalOpen(true)}
         title="Inyectar datos manualmente"
       >
@@ -38,7 +38,6 @@ export default function ControlPanel({
 
       <button
         className="flex items-center justify-center p-3 rounded-lg shadow-lg bg-[var(--bg-panel)] border border-[var(--border-color)] text-[var(--text-primary)] hover:text-[var(--accent)] cursor-pointer transition-colors"
-        style={{ marginLeft: '10px' }}
         onClick={() => setIsIoTModalOpen(true)}
         title="Configurar Sensores IoT (MQTT)"
       >
@@ -82,6 +81,23 @@ export default function ControlPanel({
                 <label className="ios-switch">
                   <input type="checkbox" checked={isSimMode} onChange={(e) => handleToggleSimMode(e.target.checked)} />
                   <span className={`slider round ${isSimMode ? 'bg-[var(--accent)]' : 'bg-[var(--border-color)]'}`}></span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
+                <div className="flex items-center gap-3">
+                  <span className="control-icon">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </span>
+                  <span className="control-text text-[var(--text-primary)]">Modo Histórico</span>
+                  {isHistoricalMode && <span className="control-status on">ON</span>}
+                </div>
+                <label className="ios-switch">
+                  <input type="checkbox" checked={isHistoricalMode} onChange={(e) => setIsHistoricalMode(e.target.checked)} />
+                  <span className={`slider round ${isHistoricalMode ? 'bg-[var(--accent)]' : 'bg-[var(--border-color)]'}`}></span>
                 </label>
               </div>
 

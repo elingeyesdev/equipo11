@@ -7,7 +7,7 @@ import mapboxgl from 'mapbox-gl';
 import { useSimulacion } from '../../context/SimulacionContext';
 import { useZonaSim } from '../../context/ZonaSimContext';
 import { useMapVisuals } from '../../context/MapVisualsContext';
-import { useUmbrales } from '../../hooks/useUmbrales';
+import { useUmbrales, colorPorValor } from '../../hooks/useUmbrales';
 import FronterasPanel from '../../components/FronterasPanel/FronterasPanel';
 import ModalSimulacion from '../../components/ModalSimulacion/ModalSimulacion';
 import ModalInyeccion from '../../components/ModalInyeccion/ModalInyeccion';
@@ -28,11 +28,26 @@ import { useTheme } from '../../context/ThemeContext';
 import './MapaMonitoreo.css';
 import HistoricalWindParticles from '../../components/MapaMonitoreo/HistoricalWindParticles';
 import useFronteras from '../../hooks/useFronteras';
+import { getWeatherAtLocation, getAqiAtLocation, getPlaceName } from '../../utils/weatherApi';
 
 // =======================================================
 // BUSCADOR ESPACIAL INTERNO (Reemplazo de Geocoder)
 // =======================================================
-function BuscadorEspacial({ mapRef }) {
+function BuscadorEspacial({ 
+  mapRef, 
+  isHistoricalMode, 
+  date, 
+  activeLayer, 
+  syncTime, 
+  setDate1, 
+  setDate2, 
+  setTimelineAnchorDate1, 
+  setTimelineAnchorDate2, 
+  isMap2,
+  MIN_DATE,
+  MAX_DATE,
+  snapToValidHour
+}) {
   const { paises, fetchProvincias, fetchGeoBoundary } = useFronteras();
   const [pais, setPais] = useState('');
   const [depto, setDepto] = useState('');
@@ -98,6 +113,45 @@ function BuscadorEspacial({ mapRef }) {
       <button onClick={handleFly} disabled={!pais || loading} className="map-overlay-btn-primary">
         {loading ? '⏳ Buscando...' : '📍 Ir a destino'}
       </button>
+
+      {isHistoricalMode && (
+        <>
+          <div style={{ margin: '8px 0', borderTop: '1px dashed var(--line-soft)' }} />
+          <div className="buscador-header">
+            <span className="buscador-header-icon">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </span>
+            <span className="buscador-header-text">Fecha Histórica</span>
+          </div>
+          <input 
+            type="date"
+            className="map-overlay-select"
+            style={{ cursor: 'pointer', fontWeight: 600 }}
+            min={MIN_DATE} max={MAX_DATE}
+            value={date.toISOString().split('T')[0]}
+            onChange={e => {
+              const newDate = new Date(e.target.value + 'T00:00:00Z');
+              newDate.setUTCHours(date.getUTCHours());
+              const snapped = snapToValidHour(newDate, activeLayer);
+              
+              if (syncTime) {
+                setDate1(snapped);
+                setDate2(snapped);
+                setTimelineAnchorDate1(snapped);
+                setTimelineAnchorDate2(snapped);
+              } else {
+                if (isMap2) {
+                  setDate2(snapped);
+                  setTimelineAnchorDate2(snapped);
+                } else {
+                  setDate1(snapped);
+                  setTimelineAnchorDate1(snapped);
+                }
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -564,6 +618,32 @@ const createHistoricalLayer = (id, activeLayerRefInner) => ({
   }
 });
 
+const updateManualResult = (points, isZ2, customName) => {
+  if (!points || points.length < 3) return null;
+  const minLng = Math.min(...points.map(p => p[0]));
+  const maxLng = Math.max(...points.map(p => p[0]));
+  const minLat = Math.min(...points.map(p => p[1]));
+  const maxLat = Math.max(...points.map(p => p[1]));
+  const bbox = [[minLng, minLat], [maxLng, maxLat]];
+  const closedPoints = [...points, points[0]];
+  const name = customName || (isZ2 ? "Zona Manual 2" : "Zona Manual 1");
+  return {
+    geojson: {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [closedPoints]
+        },
+        properties: { name: name }
+      }]
+    },
+    bbox: bbox,
+    nombre: name
+  };
+};
+
 function MapaMonitoreo() {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -571,7 +651,20 @@ function MapaMonitoreo() {
 
 
   // --- MIGRATION CONTEXTS ---
-  const { isSimMode, setIsSimMode, fronterasSeleccionadas, setFronterasSeleccionadas } = useSimulacion();
+  const { 
+    isSimMode, 
+    setIsSimMode, 
+    fronterasSeleccionadas, 
+    setFronterasSeleccionadas,
+    isComparing,
+    setIsComparing,
+    activeDrawingZone,
+    setActiveDrawingZone,
+    zona1Cfg,
+    setZona1Cfg,
+    zona2Cfg,
+    setZona2Cfg
+  } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
   const { 
     isParticlesActive, setIsParticlesActive, 
@@ -584,7 +677,22 @@ function MapaMonitoreo() {
     isDynamicHistoricalMode: _isDynamicHistoricalMode, setIsDynamicHistoricalMode
   } = useMapVisuals();
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
-  const { unidades } = useUnidades();
+  const { unidades, cambiarUnidad } = useUnidades();
+
+  const getConvertedValueAndUnit = useCallback((metricKey, rawValue) => {
+    const unitKey = unidades[metricKey];
+    const cfg = METRICAS_UNIDADES[metricKey];
+    if (!cfg) return { value: rawValue != null ? rawValue.toString() : '—', unit: '' };
+    const unit = cfg.unidades.find(u => u.key === unitKey) ?? cfg.unidades[0];
+    if (rawValue == null || typeof rawValue !== 'number' || isNaN(rawValue)) {
+      return { value: '—', unit: unit.sufijo.trim() };
+    }
+    const converted = unit.convertir(rawValue);
+    return {
+      value: converted.toFixed(unit.precision),
+      unit: unit.sufijo.trim()
+    };
+  }, [unidades]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isInjectModalOpen, setIsInjectModalOpen] = useState(false);
@@ -592,6 +700,9 @@ function MapaMonitoreo() {
   const [sensorTrigger, setSensorTrigger] = useState(0);
   const [fronterasParaSimular, setFronterasParaSimular] = useState([]);
   const [selectedCity, setSelectedCity] = useState(null);
+  const [popupInfo, setPopupInfo] = useState(null);
+  const [isComparingCities, setIsComparingCities] = useState(false);
+  const [compareCity, setCompareCity] = useState(null);
 
   const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters, trigger: sensorTrigger });
   
@@ -611,10 +722,91 @@ function MapaMonitoreo() {
     if (!selectedCity) return null;
     return citiesData.find(c => c.id === selectedCity.id) || selectedCity;
   }, [selectedCity, citiesData]);
+
+  const compareCityDetails = useMemo(() => {
+    if (!compareCity) return null;
+    return citiesData.find(c => c.id === compareCity.id) || compareCity;
+  }, [compareCity, citiesData]);
   const handleToggleSimMode = useCallback((active) => {
     setIsSimMode(active);
-    if (active) setSelectedCity(null);
-  }, [setIsSimMode]);
+    if (active) {
+      setSelectedCity(null);
+      setIsHistoricalMode(false);
+    }
+  }, [setIsSimMode, setIsHistoricalMode]);
+
+  const handleToggleHistoricalMode = useCallback((active) => {
+    setIsHistoricalMode(active);
+    if (active) {
+      setIsSimMode(false);
+    } else {
+      setPopupInfo(null);
+    }
+  }, [setIsSimMode, setIsHistoricalMode, setPopupInfo]);
+
+  const getDynamicColor = useCallback((metricKey, value) => {
+    if (value === null || value === undefined) return '#aaa';
+    if (metricKey === heatmapMetric) {
+      return colorPorValor(umbrales, value);
+    }
+    return '#aaa';
+  }, [heatmapMetric, umbrales]);
+
+  const selectCityWithWeather = useCallback((city, isCompare) => {
+    const targetSetter = isCompare ? setCompareCity : setSelectedCity;
+
+    // Si es un sensor o ya tiene datos en tiempo real (por ejemplo, simulación), lo seteamos directamente
+    if (city.es_custom || (city.data && Object.keys(city.data).length > 0)) {
+      targetSetter(city);
+      return;
+    }
+
+    // Si es una ciudad estática (sin datos), consultamos el clima en tiempo real
+    const loadingCity = {
+      ...city,
+      isLoading: true
+    };
+    targetSetter(loadingCity);
+
+    Promise.all([
+      getWeatherAtLocation(city.latitude, city.longitude),
+      getAqiAtLocation(city.latitude, city.longitude)
+    ]).then(([weather, aqi]) => {
+      const temp = weather?.current?.temperature_2m;
+      const hum = weather?.current?.relative_humidity_2m;
+      const wind = weather?.current?.wind_speed_10m;
+      const aqiVal = aqi?.current?.european_aqi;
+
+      targetSetter({
+        ...city,
+        subtitle: 'Consulta en tiempo real',
+        isLoading: false,
+        data: {
+          temperatura: temp,
+          humedad: hum,
+          aqi: aqiVal,
+          ica: null,
+          ruido: null,
+          windSpeed: wind
+        }
+      });
+    }).catch(err => {
+      console.error("Error al obtener clima para ciudad estática:", err);
+      targetSetter({
+        ...city,
+        subtitle: 'Error en consulta',
+        isLoading: false,
+        data: {
+          temperatura: null,
+          humedad: null,
+          aqi: null,
+          ica: null,
+          ruido: null,
+          windSpeed: null
+        }
+      });
+    });
+  }, [setSelectedCity, setCompareCity]);
 
   const handleStartSimulation = useCallback((fronteras) => {
     setFronterasParaSimular(fronteras);
@@ -627,9 +819,6 @@ function MapaMonitoreo() {
     if (z2) arr.push(z2);
     setFronterasSeleccionadas(arr);
   }, [setFronterasSeleccionadas]);
-  // -------------------------
-
-  const [isComparing, setIsComparing] = useState(false);
   const globalIsDraggingRef = useRef(false);
   const [date1, setDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [date2, setDate2] = useState(new Date('2024-01-01T00:00:00Z'));
@@ -641,7 +830,6 @@ function MapaMonitoreo() {
   const [activeLayer, setActiveLayer] = useState('lluvia');
   const activeLayerRef = useRef(activeLayer);
   const [aqiGeoJson, setAqiGeoJson] = useState(null);
-  const [popupInfo, setPopupInfo] = useState(null);
   const [firstSymbolId, setFirstSymbolId] = useState(null);
   const [windPixels, setWindPixels] = useState(null);
   const [windPixels2, setWindPixels2] = useState(null);
@@ -1250,39 +1438,133 @@ function MapaMonitoreo() {
     };
   }, []);
 
-  // ─── Pop-up: lectura de datos ───
+  // ─── Pop-up: lectura de datos y modo manual de dibujo ───
   const handleMapClick = useCallback((evt, isMap2 = false) => {
     const { lng, lat } = evt.lngLat;
 
+    // 1. Si estamos en modo dibujo de zona manual
+    if (activeDrawingZone) {
+      const isZ2 = activeDrawingZone === 'z2';
+      const currentCfg = isZ2 ? zona2Cfg : zona1Cfg;
+      const setCfg = isZ2 ? setZona2Cfg : setZona1Cfg;
+      
+      const newPoints = [...currentCfg.manualPoints, [lng, lat]];
+      const newResult = updateManualResult(newPoints, isZ2, currentCfg.manualName);
+      
+      const nextZ = {
+        ...currentCfg,
+        manualPoints: newPoints,
+        result: newResult
+      };
+      
+      setCfg(nextZ);
+      
+      // Actualizar fronterasSeleccionadas para que se visualicen inmediatamente
+      const otherCfg = isZ2 ? zona1Cfg : zona2Cfg;
+      const z1 = isZ2 ? otherCfg : nextZ;
+      const z2 = isZ2 ? nextZ : otherCfg;
+      const arr = [];
+      if (z1.result) arr.push(z1.result);
+      if (isComparing && z2.result) arr.push(z2.result);
+      setFronterasSeleccionadas(arr);
+      
+      return;
+    }
+
+    // 2. Si es capa de aqi en tiempo real, permitimos ver su popup
     if (activeLayer === 'aqi') {
       const map = evt.target;
       const features = map.queryRenderedFeatures(evt.point, { layers: ['aqi-circle-layer'] });
       if (features && features.length > 0) {
         const aqiVal = features[0].properties.aqi_value;
-        setPopupInfo({ lng, lat, value: Math.round(aqiVal).toString(), unit: 'AQI', layer: activeLayer, isMap2 });
+        const { value, unit } = getConvertedValueAndUnit('aqi', aqiVal);
+        setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
       }
+      return;
+    }
+
+    // 3. Si no estamos en modo histórico, no mostramos popups de lectura de píxeles.
+    // En su lugar, consultamos el clima en tiempo real para las coordenadas clickeadas.
+    if (!_isHistoricalMode) {
+      if (lat > 85.051 || lat < -85.051) return;
+
+      const targetSetter = isComparingCities ? setCompareCity : setSelectedCity;
+
+      const loadingCity = {
+        id: `clicked_${lat.toFixed(4)}_${lng.toFixed(4)}`,
+        name: 'Consultando coordenadas...',
+        latitude: lat,
+        longitude: lng,
+        isLoading: true
+      };
+      targetSetter(loadingCity);
+
+      Promise.all([
+        getWeatherAtLocation(lat, lng),
+        getAqiAtLocation(lat, lng),
+        getPlaceName(lat, lng, import.meta.env.VITE_MAPBOX_TOKEN)
+      ]).then(([weather, aqi, placeName]) => {
+        const temp = weather?.current?.temperature_2m;
+        const hum = weather?.current?.relative_humidity_2m;
+        const wind = weather?.current?.wind_speed_10m;
+        const aqiVal = aqi?.current?.european_aqi;
+
+        targetSetter({
+          id: `clicked_${lat.toFixed(4)}_${lng.toFixed(4)}`,
+          name: placeName || `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          latitude: lat,
+          longitude: lng,
+          subtitle: 'Consulta en tiempo real',
+          isLoading: false,
+          data: {
+            temperatura: temp,
+            humedad: hum,
+            aqi: aqiVal,
+            ica: null,
+            ruido: null,
+            windSpeed: wind
+          }
+        });
+      }).catch(err => {
+        console.error("Error al obtener clima en coordenadas:", err);
+        targetSetter({
+          id: `clicked_${lat.toFixed(4)}_${lng.toFixed(4)}`,
+          name: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          latitude: lat,
+          longitude: lng,
+          subtitle: 'Error en consulta',
+          isLoading: false,
+          data: {
+            temperatura: null,
+            humedad: null,
+            aqi: null,
+            ica: null,
+            ruido: null,
+            windSpeed: null
+          }
+        });
+      });
+
       return;
     }
 
     if (lat > 85.051 || lat < -85.051) return;
 
-    // 1. Determinar de qué canvas leer basado en en qué mapa se hizo clic
+    // Determinar de qué canvas leer basado en en qué mapa se hizo clic
     const currentCanvasCtx = isMap2 ? canvasCtx2Ref.current : canvasCtx1Ref.current;
     const currentCanvasSize = isMap2 ? canvasSize2Ref.current : canvasSize1Ref.current;
 
     if (!currentCanvasCtx || !currentCanvasSize.width) return;
 
     const { width, height } = currentCanvasSize;
-    // Normalización idéntica a _geoToTexel de windMath.js
     const normLng = ((lng % 360) + 540) % 360 - 180;
     const normLat = Math.max(-90, Math.min(90, lat));
-    // La imagen cruda viene con lat -90 en fila 0 (sur arriba)
 
     const shiftLayers = ['evaporacion'];
     const shiftAmount = shiftLayers.includes(activeLayer) ? 0.5 : 0.0;
 
     let u = ((normLng + 180) / 360) + shiftAmount;
-    u = u - Math.floor(u); // Equivalente JS a fract()
+    u = u - Math.floor(u);
     const pxX = Math.floor(u * width);
     const pxY = Math.floor(((normLat + 90) / 180) * height);
 
@@ -1294,49 +1576,83 @@ function MapaMonitoreo() {
     let displayValue = '', displayUnit = '';
     if (activeLayer === 'visibilidad') {
       displayValue = ((rawValue / 255.0) * 24.14).toFixed(1); displayUnit = 'km';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'humedad') {
-      displayValue = ((rawValue / 255.0) * 100.0).toFixed(1); displayUnit = '%';
+      const humRaw = (rawValue / 255.0) * 100.0;
+      const { value, unit } = getConvertedValueAndUnit('humedad', humRaw);
+      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'rayos') {
       displayValue = ((rawValue / 255.0) * 100.0).toFixed(1); displayUnit = '% max';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'uv') {
       displayValue = ((rawValue / 255.0) * 16.0).toFixed(1); displayUnit = 'UVI';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'isobaras') {
       displayValue = ((rawValue / 255.0) * 150.0 + 900.0).toFixed(0); displayUnit = 'hPa';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'temperatura') {
-      displayValue = ((rawValue / 255.0) * 120.0 - 60.0).toFixed(1); displayUnit = '°C';
+      const tempRaw = (rawValue / 255.0) * 120.0 - 60.0;
+      const { value, unit } = getConvertedValueAndUnit('temperatura', tempRaw);
+      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'lluvia') {
-      displayValue = ((rawValue / 255.0) * 20.0).toFixed(1); displayUnit = 'mm/h';
+      const rainRaw = (rawValue / 255.0) * 20.0;
+      const { value, unit } = getConvertedValueAndUnit('rain', rainRaw);
+      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'nieve') {
       displayValue = ((rawValue / 255.0) * 150.0).toFixed(1); displayUnit = 'cm';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'evaporacion') {
       displayValue = ((rawValue / 255.0) * 500.0).toFixed(1); displayUnit = 'W/m²';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     } else if (activeLayer === 'viento') {
       const u_norm = pixelData[0] / 255.0;
       const v_norm = pixelData[1] / 255.0;
       const u_ms = (u_norm * 200.0) - 100.0;
       const v_ms = (v_norm * 200.0) - 100.0;
       const speed_ms = Math.sqrt(u_ms * u_ms + v_ms * v_ms);
-      displayValue = (speed_ms * 3.6).toFixed(1); displayUnit = 'km/h';
+      const windRaw = speed_ms * 3.6;
+      const { value, unit } = getConvertedValueAndUnit('windSpeed', windRaw);
+      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
     } else {
       displayValue = rawValue.toString(); displayUnit = 'bits';
+      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
     }
-
-    setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-  }, [activeLayer]);
+  }, [
+    activeDrawingZone, zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, 
+    isComparing, setFronterasSeleccionadas, activeLayer, getConvertedValueAndUnit, _isHistoricalMode,
+    isComparingCities, setCompareCity, setSelectedCity
+  ]);
 
   // ─── LEYENDA ───
   const renderLegend = () => {
+    const getLegendLabels = (metricKey, baselineValues, suffixOverride = '') => {
+      const unitKey = unidades[metricKey];
+      const cfg = METRICAS_UNIDADES[metricKey];
+      if (!cfg) return baselineValues.map((v, idx) => `${v}${idx === baselineValues.length - 1 ? suffixOverride : ''}`);
+      const unit = cfg.unidades.find(u => u.key === unitKey) ?? cfg.unidades[0];
+      return baselineValues.map((v, idx) => {
+        const isLast = idx === baselineValues.length - 1;
+        const cleanV = v.replace('+', '').replace(' km/h', '').replace(' °C', '');
+        const numVal = parseFloat(cleanV);
+        if (isNaN(numVal)) return v;
+        const converted = unit.convertir(numVal);
+        const formatted = converted.toFixed(0);
+        const plusSign = v.includes('+') ? '+' : '';
+        return `${formatted}${plusSign}${isLast ? unit.sufijo : ''}`;
+      });
+    };
+
     const legends = {
       rayos: { gradient: 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 20%, rgba(255,255,0,0.8) 30%, rgba(255,128,0,0.9) 60%, rgba(255,0,255,1) 100%)', labels: ['0', '', 'Mod', 'Alta', 'Ext'] },
       visibilidad: { gradient: 'linear-gradient(to right, rgba(150,45,0,0.9) 0%, rgba(230,90,0,0.8) 4%, rgba(255,150,50,0.7) 12%, rgba(255,220,180,0.5) 41%, rgba(0,0,0,0) 100%)', labels: ['0', '1', '3', '10', '24+ km'] },
-      humedad: { gradient: 'linear-gradient(to right, rgba(133,68,0,0.8) 0%, rgba(196,146,63,0.8) 20%, rgba(255,255,255,0.8) 40%, rgba(65,157,148,0.8) 60%, rgba(13,100,93,0.8) 80%, rgba(3,59,54,0.9) 100%)', labels: ['0', '20', '40', '60', '80', '100%'] },
+      humedad: { gradient: 'linear-gradient(to right, rgba(133,68,0,0.8) 0%, rgba(196,146,63,0.8) 20%, rgba(255,255,255,0.8) 40%, rgba(65,157,148,0.8) 60%, rgba(13,100,93,0.8) 80%, rgba(3,59,54,0.9) 100%)', labels: getLegendLabels('humedad', ['0', '20', '40', '60', '80', '100']) },
       uv: { gradient: 'linear-gradient(to right, rgba(149,231,68,0) 0%, rgba(149,231,68,0.8) 6%, rgba(208,209,2,0.8) 20%, rgba(243,107,0,0.8) 40%, rgba(220,0,0,0.8) 53%, rgba(245,0,140,0.8) 73%, rgba(0,214,255,0.9) 100%)', labels: ['0', '1', '3', '6', '8', '11', '15+'] },
-      aqi: { gradient: 'linear-gradient(to right, #7dd3ff 0%, #00e400 10%, #ffff00 20%, #ff7e00 30%, #ff0000 40%, #8f3f97 60%, #7e0023 100%)', labels: ['0', '50', '100', '150', '200', '300+'] },
+      aqi: { gradient: 'linear-gradient(to right, #7dd3ff 0%, #00e400 10%, #ffff00 20%, #ff7e00 30%, #ff0000 40%, #8f3f97 60%, #7e0023 100%)', labels: getLegendLabels('aqi', ['0', '50', '100', '150', '200', '300+']) },
       isobaras: { gradient: 'repeating-linear-gradient(to right, rgba(255,255,255,0.8) 0px, rgba(255,255,255,0.8) 2px, transparent 2px, transparent 20px)', labels: ['900', '950', '1000', '1050 hPa'] },
-      temperatura: { gradient: 'linear-gradient(to right, #e6e6fa 0%, #9999ff 25%, #4a0080 41%, #00ff00 50%, #ffff00 62%, #ff8800 71%, #ff0000 79%, #800000 100%)', labels: ['-60', '-30', '0', '25', '60 °C'] },
-      lluvia: { gradient: 'linear-gradient(to right, rgba(0,255,255,0) 0%, rgba(0,255,255,1) 5%, rgba(0,100,255,1) 10%, rgba(0,0,255,1) 25%, rgba(100,0,200,1) 50%, rgba(180,0,180,1) 75%, rgba(255,0,255,1) 100%)', labels: ['0', '2', '5', '10', '20+ mm/h'] },
+      temperatura: { gradient: 'linear-gradient(to right, #e6e6fa 0%, #9999ff 25%, #4a0080 41%, #00ff00 50%, #ffff00 62%, #ff8800 71%, #ff0000 79%, #800000 100%)', labels: getLegendLabels('temperatura', ['-60', '-30', '0', '25', '60']) },
+      lluvia: { gradient: 'linear-gradient(to right, rgba(0,255,255,0) 0%, rgba(0,255,255,1) 5%, rgba(0,100,255,1) 10%, rgba(0,0,255,1) 25%, rgba(100,0,200,1) 50%, rgba(180,0,180,1) 75%, rgba(255,0,255,1) 100%)', labels: getLegendLabels('rain', ['0', '2', '5', '10', '20']) },
       nieve: { gradient: 'linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 5%, rgba(174,239,255,1) 10%, rgba(114,227,255,1) 20%, rgba(63,212,245,1) 33%, rgba(28,184,231,1) 50%, rgba(19,108,181,1) 80%, rgba(64,12,112,1) 100%)', labels: ['0', '15', '30', '75', '150+ cm'] },
-      viento: { gradient: 'linear-gradient(to right, rgba(51,51,255,0) 0%, rgba(51,51,255,1) 5%, rgba(46,139,87,1) 15%, rgba(173,255,47,1) 30%, rgba(255,255,0,1) 40%, rgba(255,136,0,1) 50%, rgba(255,69,0,1) 60%, rgba(139,0,0,1) 75%, rgba(255,0,255,1) 90%, rgba(255,182,193,1) 100%)', labels: ['0', '20', '50', '80', '100', '140 km/h'] },
+      viento: { gradient: 'linear-gradient(to right, rgba(51,51,255,0) 0%, rgba(51,51,255,1) 5%, rgba(46,139,87,1) 15%, rgba(173,255,47,1) 30%, rgba(255,255,0,1) 40%, rgba(255,136,0,1) 50%, rgba(255,69,0,1) 60%, rgba(139,0,0,1) 75%, rgba(255,0,255,1) 90%, rgba(255,182,193,1) 100%)', labels: getLegendLabels('windSpeed', ['0', '20', '50', '80', '100', '140']) },
       evaporacion: { gradient: 'linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(200,220,255,0.5) 10%, rgba(160,200,240,0.6) 25%, rgba(130,170,220,0.75) 40%, rgba(180,190,200,0.8) 55%, rgba(210,210,215,0.85) 70%, rgba(235,235,240,0.9) 85%, rgba(255,255,255,0.95) 100%)', labels: ['0', '50', '125', '200', '275', '350', '425', '500 W/m²'] },
     };
     const leg = legends[activeLayer];
@@ -1386,46 +1702,31 @@ function MapaMonitoreo() {
   const renderFloatingControls = (isMap2) => (
     <div style={{ 
       position: 'absolute', 
-      top: '16px', 
+      top: 'calc(var(--navbar-height, 56px) + 12px)', 
       left: isMap2 ? '25%' : 'calc(50% + (var(--sidebar-width, 232px) / 2))', 
       transform: 'translateX(-50%)',
       zIndex: 50,
       display: 'flex',
       gap: '10px',
       alignItems: 'flex-start',
-      pointerEvents: 'none'
+      pointerEvents: 'none',
+      transition: 'left 0.3s ease'
     }}>
       <div style={{ pointerEvents: 'auto' }}>
-        <BuscadorEspacial mapRef={isMap2 ? map2InstanceRef : map1InstanceRef} />
-      </div>
-
-      <div className="map-date-input-wrapper" style={{ pointerEvents: 'auto', marginTop: '16px' }}>
-        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <input 
-          type="date"
-          className="map-date-input"
-          min={MIN_DATE} max={MAX_DATE}
-          value={(isMap2 ? date2 : date1).toISOString().split('T')[0]}
-          onChange={e => {
-            const newDate = new Date(e.target.value + 'T00:00:00Z');
-            newDate.setUTCHours((isMap2 ? date2 : date1).getUTCHours());
-            const snapped = snapToValidHour(newDate, activeLayer);
-            
-            if (syncTime) {
-              setDate1(snapped);
-              setDate2(snapped);
-              setTimelineAnchorDate1(snapped);
-              setTimelineAnchorDate2(snapped);
-            } else {
-              if (isMap2) {
-                setDate2(snapped);
-                setTimelineAnchorDate2(snapped);
-              } else {
-                setDate1(snapped);
-                setTimelineAnchorDate1(snapped);
-              }
-            }
-          }}
+        <BuscadorEspacial 
+          mapRef={isMap2 ? map2InstanceRef : map1InstanceRef}
+          isHistoricalMode={_isHistoricalMode}
+          date={isMap2 ? date2 : date1}
+          activeLayer={activeLayer}
+          syncTime={syncTime}
+          setDate1={setDate1}
+          setDate2={setDate2}
+          setTimelineAnchorDate1={setTimelineAnchorDate1}
+          setTimelineAnchorDate2={setTimelineAnchorDate2}
+          isMap2={isMap2}
+          MIN_DATE={MIN_DATE}
+          MAX_DATE={MAX_DATE}
+          snapToValidHour={snapToValidHour}
         />
       </div>
     </div>
@@ -1452,7 +1753,7 @@ function MapaMonitoreo() {
         <MarkersLayer
           cities={citiesData} metrica={heatmapMetric} umbrales={umbrales}
           activeFilter={null} unidad={unidades?.[heatmapMetric]}
-          currentZoom={3.5} onCityClick={(city) => setSelectedCity(city)}
+          currentZoom={3.5} onCityClick={(city) => selectCityWithWeather(city, isComparingCities)}
         />
       )}
       {!isMap2 && (isSimMode || zonaSimActiva) && fronterasSeleccionadas && fronterasSeleccionadas.map((frontera, idx) => {
@@ -1465,6 +1766,107 @@ function MapaMonitoreo() {
           </Source>
         );
       })}
+
+      {/* ─── RENDERING OF ACTIVE MANUAL DRAWING VERTICES AND SEGMENTS ─── */}
+      {isSimMode && (
+        <>
+          {/* Zona 1 drawing on Map 1 */}
+          {!isMap2 && zona1Cfg.manualPoints && zona1Cfg.manualPoints.length > 0 && (
+            <Source
+              id="manual-points-source-1"
+              type="geojson"
+              data={{
+                type: 'FeatureCollection',
+                features: [
+                  ...zona1Cfg.manualPoints.map((p, idx) => ({
+                    type: 'Feature',
+                    properties: { index: idx + 1 },
+                    geometry: { type: 'Point', coordinates: p }
+                  })),
+                  ...(zona1Cfg.manualPoints.length > 1 ? [{
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                      type: 'LineString',
+                      coordinates: zona1Cfg.manualPoints
+                    }
+                  }] : [])
+                ]
+              }}
+            >
+              <Layer
+                id="manual-points-layer-1"
+                type="circle"
+                paint={{
+                  'circle-radius': 6,
+                  'circle-color': '#38bdf8',
+                  'circle-stroke-width': 2,
+                  'circle-stroke-color': '#ffffff'
+                }}
+                filter={['==', ['$type'], 'Point']}
+              />
+              <Layer
+                id="manual-lines-layer-1"
+                type="line"
+                paint={{
+                  'line-color': '#38bdf8',
+                  'line-width': 3,
+                  'line-dasharray': [2, 2]
+                }}
+                filter={['==', ['$type'], 'LineString']}
+              />
+            </Source>
+          )}
+
+          {/* Zona 2 drawing on Map 2 */}
+          {isMap2 && zona2Cfg.manualPoints && zona2Cfg.manualPoints.length > 0 && (
+            <Source
+              id="manual-points-source-2"
+              type="geojson"
+              data={{
+                type: 'FeatureCollection',
+                features: [
+                  ...zona2Cfg.manualPoints.map((p, idx) => ({
+                    type: 'Feature',
+                    properties: { index: idx + 1 },
+                    geometry: { type: 'Point', coordinates: p }
+                  })),
+                  ...(zona2Cfg.manualPoints.length > 1 ? [{
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                      type: 'LineString',
+                      coordinates: zona2Cfg.manualPoints
+                    }
+                  }] : [])
+                ]
+              }}
+            >
+              <Layer
+                id="manual-points-layer-2"
+                type="circle"
+                paint={{
+                  'circle-radius': 6,
+                  'circle-color': '#a855f7',
+                  'circle-stroke-width': 2,
+                  'circle-stroke-color': '#ffffff'
+                }}
+                filter={['==', ['$type'], 'Point']}
+              />
+              <Layer
+                id="manual-lines-layer-2"
+                type="line"
+                paint={{
+                  'line-color': '#a855f7',
+                  'line-width': 3,
+                  'line-dasharray': [2, 2]
+                }}
+                filter={['==', ['$type'], 'LineString']}
+              />
+            </Source>
+          )}
+        </>
+      )}
 
       {/* ─── CAPA VECTORIAL AQI ─── */}
       {!isMap2 && activeLayer === 'aqi' && aqiGeoJson && (
@@ -1511,7 +1913,7 @@ function MapaMonitoreo() {
       )}
 
       {/* POP-UP UNIFICADO */}
-      {popupInfo && popupInfo.isMap2 === isMap2 && (
+      {_isHistoricalMode && popupInfo && popupInfo.isMap2 === isMap2 && (
         <Popup
           longitude={popupInfo.lng}
           latitude={popupInfo.lat}
@@ -1609,7 +2011,11 @@ function MapaMonitoreo() {
           isRunning={zonaSimActiva}
           unidades={unidades}
           formatearValor={formatearValor}
-          getDynamicColor={() => '#aaa'}
+          getDynamicColor={getDynamicColor}
+          isComparingCities={isComparingCities}
+          setIsComparingCities={setIsComparingCities}
+          compareCity={compareCityDetails}
+          setCompareCity={setCompareCity}
         />
 
         <ControlPanel
@@ -1621,10 +2027,10 @@ function MapaMonitoreo() {
           isHeatmapActive={isHeatmapActive} setIsHeatmapActive={setIsHeatmapActive}
           heatmapMetric={heatmapMetric} setHeatmapMetric={setHeatmapMetric}
           isChoroplethActive={isChoroplethActive} setIsChoroplethActive={setIsChoroplethActive}
-          isHistoricalMode={false} setIsHistoricalMode={() => { }}
+          isHistoricalMode={_isHistoricalMode} setIsHistoricalMode={handleToggleHistoricalMode}
           showSensors={showSensors} setShowSensors={setShowSensors} setSelectedCity={setSelectedCity}
           iotLoading={false}
-          unidades={unidades} cambiarUnidad={() => { }} METRICAS_UNIDADES={METRICAS_UNIDADES}
+          unidades={unidades} cambiarUnidad={cambiarUnidad} METRICAS_UNIDADES={METRICAS_UNIDADES}
           isDynamicHistoricalMode={false} setIsDynamicHistoricalMode={() => { }}
           isCompareMode={isComparing} setIsCompareMode={setIsComparing}
           compareIndexA={0} compareIndexB={0}
@@ -1636,90 +2042,94 @@ function MapaMonitoreo() {
         {/* ─── PANELES DE CONTROL (Time Machine & Timeline) ─── */}
 
         {/* Modo Histórico — Panel lateral derecho */}
-        <Draggable className="modo-historico-panel">
-          <div className="mh-title">
-            <span className="mh-title-icon">🕐</span>
-            <span className="mh-title-text">Modo Histórico</span>
-          </div>
-          <div className="mh-actions">
-            <button
-              onClick={() => setIsComparing(!isComparing)}
-              className={isComparing ? 'map-overlay-btn-secondary' : 'map-overlay-btn-primary'}
-            >
-              {isComparing ? '✕ Desactivar Comparación' : '⚖️ Comparar Mapas'}
-            </button>
-            <button
-              onClick={() => navigate('/reportes')}
-              className="map-overlay-btn-secondary"
-            >
-              📊 Ir a Reportes
-            </button>
-          </div>
-          
-          {isComparing && (
-            <div className="mh-sync-options">
-              <label>
-                <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
-                Sincronizar Tiempo
-              </label>
-              <label>
-                <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
-                Sincronizar Vistas
-              </label>
+        {_isHistoricalMode && (
+          <Draggable className="modo-historico-panel">
+            <div className="mh-title">
+              <span className="mh-title-icon">🕐</span>
+              <span className="mh-title-text">Modo Histórico</span>
             </div>
-          )}
-
-          <div className="mh-variable-section">
-            <label>
-              Variable Atmosférica
-              <select
-                value={activeLayer}
-                onChange={e => setActiveLayer(e.target.value)}
-                className="map-overlay-select"
+            <div className="mh-actions">
+              <button
+                onClick={() => setIsComparing(!isComparing)}
+                className={isComparing ? 'map-overlay-btn-secondary' : 'map-overlay-btn-primary'}
               >
-                <option value="visibilidad">Visibilidad</option>
-                <option value="viento">Velocidad del Viento</option>
-                <option value="uv">Índice UV</option>
-                <option value="humedad">Humedad Relativa</option>
-                <option value="isobaras">Presión (Isobaras)</option>
-                <option value="temperatura">Temperatura</option>
-                <option value="lluvia">Precipitación (Lluvia)</option>
-                <option value="nieve">Acumulación de Nieve</option>
-                <option value="evaporacion">Evaporación (Calor Latente)</option>
-              </select>
-            </label>
-          </div>
-          {renderLegend()}
-        </Draggable>
-
-        {/* Barra de Reproducción Inferior (Timeline UI) */}
-        <div className="timeline-bar">
-          <div className="timeline-date-display">
-            {finalFormattedText}
-          </div>
-          
-          <div className="timeline-controls-row">
-            <button 
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={`timeline-play-btn ${isPlaying ? 'paused' : 'active'}`}
-            >
-              {isPlaying ? '⏸ Pausa' : '▶ Play'}
-            </button>
-            {(!isComparing || syncTime) ? (
-              renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)
-            ) : (
-              <div style={{ flex: 1, display: 'flex', width: '100%', gap: '14px', overflow: 'hidden' }}>
-                <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                  {renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)}
-                </div>
-                <div style={{ width: '1px', background: 'var(--border-color)' }} />
-                <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                  {renderTimeline(date2, setDate2, timelineAnchorDate2, setTimelineAnchorDate2, false)}
-                </div>
+                {isComparing ? '✕ Desactivar Comparación' : '⚖️ Comparar Mapas'}
+              </button>
+              <button
+                onClick={() => navigate('/reportes')}
+                className="map-overlay-btn-secondary"
+              >
+                📊 Ir a Reportes
+              </button>
+            </div>
+            
+            {isComparing && (
+              <div className="mh-sync-options">
+                <label>
+                  <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
+                  Sincronizar Tiempo
+                </label>
+                <label>
+                  <input type="checkbox" checked={syncMaps} onChange={e => setSyncMaps(e.target.checked)} />
+                  Sincronizar Vistas
+                </label>
               </div>
             )}
+
+            <div className="mh-variable-section">
+              <label>
+                Variable Atmosférica
+                <select
+                  value={activeLayer}
+                  onChange={e => setActiveLayer(e.target.value)}
+                  className="map-overlay-select"
+                >
+                  <option value="visibilidad">Visibilidad</option>
+                  <option value="viento">Velocidad del Viento</option>
+                  <option value="uv">Índice UV</option>
+                  <option value="humedad">Humedad Relativa</option>
+                  <option value="isobaras">Presión (Isobaras)</option>
+                  <option value="temperatura">Temperatura</option>
+                  <option value="lluvia">Precipitación (Lluvia)</option>
+                  <option value="nieve">Acumulación de Nieve</option>
+                  <option value="evaporacion">Evaporación (Calor Latente)</option>
+                </select>
+              </label>
+            </div>
+            {renderLegend()}
+          </Draggable>
+        )}
+
+        {/* Barra de Reproducción Inferior (Timeline UI) */}
+        {_isHistoricalMode && (
+          <div className="timeline-bar">
+            <div className="timeline-date-display">
+              {finalFormattedText}
+            </div>
+            
+            <div className="timeline-controls-row">
+              <button 
+                onClick={() => setIsPlaying(!isPlaying)}
+                className={`timeline-play-btn ${isPlaying ? 'paused' : 'active'}`}
+              >
+                {isPlaying ? '⏸ Pausa' : '▶ Play'}
+              </button>
+              {(!isComparing || syncTime) ? (
+                renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)
+              ) : (
+                <div style={{ flex: 1, display: 'flex', width: '100%', gap: '14px', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                    {renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)}
+                  </div>
+                  <div style={{ width: '1px', background: 'var(--border-color)' }} />
+                  <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                    {renderTimeline(date2, setDate2, timelineAnchorDate2, setTimelineAnchorDate2, false)}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
 
         <SimulationStatus

@@ -25,6 +25,7 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
   const [latitud, setLatitud] = useState(null);
   const [longitud, setLongitud] = useState(null);
   const [topics, setTopics] = useState(EMPTY_TOPICS);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Estados del listado y de UI
   const [sensorsList, setSensorsList] = useState([]);
@@ -75,6 +76,39 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
     setTopics(prev => ({ ...prev, [metric]: val }));
   };
 
+  const handleEditClick = (s) => {
+    setIsEditing(true);
+    setSensorId(s.id);
+    setNombre(s.name);
+    setLatitud(s.latitude);
+    setLongitud(s.longitude);
+    const mergedTopics = { ...EMPTY_TOPICS };
+    if (s.topics) {
+      Object.keys(EMPTY_TOPICS).forEach(k => {
+        if (s.topics[k] !== undefined) {
+          mergedTopics[k] = s.topics[k];
+        }
+      });
+    }
+    setTopics(mergedTopics);
+    setViewState({
+      longitude: s.longitude,
+      latitude: s.latitude,
+      zoom: 6.5
+    });
+    setAlertMsg({ text: '', type: '' });
+  };
+
+  const handleCancelEdit = () => {
+    setSensorId('');
+    setNombre('');
+    setLatitud(null);
+    setLongitud(null);
+    setTopics(EMPTY_TOPICS);
+    setIsEditing(false);
+    setAlertMsg({ text: '', type: '' });
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setAlertMsg({ text: '', type: '' });
@@ -115,13 +149,17 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
 
       const { data } = await httpClient.post('/sensores', payload);
       if (data.ok) {
-        setAlertMsg({ text: 'Sensor IoT creado y conectado a HiveMQ.', type: 'success' });
+        setAlertMsg({
+          text: isEditing ? 'Sensor IoT actualizado correctamente.' : 'Sensor IoT creado y conectado a HiveMQ.',
+          type: 'success'
+        });
         // Limpiar form
         setSensorId('');
         setNombre('');
         setLatitud(null);
         setLongitud(null);
         setTopics(EMPTY_TOPICS);
+        setIsEditing(false);
         // Recargar listado y notificar cambio a mapa principal
         await loadCustomSensors();
         if (onSensorChange) onSensorChange();
@@ -135,6 +173,10 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
   };
 
   const handleDelete = async (id) => {
+    if (isEditing && sensorId === id) {
+      setAlertMsg({ text: 'No puedes eliminar el sensor mientras lo estás editando.', type: 'error' });
+      return;
+    }
     if (!window.confirm('¿Estás seguro de que deseas eliminar este sensor IoT personalizado?')) return;
     try {
       const { data } = await httpClient.delete(`/sensores/${id}`);
@@ -155,7 +197,7 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
       <div className="miot-box">
         <div className="miot-box-header">
           <span className="miot-box-title">
-            <svg width="20" height="20" fill="none" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <svg width="20" height="20" fill="none" stroke="#5bc0be" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
               <path d="M5 12.55a11 11 0 0 1 14.08 0" />
               <path d="M1.42 9a16 16 0 0 1 21.16 0" />
               <path d="M8.58 16.14a6 6 0 0 1 6.84 0" />
@@ -167,10 +209,16 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
         </div>
 
         <div className="miot-body">
-          {/* Panel Izquierdo: Crear Sensor */}
+          {/* Panel Izquierdo: Crear/Editar Sensor */}
           <div className="miot-left-panel">
-            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)' }}>Añadir Nuevo Sensor</span>
-            <p className="miot-subtitle">Completa el nombre, selecciona la ubicación en el mapa e ingresa los temas MQTT en HiveMQ Cloud.</p>
+            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+              {isEditing ? 'Editar Sensor' : 'Añadir Nuevo Sensor'}
+            </span>
+            <p className="miot-subtitle">
+              {isEditing 
+                ? 'Modifica los datos del sensor seleccionado. El identificador único no se puede cambiar.' 
+                : 'Completa el nombre, selecciona la ubicación en el mapa e ingresa los temas MQTT en HiveMQ Cloud.'}
+            </p>
 
             <form onSubmit={handleFormSubmit} className="miot-form-section">
               <div className="miot-field-row">
@@ -183,6 +231,7 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
                     value={sensorId}
                     onChange={e => setSensorId(e.target.value)}
                     required
+                    disabled={isEditing}
                   />
                 </div>
                 <div className="miot-field">
@@ -265,7 +314,7 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
                 <button
                   type="button"
                   className="miot-btn miot-btn-secondary"
-                  onClick={() => {
+                  onClick={isEditing ? handleCancelEdit : () => {
                     setSensorId('');
                     setNombre('');
                     setLatitud(null);
@@ -274,14 +323,14 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
                     setAlertMsg({ text: '', type: '' });
                   }}
                 >
-                  Limpiar
+                  {isEditing ? 'Cancelar' : 'Limpiar'}
                 </button>
                 <button
                   type="submit"
                   className="miot-btn miot-btn-primary"
                   disabled={submitting}
                 >
-                  {submitting ? 'Guardando...' : 'Guardar Sensor'}
+                  {submitting ? 'Guardando...' : isEditing ? 'Guardar Cambios' : 'Guardar Sensor'}
                 </button>
               </div>
             </form>
@@ -322,18 +371,31 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
                         })}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="miot-btn-delete"
-                      onClick={() => handleDelete(s.id)}
-                      title="Eliminar sensor"
-                    >
-                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="miot-btn-edit"
+                        onClick={() => handleEditClick(s)}
+                        title="Editar sensor"
+                      >
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className="miot-btn-delete"
+                        onClick={() => handleDelete(s.id)}
+                        title="Eliminar sensor"
+                      >
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

@@ -3,20 +3,25 @@
   height: 100vh;
   overflow: hidden;
   background-color: var(--paper);
+  --sidebar-width: 232px;
+}
+
+.layout.sidebar-collapsed {
+  --sidebar-width: 72px;
 }
 
 .layout-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: var(--sidebar-width, 232px);
+  margin-left: var(--sidebar-width);
   overflow: hidden;
   transition: margin-left 0.3s ease;
   min-width: 0;
 }
 
 .layout.sidebar-collapsed .layout-main {
-  margin-left: 72px;
+  margin-left: var(--sidebar-width);
 }
 
 .layout-content {
@@ -39,7 +44,12 @@
 }
 
 @media (max-width: 768px) {
+  .layout {
+    --sidebar-width: 0px;
+  }
+  .layout.sidebar-collapsed {
+    --sidebar-width: 0px;
+  }
   .layout-main { margin-left: 0 !important; }
   .layout-content { padding: 20px 16px; }
-  .layout.sidebar-collapsed .layout-main { margin-left: 0; }
 }

@@ -1,6 +1,41 @@
 const { success, error } = require('../../utils/response');
 const logger = require('../../utils/logger');
 
+function generarSugerenciaMock(ciudad, variable, datos) {
+  if (!datos || datos.length === 0) return 'No hay datos para analizar.';
+  
+  const values = datos.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+  if (values.length === 0) return 'No hay datos numéricos válidos en el rango seleccionado.';
+  
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const sum = values.reduce((a, b) => a + b, 0);
+  const avgVal = sum / values.length;
+  
+  // Determinar tendencia
+  let trend = 'estable';
+  if (values.length > 1) {
+    const first = values[0];
+    const last = values[values.length - 1];
+    const diff = last - first;
+    if (diff > 0.05 * avgVal) {
+      trend = 'ascendente';
+    } else if (diff < -0.05 * avgVal) {
+      trend = 'descendente';
+    }
+  }
+  
+  let unit = '';
+  const varLower = (variable || '').toLowerCase();
+  if (varLower.includes('temp')) unit = '°C';
+  else if (varLower.includes('aqi')) unit = ' AQI';
+  else if (varLower.includes('ruido') || varLower.includes('db')) unit = ' dB';
+  else if (varLower.includes('humedad')) unit = '%';
+  else if (varLower.includes('ica')) unit = ' ICA';
+  
+  return `El análisis de la variable ${variable} en ${ciudad || 'la zona'} muestra una tendencia general ${trend}. El promedio es de ${avgVal.toFixed(1)}${unit}, con un valor máximo de ${maxVal.toFixed(1)}${unit} y un mínimo registrado de ${minVal.toFixed(1)}${unit}. Las condiciones ambientales generales se muestran ${avgVal > maxVal * 0.85 ? 'ligeramente elevadas' : 'dentro de los parámetros esperados de estabilidad, indicando un entorno seguro'}.`;
+}
+
 const obtenerSugerenciaIA = async (req, res) => {
   try {
     const { ciudad, variable, datos } = req.body;
@@ -11,7 +46,9 @@ const obtenerSugerenciaIA = async (req, res) => {
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      return error(res, 'DeepSeek API Key no configurada en el backend', 500);
+      logger.warn('[AI] DeepSeek API Key no configurada. Usando generador analítico local.');
+      const recomendacion = generarSugerenciaMock(ciudad, variable, datos);
+      return success(res, { recomendacion });
     }
 
     // Preparar el resumen de datos para la IA
@@ -45,7 +82,9 @@ Mantén tu respuesta profesional, directa y no más larga de un párrafo corto.`
     if (!response.ok) {
       const errText = await response.text();
       logger.error('[AI] Error de DeepSeek API:', errText);
-      return error(res, 'Error al conectar con IA predictiva', 502);
+      logger.warn('[AI] Usando generador analítico local como fallback.');
+      const recomendacion = generarSugerenciaMock(ciudad, variable, datos);
+      return success(res, { recomendacion });
     }
 
     const aiData = await response.json();
@@ -54,7 +93,14 @@ Mantén tu respuesta profesional, directa y no más larga de un párrafo corto.`
     success(res, { recomendacion });
   } catch (err) {
     logger.error('[AI] Error en obtenerSugerenciaIA:', err);
-    error(res, 'Error interno del servidor', 500);
+    logger.warn('[AI] Usando generador analítico local como fallback debido a excepción.');
+    try {
+      const { ciudad, variable, datos } = req.body;
+      const recomendacion = generarSugerenciaMock(ciudad, variable, datos);
+      return success(res, { recomendacion });
+    } catch (fallbackErr) {
+      error(res, 'Error interno del servidor', 500);
+    }
   }
 };
 

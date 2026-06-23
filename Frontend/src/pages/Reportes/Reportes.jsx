@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useMultiForecastData } from '../../hooks/useMultiForecastData';
 import ReactECharts from 'echarts-for-react';
 import { useToast } from '../../components/Toast/Toast';
@@ -6,6 +6,14 @@ import './Reportes.css';
 import { useZonaSim } from '../../context/ZonaSimContext';
 import MeteoroAssistant from '../../components/MeteoroAssistant/MeteoroAssistant';
 import httpClient from '../../config/httpClient';
+
+import { useUnidades } from '../../hooks/useUnidades';
+import { formatearValor } from '../../utils/unidades';
+import { formatDateTime, formatCityName } from '../../utils/formatters';
+import LineChart from './LineChart';
+import BarChart from './BarChart';
+import KpiCard from './KpiCard';
+import { CIUDADES, METRICAS_OPTS, RANGOS, PAGE_SIZE, calcStats } from './constants';
 
 const CIUDADES_BOLIVIA = [
   { nombre: 'La Paz',       latitude: -16.4897, longitude: -68.1193 },
@@ -424,6 +432,439 @@ function TabSimulador() {
   );
 }
 
+function TabHistorial() {
+  const { addToast } = useToast()
+  const [historial, setHistorial] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [ciudadFiltro, setCiudadFiltro] = useState('')
+  const [ciudadFiltro2, setCiudadFiltro2] = useState('')
+  const [fechaInicio, setFechaInicio] = useState('')
+  const [fechaFin, setFechaFin] = useState('')
+  const [metricaGrafico, setMetricaGrafico] = useState('temperatura')
+  const [page, setPage] = useState(1)
+  const { unidades } = useUnidades()
+
+  // --- Zona sim context: auto-refresh cuando termina una simulación ---
+  const { zonaSimActiva, zonaSimSesionId } = useZonaSim()
+  const prevActivaRef = useRef(zonaSimActiva)
+
+  const fetchHistorial = useCallback(() => {
+    console.log('🔄 [Reportes] Solicitando historial fresco al servidor...');
+    setLoading(true)
+    httpClient.get('/historial', { 
+      cacheTTL: false,
+      params: { _t: Date.now() }, // Cache buster absoluto
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
+      .then(res => res.data.data)
+      .then(data => {
+        const flat = []
+        data.forEach(t => {
+          t.cities.forEach(c => {
+            flat.push({
+              fecha: t.timestamp,
+              ciudad: c.name,
+              temperatura: c.data.temperatura,
+              aqi: c.data.aqi,
+              humedad: c.data.humedad,
+              ruido: c.data.ruido,
+              ica: c.data.ica,
+            })
+          })
+        })
+        console.log(`✅ [Reportes] Historial cargado. Total ciudades en historial:`, new Set(flat.map(x => x.ciudad)).size);
+        setHistorial(flat.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+      })
+      .catch((err) => {
+        console.error('❌ [Reportes] Error cargando historial:', err);
+        addToast('Error cargando historial', 'error');
+      })
+      .finally(() => setLoading(false))
+  }, [addToast])
+
+  // Carga inicial al montar el componente
+  useEffect(() => { fetchHistorial() }, [fetchHistorial])
+
+  // Auto-refresh cuando una simulación de zona termina (activa pasa de true→false)
+  useEffect(() => {
+    if (prevActivaRef.current === true && zonaSimActiva === false) {
+      // Pequeño delay para que la BD termine de escribir
+      const timer = setTimeout(() => {
+        fetchHistorial()
+        addToast('Datos de simulación actualizados', 'success')
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+    prevActivaRef.current = zonaSimActiva
+  }, [zonaSimActiva, fetchHistorial, addToast])
+
+  const ciudadesDisponibles = useMemo(() => {
+    const s = new Set(CIUDADES)
+    historial.forEach(d => s.add(d.ciudad))
+    return Array.from(s).sort((a, b) => formatCityName(a).localeCompare(formatCityName(b)))
+  }, [historial])
+
+  const aplicarRango = dias => {
+    if (dias === null) {
+      setFechaInicio('')
+      setFechaFin('')
+    } else {
+      const now = new Date()
+      const from = new Date(now)
+      from.setDate(from.getDate() - dias)
+      setFechaInicio(from.toISOString().split('T')[0])
+      setFechaFin(now.toISOString().split('T')[0])
+    }
+    setPage(1)
+  }
+
+  const datosFiltrados = useMemo(() =>
+    historial.filter(row => {
+      const esSimulacion = row.ciudad.startsWith('Zona Sim.');
+      const esSimulacionSeleccionada = esSimulacion && (row.ciudad === ciudadFiltro || row.ciudad === ciudadFiltro2);
+
+      if (ciudadFiltro || ciudadFiltro2) {
+        if (row.ciudad !== ciudadFiltro && row.ciudad !== ciudadFiltro2) return false
+      }
+      if (!esSimulacionSeleccionada) {
+        if (fechaInicio && new Date(row.fecha) < new Date(fechaInicio)) return false
+        if (fechaFin && new Date(row.fecha) > new Date(fechaFin + 'T23:59:59')) return false
+      }
+      return true
+    }),
+    [historial, ciudadFiltro, ciudadFiltro2, fechaInicio, fechaFin]
+  )
+
+  const metricaActual = METRICAS_OPTS.find(m => m.value === metricaGrafico) ?? METRICAS_OPTS[0]
+
+  const seriesLinea = useMemo(() => {
+    const s = []
+    if (ciudadFiltro) {
+      s.push({
+        name: formatCityName(ciudadFiltro),
+        datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro),
+        colorVar: metricaActual.color
+      })
+    }
+    if (ciudadFiltro2) {
+      s.push({
+        name: formatCityName(ciudadFiltro2),
+        datos: datosFiltrados.filter(d => d.ciudad === ciudadFiltro2),
+        colorVar: metricaActual.color === 'river' ? 'moss' : 'river'
+      })
+    }
+    if (s.length === 0) {
+      const byTime = {}
+      datosFiltrados.forEach(d => {
+        if (!byTime[d.fecha]) byTime[d.fecha] = { fecha: d.fecha, _n: 0, v: 0 }
+        const t = byTime[d.fecha]
+        if (d[metricaGrafico] != null && !isNaN(d[metricaGrafico])) {
+          t.v += d[metricaGrafico]
+          t._n++
+        }
+      })
+      const prom = Object.values(byTime)
+        .map(t => ({ fecha: t.fecha, [metricaGrafico]: t._n ? t.v / t._n : null }))
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      s.push({ name: 'Promedio general', datos: prom, colorVar: metricaActual.color })
+    }
+    return s
+  }, [datosFiltrados, ciudadFiltro, ciudadFiltro2, metricaActual, metricaGrafico])
+
+  const stats = useMemo(() => ({
+    temperatura: calcStats(datosFiltrados, 'temperatura'),
+    aqi: calcStats(datosFiltrados, 'aqi'),
+    humedad: calcStats(datosFiltrados, 'humedad'),
+    ruido: calcStats(datosFiltrados, 'ruido'),
+  }), [datosFiltrados])
+
+  const totalPaginas = Math.ceil(datosFiltrados.length / PAGE_SIZE)
+  const datosPagina = datosFiltrados.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  const descargarReporte = async formato => {
+    const getReportFilename = (c1, c2) => {
+      const cleanName = (name) => {
+        if (!name) return '';
+        let clean = name.replace(/Zona Sim\.\s*/i, '');
+        clean = clean.replace(/\d+/g, '').trim();
+        clean = clean.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z\s]/g, '')
+          .trim();
+        const hasDept = clean.includes('department') || clean.includes('departamento');
+        if (hasDept) {
+          clean = clean.replace(/department|departamento/g, '').trim();
+          clean = clean.replace(/\s+/g, '_');
+          return `department_${clean}`;
+        }
+        return clean.replace(/\s+/g, '_');
+      };
+
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const dateStr = `${dd}${mm}${yyyy}`;
+
+      if (c1 && c2) {
+        return `${cleanName(c1)}_${cleanName(c2)}_${dateStr}`;
+      } else if (c1) {
+        return `${cleanName(c1)}_${dateStr}`;
+      } else {
+        return `reporte_ambiental_${dateStr}`;
+      }
+    };
+
+    try {
+      const payload = {
+        formato,
+        titulo: `Reporte Ambiental${ciudadFiltro ? (ciudadFiltro2 ? ` — ${formatCityName(ciudadFiltro)} vs ${formatCityName(ciudadFiltro2)}` : ` — ${formatCityName(ciudadFiltro)}`) : ' — Todas las ciudades'}`,
+        columnas: [
+          { header: 'Fecha y Hora', key: 'fechaFmt' },
+          { header: 'Ciudad', key: 'ciudad' },
+          { header: 'Temp (°C)', key: 'temperaturaFmt' },
+          { header: 'AQI', key: 'aqiFmt' },
+          { header: 'Humedad (%)', key: 'humedadFmt' },
+          { header: 'Ruido (dB)', key: 'ruidoFmt' },
+          { header: 'ICA', key: 'icaFmt' },
+        ],
+        datos: datosFiltrados.map(d => ({
+          fechaFmt: formatDateTime(d.fecha),
+          ciudad: formatCityName(d.ciudad),
+          temperaturaFmt: formatearValor('temperatura', d.temperatura, unidades.temperatura),
+          aqiFmt: formatearValor('aqi', d.aqi, unidades.aqi),
+          humedadFmt: formatearValor('humedad', d.humedad, unidades.humedad),
+          ruidoFmt: formatearValor('ruido', d.ruido, unidades.ruido),
+          icaFmt: d.ica != null ? `${Number(d.ica).toFixed(0)} ICA` : '—',
+        })),
+      }
+
+      const res = await httpClient.post('/reportes/generar', payload, { responseType: 'blob' })
+      const blob = res.data
+      const url = URL.createObjectURL(blob)
+      const filename = `${getReportFilename(ciudadFiltro, ciudadFiltro2)}.${formato === 'excel' ? 'xlsx' : 'pdf'}`
+
+      const a = Object.assign(document.createElement('a'), {
+        href: url,
+        download: filename,
+      })
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      addToast(err.message, 'error')
+    }
+  }
+
+  return (
+    <div className="bi-dashboard-container" style={{ marginTop: '20px' }}>
+      {/* KPI Cards */}
+      <div className="rep-kpi-grid">
+        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" icon="🌡" stats={stats.temperatura} />
+        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" icon="🌫" stats={stats.aqi} />
+        <KpiCard label="Humedad" sufijo="%" colorVar="river" icon="💧" stats={stats.humedad} />
+        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" icon="🔊" stats={stats.ruido} />
+      </div>
+
+      {/* Filtros */}
+      <div className="rep-filtros" style={{ background: 'var(--bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: '20px' }}>
+        <div className="rep-filtros-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
+          <label className="rep-label" style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+            Localidad
+            <select
+              className="rep-select"
+              value={ciudadFiltro}
+              onChange={e => {
+                setCiudadFiltro(e.target.value)
+                if (!e.target.value) setCiudadFiltro2('')
+                setPage(1)
+              }}
+              style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', minWidth: '180px' }}
+            >
+              <option value="">Todas las ciudades</option>
+              {ciudadesDisponibles.map(c => <option key={c} value={c}>{formatCityName(c)}</option>)}
+            </select>
+          </label>
+
+          {ciudadFiltro && (
+            <label className="rep-label" style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px', animation: 'fadeIn 0.2s' }}>
+              Comparar con
+              <select
+                className="rep-select"
+                value={ciudadFiltro2}
+                onChange={e => { setCiudadFiltro2(e.target.value); setPage(1) }}
+                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', minWidth: '180px' }}
+              >
+                <option value="">Ninguna</option>
+                {ciudadesDisponibles.map(c => (c !== ciudadFiltro) && <option key={c} value={c}>{formatCityName(c)}</option>)}
+              </select>
+            </label>
+          )}
+
+          <label className="rep-label" style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+            Desde
+            <input
+              type="date" className="rep-input" value={fechaInicio}
+              onChange={e => { setFechaInicio(e.target.value); setPage(1) }}
+              style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px' }}
+            />
+          </label>
+
+          <label className="rep-label" style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+            Hasta
+            <input
+              type="date" className="rep-input" value={fechaFin}
+              onChange={e => { setFechaFin(e.target.value); setPage(1) }}
+              style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px' }}
+            />
+          </label>
+
+          <div className="rep-rangos" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span className="rep-rangos-label" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Rango rápido</span>
+            <div className="rep-rangos-btns" style={{ display: 'flex', gap: '8px' }}>
+              {RANGOS.map(r => (
+                <button key={r.label} className="rep-rango-btn" onClick={() => aplicarRango(r.dias)} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer' }}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rep-actions" style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
+            <button className="rep-export-btn rep-export-pdf" onClick={() => descargarReporte('pdf')} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              PDF
+            </button>
+            <button className="rep-export-btn rep-export-xl" onClick={() => descargarReporte('excel')} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M3 15h18M9 3v18" />
+              </svg>
+              Excel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="rep-charts" style={{ marginTop: '30px' }}>
+        <div className="rep-chart-tabs" style={{ display: 'flex', gap: '10px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '20px' }}>
+          {METRICAS_OPTS.map(m => (
+            <button
+              key={m.value}
+              className={`rep-chart-tab ${metricaGrafico === m.value ? 'active' : ''}`}
+              style={{
+                background: metricaGrafico === m.value ? `var(--${m.color}-soft)` : 'transparent',
+                color: metricaGrafico === m.value ? `var(--${m.color})` : 'var(--text-secondary)',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+              onClick={() => setMetricaGrafico(m.value)}
+            >
+              {m.icon} {m.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="rep-charts-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="rep-chart-card" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px' }}>
+            <div className="rep-chart-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px' }}>
+              Evolución temporal
+              <span className="rep-chart-sub" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                {ciudadFiltro ? (ciudadFiltro2 ? `${formatCityName(ciudadFiltro)} vs ${formatCityName(ciudadFiltro2)}` : formatCityName(ciudadFiltro)) : 'promedio · todas las ciudades'}
+              </span>
+            </div>
+            {loading
+              ? <div className="rep-chart-empty" style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Cargando…</div>
+              : <LineChart series={seriesLinea} metrica={metricaGrafico} />
+            }
+          </div>
+
+          <div className="rep-chart-card" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '20px', borderRadius: '12px' }}>
+            <div className="rep-chart-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px' }}>
+              Promedio por ciudad
+              <span className="rep-chart-sub" style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{metricaActual.label}</span>
+            </div>
+            {loading
+              ? <div className="rep-chart-empty" style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>Cargando…</div>
+              : <BarChart datos={datosFiltrados} metrica={metricaGrafico} colorVar={metricaActual.color} />
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="rep-tabla-wrap" style={{ marginTop: '30px', background: 'var(--bg-panel)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+        {loading ? (
+          <div className="rep-estado" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>Cargando historial de datos…</div>
+        ) : datosFiltrados.length === 0 ? (
+          <div className="rep-estado" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>No hay registros para los filtros seleccionados.</div>
+        ) : (
+          <table className="rep-tabla" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Fecha / Hora</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Ciudad</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Temperatura</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>AQI</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Humedad</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>Ruido</th>
+                <th style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>ICA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {datosPagina.map((row, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td className="rep-td-fecha" style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                    {formatDateTime(row.fecha)}
+                  </td>
+                  <td className="rep-td-ciudad" style={{ padding: '12px 16px', color: 'var(--text-primary)', fontWeight: 'bold' }}>{formatCityName(row.ciudad)}</td>
+                  <td className="rep-td-valor" style={{ padding: '12px 16px', color: 'var(--accent)' }}>{formatearValor('temperatura', row.temperatura, unidades.temperatura)}</td>
+                  <td className="rep-td-valor" style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{formatearValor('aqi', row.aqi, unidades.aqi)}</td>
+                  <td className="rep-td-valor" style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{formatearValor('humedad', row.humedad, unidades.humedad)}</td>
+                  <td className="rep-td-valor" style={{ padding: '12px 16px', color: 'var(--text-primary)' }}>{formatearValor('ruido', row.ruido, unidades.ruido)}</td>
+                  <td className="rep-td-valor" style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
+                    {row.ica != null ? `${Number(row.ica).toFixed(0)} ICA` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Paginación */}
+      {totalPaginas > 1 && (
+        <div className="rep-paginacion" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginTop: '20px' }}>
+          <button className="rep-pag-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>
+            ← Anterior
+          </button>
+          <span className="rep-pag-info" style={{ color: 'var(--text-secondary)' }}>Página {page} de {totalPaginas}</span>
+          <button className="rep-pag-btn" disabled={page >= totalPaginas} onClick={() => setPage(p => p + 1)} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>
+            Siguiente →
+          </button>
+        </div>
+      )}
+
+      <p className="rep-nota" style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '15px' }}>
+        Mostrando {datosPagina.length} de {datosFiltrados.length} registros
+        · El archivo exportado incluye todos los registros filtrados.
+      </p>
+    </div>
+  )
+}
+
 export default function Reportes() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { zonaSimActiva } = useZonaSim();
@@ -461,10 +902,18 @@ export default function Reportes() {
         >
           🔮 Simulador 96h e IA
         </button>
+        <button 
+          className={`bi-tab-btn ${activeTab === 'historial' ? 'active' : ''}`}
+          onClick={() => setActiveTab('historial')}
+        >
+          📈 Historial y Simulaciones
+        </button>
       </div>
 
       {/* TABS CONTENT */}
-      {activeTab === 'dashboard' ? <TabDashboard /> : <TabSimulador />}
+      {activeTab === 'dashboard' && <TabDashboard />}
+      {activeTab === 'simulador' && <TabSimulador />}
+      {activeTab === 'historial' && <TabHistorial />}
     </div>
   );
 }

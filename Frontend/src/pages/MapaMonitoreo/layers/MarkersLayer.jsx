@@ -49,7 +49,7 @@ export default function MarkersLayer({ cities, metrica, umbrales, activeFilter, 
             <div
               className={`city-marker city-marker--custom`}
               style={{
-                '--marker-color': color || '#a855f7',
+                '--marker-color': color || '#5bc0be',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -57,16 +57,16 @@ export default function MarkersLayer({ cities, metrica, umbrales, activeFilter, 
                 height: '32px',
                 borderRadius: '50%',
                 backgroundColor: 'rgba(24, 18, 36, 0.85)',
-                border: `2px solid ${color || '#a855f7'}`,
-                boxShadow: `0 0 8px ${color || '#a855f7'}`,
+                border: `2px solid ${color || '#5bc0be'}`,
+                boxShadow: `0 0 8px ${color || '#5bc0be'}`,
               }}
               title={`${city.name}: ${Math.round(displayValue)}`}
             >
-              <svg width="18" height="18" fill="none" stroke="#a855f7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <svg width="18" height="18" fill="none" stroke="#5bc0be" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                 <path d="M5 12.55a11 11 0 0 1 14.08 0" />
                 <path d="M1.42 9a16 16 0 0 1 21.16 0" />
                 <path d="M8.58 16.14a6 6 0 0 1 6.84 0" />
-                <circle cx="12" cy="20" r="1.5" fill="#a855f7" />
+                <circle cx="12" cy="20" r="1.5" fill="#5bc0be" />
               </svg>
             </div>
             <div style={{
@@ -77,7 +77,7 @@ export default function MarkersLayer({ cities, metrica, umbrales, activeFilter, 
               color: 'white',
               fontSize: '10px',
               fontWeight: 'bold',
-              border: `1px solid ${color || '#a855f7'}`
+              border: `1px solid ${color || '#5bc0be'}`
             }}>
               {Math.round(displayValue)}
             </div>

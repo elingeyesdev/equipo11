@@ -301,9 +301,11 @@
   position: absolute;
   top: 68px;
   /* debajo del buscador (≈60px) */
-  left: 15px;
+  left: calc(var(--sidebar-width, 232px) + 15px);
+  right: auto;
   z-index: 20;
   cursor: grab;
+  transition: left 0.3s ease;
 }
 
 .city-info-panel-wrapper:active {
@@ -695,8 +697,9 @@
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
+  transition: left 0.3s ease;
 }
 
 .controls-toggle-btn {
