@@ -32,9 +32,16 @@ async function setup() {
     logger.info('✅ Tabla configuracion_notificaciones creada y sembrada.');
   } catch (err) {
     logger.error('❌ Error configurando notificaciones:', err);
-  } finally {
-    process.exit();
   }
 }
 
-setup();
+if (require.main === module) {
+  setup()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      logger.error('Error fatal en setup_notifications:', err);
+      process.exit(1);
+    });
+}
+
+module.exports = { setup };
