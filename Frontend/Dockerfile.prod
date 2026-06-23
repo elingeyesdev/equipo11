@@ -32,7 +32,7 @@ COPY package.json pnpm-lock.yaml ./
 
 ENV CI=true
 RUN npm install -g pnpm@11.4.0 && \
-    pnpm install --no-frozen-lockfile
+    pnpm install --no-frozen-lockfile --ignore-scripts
 
 # Copiar el código fuente
 COPY . .

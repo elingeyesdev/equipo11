@@ -54,8 +54,8 @@ EVOLUCION_RADAR.md
 previo.md
 /implementaciones
 # Datos de clima persistentes
-data/
-ETL/data/
+/data/
+/ETL/data/
 
 # WhatsApp Web JS
 .wwebjs_auth/
