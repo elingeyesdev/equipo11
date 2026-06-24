@@ -686,6 +686,7 @@ function MapaMonitoreo() {
     isDynamicHistoricalMode, setIsDynamicHistoricalMode,
     setHistoricalDate
   } = useMapVisuals();
+  const showSplitMap = isComparing && _isHistoricalMode;
   const { umbrales } = useUmbrales(heatmapMetric || 'aqi');
   const { unidades, cambiarUnidad } = useUnidades();
 
@@ -995,7 +996,7 @@ function MapaMonitoreo() {
 
   // ─── Sincronización Nativa de Cámaras (Anti-Infinite Loop) ───
   useEffect(() => {
-    if (!isComparing || !syncMaps) return;
+    if (!showSplitMap || !syncMaps) return;
 
     const map1 = map1InstanceRef.current;
     const map2 = map2InstanceRef.current;
@@ -1022,7 +1023,7 @@ function MapaMonitoreo() {
       map1.off('move', handleMap1Move);
       map2.off('move', handleMap2Move);
     };
-  }, [isComparing, syncMaps]);
+  }, [showSplitMap, syncMaps]);
 
   // ─── DEEP LINKING (Desde Módulo de Reportes) ───
   useEffect(() => {
@@ -1197,14 +1198,14 @@ function MapaMonitoreo() {
       };
 
       setDate1(prev => advanceDate(prev, setTimelineAnchorDate1));
-      if (!syncTime && isComparing) {
+      if (!syncTime && showSplitMap) {
         setDate2(prev => advanceDate(prev, setTimelineAnchorDate2));
-      } else if (syncTime && isComparing) {
+      } else if (syncTime && showSplitMap) {
         setDate2(prev => advanceDate(prev, setTimelineAnchorDate2));
       }
     }, 1500);
     return () => clearInterval(timer);
-  }, [isPlaying, activeLayer, syncTime, isComparing, getLayerStepHours]);
+  }, [isPlaying, activeLayer, syncTime, showSplitMap, getLayerStepHours]);
 
   // ─── MAPA 1: Cargar imagen PNG o JSON puntual ───
   useEffect(() => {
@@ -1285,7 +1286,7 @@ function MapaMonitoreo() {
 
   // ─── MAPA 2: Cargar imagen PNG o JSON puntual ───
   useEffect(() => {
-    if (!imageUrl2 || !isComparing) return;
+    if (!imageUrl2 || !showSplitMap) return;
 
     if (activeLayer === 'aqi') {
       return; // AQI geojson compartido, no refetch por ahora.
@@ -1336,7 +1337,7 @@ function MapaMonitoreo() {
       img.onload = null;
       img.src = '';
     };
-  }, [imageUrl2, activeLayer, isComparing]);
+  }, [imageUrl2, activeLayer, showSplitMap]);
 
   // ─── MAPA 1: Forzar actualización de Canvas 2D al pausar ───
   useEffect(() => {
@@ -1366,7 +1367,7 @@ function MapaMonitoreo() {
 
   // ─── MAPA 2: Forzar actualización de Canvas 2D al pausar ───
   useEffect(() => {
-    if (!isPlaying && !globalIsDraggingRef.current && imageUrl2 && activeLayer !== 'aqi' && isComparing) {
+    if (!isPlaying && !globalIsDraggingRef.current && imageUrl2 && activeLayer !== 'aqi' && showSplitMap) {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
       img.src = imageUrl2;
@@ -1388,7 +1389,7 @@ function MapaMonitoreo() {
         }
       };
     }
-  }, [isPlaying, imageUrl2, activeLayer, isComparing]);
+  }, [isPlaying, imageUrl2, activeLayer, showSplitMap]);
 
   // ─── Network Preloading (Siguiente fotograma) ───
   useEffect(() => {
@@ -1887,8 +1888,8 @@ function MapaMonitoreo() {
             </Source>
           )}
 
-          {/* Zona 2 drawing on Map 2 */}
-          {isMap2 && zona2Cfg.manualPoints && zona2Cfg.manualPoints.length > 0 && (
+          {/* Zona 2 drawing on Map 2 or Map 1 (if single map) */}
+          {(isMap2 || (!isMap2 && !showSplitMap)) && zona2Cfg.manualPoints && zona2Cfg.manualPoints.length > 0 && (
             <Source
               id="manual-points-source-2"
               type="geojson"
@@ -2009,11 +2010,11 @@ function MapaMonitoreo() {
 
   return (
     <div className="mapa-page-container" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0 }}>
-      <div className="map-container" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: isComparing ? 'row' : 'column' }}>
+      <div className={`map-container${activeDrawingZone ? ' drawing-mode' : ''}`} style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: showSplitMap ? 'row' : 'column' }}>
 
 
         {/* MAPA 1 */}
-        <div style={{ flex: 1, position: 'relative', borderRight: isComparing ? '2px solid rgba(255,255,255,0.2)' : 'none' }}>
+        <div style={{ flex: 1, position: 'relative', borderRight: showSplitMap ? '2px solid rgba(255,255,255,0.2)' : 'none' }}>
           {isSimMode && (
             <FronterasPanel
               onBoundarySelect={handleBoundarySelect}
@@ -2054,7 +2055,7 @@ function MapaMonitoreo() {
         </div>
 
         {/* MAPA 2 */}
-        {isComparing && (
+        {showSplitMap && (
           <div style={{ flex: 1, position: 'relative' }}>
             {renderFloatingControls(true)}
             <Map
@@ -2143,7 +2144,7 @@ function MapaMonitoreo() {
               </button>
             </div>
             
-            {isComparing && (
+            {showSplitMap && (
               <div className="mh-sync-options">
                 <label>
                   <input type="checkbox" checked={syncTime} onChange={e => setSyncTime(e.target.checked)} />
@@ -2194,7 +2195,7 @@ function MapaMonitoreo() {
               >
                 {isPlaying ? '⏸ Pausa' : '▶ Play'}
               </button>
-              {(!isComparing || syncTime) ? (
+              {(!showSplitMap || syncTime) ? (
                 renderTimeline(date1, setDate1, timelineAnchorDate1, setTimelineAnchorDate1, true)
               ) : (
                 <div style={{ flex: 1, display: 'flex', width: '100%', gap: '14px', overflow: 'hidden' }}>

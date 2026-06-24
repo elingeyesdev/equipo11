@@ -3,15 +3,15 @@ const logger = require('../../utils/logger');
 
 function generarSugerenciaMock(ciudad, variable, datos) {
   if (!datos || datos.length === 0) return 'No hay datos para analizar.';
-  
+
   const values = datos.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
   if (values.length === 0) return 'No hay datos numéricos válidos en el rango seleccionado.';
-  
+
   const minVal = Math.min(...values);
   const maxVal = Math.max(...values);
   const sum = values.reduce((a, b) => a + b, 0);
   const avgVal = sum / values.length;
-  
+
   // Determinar tendencia
   let trend = 'estable';
   if (values.length > 1) {
@@ -24,7 +24,7 @@ function generarSugerenciaMock(ciudad, variable, datos) {
       trend = 'descendente';
     }
   }
-  
+
   let unit = '';
   const varLower = (variable || '').toLowerCase();
   if (varLower.includes('temp')) unit = '°C';
@@ -32,7 +32,7 @@ function generarSugerenciaMock(ciudad, variable, datos) {
   else if (varLower.includes('ruido') || varLower.includes('db')) unit = ' dB';
   else if (varLower.includes('humedad')) unit = '%';
   else if (varLower.includes('ica')) unit = ' ICA';
-  
+
   return `El análisis de la variable ${variable} en ${ciudad || 'la zona'} muestra una tendencia general ${trend}. El promedio es de ${avgVal.toFixed(1)}${unit}, con un valor máximo de ${maxVal.toFixed(1)}${unit} y un mínimo registrado de ${minVal.toFixed(1)}${unit}. Las condiciones ambientales generales se muestran ${avgVal > maxVal * 0.85 ? 'ligeramente elevadas' : 'dentro de los parámetros esperados de estabilidad, indicando un entorno seguro'}.`;
 }
 

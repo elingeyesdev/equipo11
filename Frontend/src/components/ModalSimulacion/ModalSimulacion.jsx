@@ -284,9 +284,30 @@ function ModalSimulacion({ isOpen, onClose, fronteras = [] }) {
                 }}
                 onClick={() => updateCfg('intensidad', lvl)}
               >
-                {lvl === 'bajo' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#10b981" stroke="none"/></svg> Bajo'}
-                {lvl === 'medio' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="none"/></svg> Medio'}
-                {lvl === 'alto' && '<svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ef4444" stroke="none"/></svg> Alto'}
+                {lvl === 'bajo' && (
+                  <>
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ marginRight: '6px' }}>
+                      <circle cx="12" cy="12" r="10" fill="#10b981" stroke="none"/>
+                    </svg>
+                    Bajo
+                  </>
+                )}
+                {lvl === 'medio' && (
+                  <>
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ marginRight: '6px' }}>
+                      <circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="none"/>
+                    </svg>
+                    Medio
+                  </>
+                )}
+                {lvl === 'alto' && (
+                  <>
+                    <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ marginRight: '6px' }}>
+                      <circle cx="12" cy="12" r="10" fill="#ef4444" stroke="none"/>
+                    </svg>
+                    Alto
+                  </>
+                )}
               </button>
             ))}
           </div>
