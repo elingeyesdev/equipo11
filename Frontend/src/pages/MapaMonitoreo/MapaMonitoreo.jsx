@@ -505,8 +505,13 @@ function TimelineSlider({ date, setDate, setIsPlaying, timelineTicks, minDate, m
 // COMPONENTE PRINCIPAL
 // =======================================================
 const MIN_DATE = '2024-01-01';
-const MAX_DATE = new Date().toISOString().split('T')[0];
+const MAX_DATE = '2026-07-08';
 const BASE_DATA_URL = (import.meta.env.VITE_MAP_DATA_URL || 'http://localhost:8080').replace(/\/+$/, '');
+
+const checkNeedsOffset = (d) => {
+  if (!d) return false;
+  return d.getTime() >= new Date('2026-06-02T00:00:00Z').getTime();
+};
 
 const createHistoricalLayer = (id, activeLayerRefInner) => ({
   id: id,
@@ -518,6 +523,7 @@ const createHistoricalLayer = (id, activeLayerRefInner) => ({
   _dataTex: null,
   _rampTex: null,
   _pendingImg: null,
+  _extraLonOffset: 0.0,
 
   onAdd(_map, gl) {
     this._gl = gl;
@@ -597,7 +603,9 @@ const createHistoricalLayer = (id, activeLayerRefInner) => ({
 
     const shiftLayers = ['evaporacion'];
     const isShifted = shiftLayers.includes(activeLayerRefInner.current);
-    gl.uniform1f(this._uLonOffset, isShifted ? 0.5 : 0.0);
+    const extraOffset = this._extraLonOffset || 0.0;
+    const finalOffset = (isShifted || extraOffset > 0) ? 0.5 : 0.0;
+    gl.uniform1f(this._uLonOffset, finalOffset);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._dataTex);
@@ -841,6 +849,9 @@ function MapaMonitoreo() {
   const [firstSymbolId, setFirstSymbolId] = useState(null);
   const [windPixels, setWindPixels] = useState(null);
   const [windPixels2, setWindPixels2] = useState(null);
+  const [windSize, setWindSize] = useState({ width: 360, height: 180 });
+  const [windSize2, setWindSize2] = useState({ width: 360, height: 180 });
+  const [canvasUpdateTick, setCanvasUpdateTick] = useState(0);
 
   const formatBackendDate = useCallback((date) => {
     const yyyy = date.getUTCFullYear();
@@ -862,6 +873,23 @@ function MapaMonitoreo() {
   const canvasSize2Ref = useRef({ width: 0, height: 0 });
   const layerMap2Ref = useRef(null);
   const map2InstanceRef = useRef(null);
+
+  const isOffset1 = checkNeedsOffset(date1);
+  const isOffset2 = checkNeedsOffset(date2);
+
+  useEffect(() => {
+    if (layerMap1Ref.current) {
+      layerMap1Ref.current._extraLonOffset = isOffset1 ? 0.5 : 0.0;
+      if (map1InstanceRef.current) map1InstanceRef.current.triggerRepaint();
+    }
+  }, [isOffset1]);
+
+  useEffect(() => {
+    if (layerMap2Ref.current) {
+      layerMap2Ref.current._extraLonOffset = isOffset2 ? 0.5 : 0.0;
+      if (map2InstanceRef.current) map2InstanceRef.current.triggerRepaint();
+    }
+  }, [isOffset2]);
 
   const [timelineAnchorDate1, setTimelineAnchorDate1] = useState(new Date('2024-01-01T00:00:00Z'));
   const [timelineAnchorDate2, setTimelineAnchorDate2] = useState(new Date('2024-01-01T00:00:00Z'));
@@ -1228,9 +1256,11 @@ function MapaMonitoreo() {
         ctx.drawImage(img, 0, 0);
         canvasCtx1Ref.current = ctx;
         canvasSize1Ref.current = { width: img.width, height: img.height };
+        setCanvasUpdateTick(t => t + 1);
 
         if (activeLayer === 'viento') {
           setWindPixels(ctx.getImageData(0, 0, img.width, img.height).data);
+          setWindSize({ width: img.width, height: img.height });
         } else {
           setWindPixels(null);
         }
@@ -1281,9 +1311,11 @@ function MapaMonitoreo() {
         ctx.drawImage(img, 0, 0);
         canvasCtx2Ref.current = ctx;
         canvasSize2Ref.current = { width: img.width, height: img.height };
+        setCanvasUpdateTick(t => t + 1);
 
         if (activeLayer === 'viento') {
           setWindPixels2(ctx.getImageData(0, 0, img.width, img.height).data);
+          setWindSize2({ width: img.width, height: img.height });
         } else {
           setWindPixels2(null);
         }
@@ -1321,8 +1353,10 @@ function MapaMonitoreo() {
         ctx.drawImage(img, 0, 0);
         canvasCtx1Ref.current = ctx;
         canvasSize1Ref.current = { width: img.width, height: img.height };
+        setCanvasUpdateTick(t => t + 1);
         if (activeLayer === 'viento') {
           setWindPixels(ctx.getImageData(0, 0, img.width, img.height).data);
+          setWindSize({ width: img.width, height: img.height });
         } else {
           setWindPixels(null);
         }
@@ -1345,8 +1379,10 @@ function MapaMonitoreo() {
         ctx.drawImage(img, 0, 0);
         canvasCtx2Ref.current = ctx;
         canvasSize2Ref.current = { width: img.width, height: img.height };
+        setCanvasUpdateTick(t => t + 1);
         if (activeLayer === 'viento') {
           setWindPixels2(ctx.getImageData(0, 0, img.width, img.height).data);
+          setWindSize2({ width: img.width, height: img.height });
         } else {
           setWindPixels2(null);
         }
@@ -1370,6 +1406,80 @@ function MapaMonitoreo() {
       preImg.src = nextImageUrl;
     }
   }, [date1, activeLayer, isPlaying, getLayerStepHours, formatBackendDate]);
+
+  useEffect(() => {
+    if (!popupInfo || !_isHistoricalMode || popupInfo.layer === 'aqi') return;
+
+    const { lng, lat, isMap2 } = popupInfo;
+    const currentCanvasCtx = isMap2 ? canvasCtx2Ref.current : canvasCtx1Ref.current;
+    const currentCanvasSize = isMap2 ? canvasSize2Ref.current : canvasSize1Ref.current;
+
+    if (!currentCanvasCtx || !currentCanvasSize || !currentCanvasSize.width) return;
+
+    const { width, height } = currentCanvasSize;
+    const normLng = ((lng % 360) + 540) % 360 - 180;
+    const normLat = Math.max(-90, Math.min(90, lat));
+
+    const currentIsOffset = isMap2 ? checkNeedsOffset(date2) : checkNeedsOffset(date1);
+    const shiftLayers = ['evaporacion'];
+    const isShifted = shiftLayers.includes(activeLayer);
+    const shiftAmount = (isShifted || currentIsOffset) ? 0.5 : 0.0;
+
+    let u = ((normLng + 180) / 360) + shiftAmount;
+    u = u - Math.floor(u);
+    const pxX = Math.floor(u * width);
+    // FIXED: Y coordinate goes from 0 (North Pole) to height (South Pole) on Canvas
+    const pxY = Math.floor(((90 - normLat) / 180) * height);
+
+    const pixelData = currentCanvasCtx.getImageData(
+      Math.min(pxX, width - 1), Math.min(pxY, height - 1), 1, 1
+    ).data;
+    const rawValue = pixelData[0];
+
+    let displayValue = '', displayUnit = '';
+    if (activeLayer === 'visibilidad') {
+      displayValue = ((rawValue / 255.0) * 24.14).toFixed(1); displayUnit = 'km';
+    } else if (activeLayer === 'humedad') {
+      const humRaw = (rawValue / 255.0) * 100.0;
+      const { value, unit } = getConvertedValueAndUnit('humedad', humRaw);
+      displayValue = value; displayUnit = unit;
+    } else if (activeLayer === 'rayos') {
+      displayValue = ((rawValue / 255.0) * 100.0).toFixed(1); displayUnit = '% max';
+    } else if (activeLayer === 'uv') {
+      displayValue = ((rawValue / 255.0) * 16.0).toFixed(1); displayUnit = 'UVI';
+    } else if (activeLayer === 'isobaras') {
+      displayValue = ((rawValue / 255.0) * 150.0 + 900.0).toFixed(0); displayUnit = 'hPa';
+    } else if (activeLayer === 'temperatura') {
+      const tempRaw = (rawValue / 255.0) * 120.0 - 60.0;
+      const { value, unit } = getConvertedValueAndUnit('temperatura', tempRaw);
+      displayValue = value; displayUnit = unit;
+    } else if (activeLayer === 'lluvia') {
+      const rainRaw = (rawValue / 255.0) * 20.0;
+      const { value, unit } = getConvertedValueAndUnit('rain', rainRaw);
+      displayValue = value; displayUnit = unit;
+    } else if (activeLayer === 'nieve') {
+      displayValue = ((rawValue / 255.0) * 150.0).toFixed(1); displayUnit = 'cm';
+    } else if (activeLayer === 'evaporacion') {
+      displayValue = ((rawValue / 255.0) * 500.0).toFixed(1); displayUnit = 'W/m²';
+    } else if (activeLayer === 'viento') {
+      const u_norm = pixelData[0] / 255.0;
+      const v_norm = pixelData[1] / 255.0;
+      const u_ms = (u_norm * 200.0) - 100.0;
+      const v_ms = (v_norm * 200.0) - 100.0;
+      const speed_ms = Math.sqrt(u_ms * u_ms + v_ms * v_ms);
+      const windRaw = speed_ms * 3.6;
+      const { value, unit } = getConvertedValueAndUnit('windSpeed', windRaw);
+      displayValue = value; displayUnit = unit;
+    } else {
+      displayValue = rawValue.toString(); displayUnit = 'bits';
+    }
+
+    setPopupInfo(prev => {
+      if (!prev) return null;
+      if (prev.value === displayValue && prev.unit === displayUnit && prev.layer === activeLayer) return prev;
+      return { ...prev, value: displayValue, unit: displayUnit, layer: activeLayer };
+    });
+  }, [canvasUpdateTick, popupInfo?.lng, popupInfo?.lat, popupInfo?.isMap2, _isHistoricalMode, activeLayer, date1, date2, getConvertedValueAndUnit]);
 
   // ─── Actualizar ref y paleta cuando cambia la capa ───
   useEffect(() => {
@@ -1573,67 +1683,7 @@ function MapaMonitoreo() {
 
     if (!currentCanvasCtx || !currentCanvasSize.width) return;
 
-    const { width, height } = currentCanvasSize;
-    const normLng = ((lng % 360) + 540) % 360 - 180;
-    const normLat = Math.max(-90, Math.min(90, lat));
-
-    const shiftLayers = ['evaporacion'];
-    const shiftAmount = shiftLayers.includes(activeLayer) ? 0.5 : 0.0;
-
-    let u = ((normLng + 180) / 360) + shiftAmount;
-    u = u - Math.floor(u);
-    const pxX = Math.floor(u * width);
-    const pxY = Math.floor(((normLat + 90) / 180) * height);
-
-    const pixelData = currentCanvasCtx.getImageData(
-      Math.min(pxX, width - 1), Math.min(pxY, height - 1), 1, 1
-    ).data;
-    const rawValue = pixelData[0];
-
-    let displayValue = '', displayUnit = '';
-    if (activeLayer === 'visibilidad') {
-      displayValue = ((rawValue / 255.0) * 24.14).toFixed(1); displayUnit = 'km';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'humedad') {
-      const humRaw = (rawValue / 255.0) * 100.0;
-      const { value, unit } = getConvertedValueAndUnit('humedad', humRaw);
-      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'rayos') {
-      displayValue = ((rawValue / 255.0) * 100.0).toFixed(1); displayUnit = '% max';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'uv') {
-      displayValue = ((rawValue / 255.0) * 16.0).toFixed(1); displayUnit = 'UVI';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'isobaras') {
-      displayValue = ((rawValue / 255.0) * 150.0 + 900.0).toFixed(0); displayUnit = 'hPa';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'temperatura') {
-      const tempRaw = (rawValue / 255.0) * 120.0 - 60.0;
-      const { value, unit } = getConvertedValueAndUnit('temperatura', tempRaw);
-      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'lluvia') {
-      const rainRaw = (rawValue / 255.0) * 20.0;
-      const { value, unit } = getConvertedValueAndUnit('rain', rainRaw);
-      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'nieve') {
-      displayValue = ((rawValue / 255.0) * 150.0).toFixed(1); displayUnit = 'cm';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'evaporacion') {
-      displayValue = ((rawValue / 255.0) * 500.0).toFixed(1); displayUnit = 'W/m²';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    } else if (activeLayer === 'viento') {
-      const u_norm = pixelData[0] / 255.0;
-      const v_norm = pixelData[1] / 255.0;
-      const u_ms = (u_norm * 200.0) - 100.0;
-      const v_ms = (v_norm * 200.0) - 100.0;
-      const speed_ms = Math.sqrt(u_ms * u_ms + v_ms * v_ms);
-      const windRaw = speed_ms * 3.6;
-      const { value, unit } = getConvertedValueAndUnit('windSpeed', windRaw);
-      setPopupInfo({ lng, lat, value, unit, layer: activeLayer, isMap2 });
-    } else {
-      displayValue = rawValue.toString(); displayUnit = 'bits';
-      setPopupInfo({ lng, lat, value: displayValue, unit: displayUnit, layer: activeLayer, isMap2 });
-    }
+    setPopupInfo({ lng, lat, value: '...', unit: '', layer: activeLayer, isMap2 });
   }, [
     activeDrawingZone, zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, 
     isComparing, setFronterasSeleccionadas, activeLayer, getConvertedValueAndUnit, _isHistoricalMode,
@@ -1720,14 +1770,14 @@ function MapaMonitoreo() {
     <div style={{ 
       position: 'absolute', 
       top: 'calc(var(--navbar-height, 56px) + 12px)', 
-      left: isMap2 ? '25%' : 'calc(50% + (var(--sidebar-width, 232px) / 2))', 
-      transform: 'translateX(-50%)',
+      left: isMap2 ? '25%' : 'calc(var(--sidebar-width, 232px) + 16px)', 
+      transform: isMap2 ? 'translateX(-50%)' : 'none',
       zIndex: 50,
       display: 'flex',
       gap: '10px',
       alignItems: 'flex-start',
       pointerEvents: 'none',
-      transition: 'left 0.3s ease'
+      transition: 'left 0.3s ease, transform 0.3s ease'
     }}>
       <div style={{ pointerEvents: 'auto' }}>
         <BuscadorEspacial 
@@ -1758,6 +1808,8 @@ function MapaMonitoreo() {
         <HistoricalWindParticles
           isActive={true}
           windPixels={isMap2 ? windPixels2 : windPixels}
+          windSize={isMap2 ? windSize2 : windSize}
+          isOffset={isMap2 ? isOffset2 : isOffset1}
         />
       )}
 

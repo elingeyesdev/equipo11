@@ -1,21 +1,19 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { useMap } from 'react-map-gl/mapbox';
 
-const GRID_WIDTH = 360;
-const GRID_HEIGHT = 180;
-
-const HistoricalWindParticles = ({ isActive, windPixels, currentZoom = 6 }) => {
+const HistoricalWindParticles = ({ isActive, windPixels, windSize, currentZoom = 6, isOffset = false }) => {
   const { current: map } = useMap();
   const canvasRef = useRef(null);
 
   const { activeNodes } = useMemo(() => {
     const nodes = [];
-    if (!isActive || !windPixels) return { activeNodes: nodes };
+    if (!isActive || !windPixels || !windSize) return { activeNodes: nodes };
 
+    const { width, height } = windSize;
     let nodeIndex = 0;
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-      for (let col = 0; col < GRID_WIDTH; col++) {
-        const idx = (row * GRID_WIDTH + col) * 4;
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const idx = (row * width + col) * 4;
 
         const windR = windPixels[idx];
         const windG = windPixels[idx + 1];
@@ -31,8 +29,12 @@ const HistoricalWindParticles = ({ isActive, windPixels, currentZoom = 6 }) => {
           const direction = (Math.atan2(v_ms, u_ms) * 180 / Math.PI) + 90;
 
           if (speed > 15) { // Threshold for rendering particles
-            const lat = row - 89.5;
-            const lon = col - 179.5;
+            const lat = -90 + (row / height) * 180 + (90 / height);
+            let lon = -180 + (col / width) * 360 + (180 / width);
+            if (isOffset) {
+              lon += 180;
+              if (lon > 180) lon -= 360;
+            }
 
             nodes.push({
               id: nodeIndex++,
@@ -48,7 +50,7 @@ const HistoricalWindParticles = ({ isActive, windPixels, currentZoom = 6 }) => {
     }
 
     return { activeNodes: nodes };
-  }, [isActive, windPixels]);
+  }, [isActive, windPixels, windSize, isOffset]);
 
   // Motor de renderizado Canvas
   useEffect(() => {
@@ -180,14 +182,18 @@ const HistoricalWindParticles = ({ isActive, windPixels, currentZoom = 6 }) => {
         const p = particlePool[i];
         if (!p.active) continue;
 
-        if (windPixels) {
+        if (windPixels && windSize) {
+          const { width, height } = windSize;
           const pLng = p.node.longitude + ((p.offsetX || 0) / pxPerDeg);
           const pLat = p.node.latitude - ((p.offsetY || 0) / pxPerDeg);
 
-          const col = Math.floor(pLng + 179.5);
-          const row = Math.floor(pLat + 89.5);
-          if (col >= 0 && col < 360 && row >= 0 && row < 180) {
-            const idx = (row * 360 + col) * 4;
+          let col = Math.floor((pLng + 180) * (width / 360));
+          if (isOffset) {
+            col = (col + Math.floor(width / 2)) % width;
+          }
+          const row = Math.floor((pLat + 90) * (height / 180));
+          if (col >= 0 && col < width && row >= 0 && row < height) {
+            const idx = (row * width + col) * 4;
             const windA = windPixels[idx + 3];
             if (windA > 0) {
               const local_u_norm = windPixels[idx] / 255.0;
