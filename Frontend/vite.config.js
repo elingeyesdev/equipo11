@@ -67,6 +67,7 @@ export default defineConfig({
     allowedHosts: true,
     hmr: {
       clientPort: 5173,
+      overlay: false,
     },
     watch: {
       usePolling: process.env.WATCH_POLLING === '1',

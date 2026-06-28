@@ -33,7 +33,7 @@ export default function ControlPanel({
         onClick={() => setIsInjectModalOpen(true)}
         title="Inyectar datos manualmente"
       >
-        <span className="controls-toggle-icon"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg></span>
+        <span className="controls-toggle-icon"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg></span>
       </button>
 
       <button
@@ -74,7 +74,7 @@ export default function ControlPanel({
 
               <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
                 <div className="flex items-center gap-3">
-                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></svg></span>
+                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M6 18h8" /><path d="M3 22h18" /><path d="M14 22a7 7 0 1 0 0-14h-1" /><path d="M9 14h2" /><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" /><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" /></svg></span>
                   <span className="control-text text-[var(--text-primary)]">Modo Simulación</span>
                   {isSimMode && <span className="control-status on">ON</span>}
                 </div>
@@ -105,7 +105,7 @@ export default function ControlPanel({
 
               <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
                 <div className="flex items-center gap-3">
-                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0 1 17-10"/><path d="M9 12a3 3 0 0 1 4-2"/><path d="M6 12a6 6 0 0 1 10-5"/><circle cx="12" cy="12" r="2"/></svg></span>
+                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M2 12a10 10 0 0 1 17-10" /><path d="M9 12a3 3 0 0 1 4-2" /><path d="M6 12a6 6 0 0 1 10-5" /><circle cx="12" cy="12" r="2" /></svg></span>
                   <span className="control-text text-[var(--text-primary)]">Sensores IoT</span>
                   {iotLoading && <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 4 }}>cargando…</span>}
                 </div>
@@ -117,7 +117,7 @@ export default function ControlPanel({
 
               <div className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0">
                 <div className="flex items-center gap-3">
-                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg></span>
+                  <span className="control-icon"><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" /><line x1="9" y1="3" x2="9" y2="18" /><line x1="15" y1="6" x2="15" y2="21" /></svg></span>
                   <span className="control-text text-[var(--text-primary)]">Mapa de calor</span>
                 </div>
                 <label className="ios-switch">

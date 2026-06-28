@@ -22,7 +22,7 @@ SELECT m.id, 3, 'Dañino para sensibles', 101,  150,  '#ff7e00', 'advertencia'  
 UNION ALL
 SELECT m.id, 4, 'No saludable',          151,  200,  '#ff0000', 'critica'      FROM metricas m WHERE m.clave = 'aqi'
 UNION ALL
-SELECT m.id, 5, 'Muy no saludable',      201,  300,  '#8f3f97', 'critica'      FROM metricas m WHERE m.clave = 'aqi'
+SELECT m.id, 5, 'Muy Insalubre',      201,  300,  '#8f3f97', 'critica'      FROM metricas m WHERE m.clave = 'aqi'
 UNION ALL
 SELECT m.id, 6, 'Peligroso',             301,  500,  '#7e0023', 'emergencia'   FROM metricas m WHERE m.clave = 'aqi'
 ON CONFLICT (metrica_id, nivel) DO UPDATE

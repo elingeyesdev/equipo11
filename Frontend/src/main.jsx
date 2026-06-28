@@ -7,6 +7,7 @@ import { ToastProvider } from './components/Toast/Toast'
 import { PwaProvider } from './context/PwaContext'
 import './index.css'
 import App from './App.jsx'
+import SilentErrorBoundary from './components/Utils/SilentErrorBoundary.jsx'
 
 const router = createBrowserRouter([
   {
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider>
       <ToastProvider>
         <PwaProvider>
-          <RouterProvider router={router} />
+          <SilentErrorBoundary>
+            <RouterProvider router={router} />
+          </SilentErrorBoundary>
         </PwaProvider>
       </ToastProvider>
     </ThemeProvider>

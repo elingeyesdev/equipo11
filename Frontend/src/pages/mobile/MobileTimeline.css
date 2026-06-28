@@ -1,0 +1,100 @@
+.mobile-timeline-wrapper {
+  position: absolute;
+  bottom: 140px; /* Above the navigation bar and settings button */
+  left: 10px;
+  right: 10px;
+  height: 60px;
+  background: rgba(30, 41, 59, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-play-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #38bdf8;
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+}
+
+.mobile-timeline-scroll {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: center;
+  height: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scroll-behavior: smooth;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-timeline-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.timeline-day-group {
+  display: flex;
+  flex-direction: column;
+  margin-right: 16px;
+  position: relative;
+}
+
+.timeline-day-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.timeline-tick-row {
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-tick {
+  width: 48px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.timeline-tick.active {
+  background: #38bdf8;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(56, 189, 248, 0.3);
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}

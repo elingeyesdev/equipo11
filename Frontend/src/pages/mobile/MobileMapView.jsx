@@ -13,6 +13,22 @@ import { convertirValor } from '../../utils/unidades';
 import MarkersLayer from '../MapaMonitoreo/layers/MarkersLayer';
 import VoronoiLayer from '../MapaMonitoreo/layers/VoronoiLayer';
 import ChoroplethLayer from '../MapaMonitoreo/layers/ChoroplethLayer';
+import MobileAtmosphericLayer from './MobileAtmosphericLayer';
+import MobileTimeline from './MobileTimeline';
+
+const ABSOLUTE_FLOOR_DATE = new Date(Date.UTC(2024, 0, 1, 0, 0, 0));
+const ABSOLUTE_CEILING_DATE = new Date(Date.UTC(2026, 6, 5, 23, 59, 59));
+const MIN_DATE = '2024-01-01';
+const MAX_DATE = '2026-07-08';
+
+const getRoundedPresentDate = () => {
+  const d = new Date();
+  d.setUTCMinutes(0, 0, 0);
+  if (d.getTime() > ABSOLUTE_CEILING_DATE.getTime()) {
+    return new Date(ABSOLUTE_CEILING_DATE);
+  }
+  return d;
+};
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -24,15 +40,31 @@ const METRICAS = [
   { key: 'ruido', label: 'Ruido', icon: <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg> }
 ];
 
+const METRICAS_ATMOSFERICAS = [
+  { key: 'temperatura', label: 'Temperatura' },
+  { key: 'viento', label: 'Viento' },
+  { key: 'lluvia', label: 'Lluvia' },
+  { key: 'humedad', label: 'Humedad' },
+  { key: 'visibilidad', label: 'Visibilidad' },
+  { key: 'uv', label: 'UV' },
+  { key: 'rayos', label: 'Rayos' }
+];
+
 export default function MobileMapView() {
   const { theme, toggleTheme } = useTheme();
   const { cities: simulatedCities } = useSimulacion();
   const { unidades } = useUnidades();
 
   // Estados de visualización del mapa
-  const [activeLayer, setActiveLayer] = useState('heatmap'); // 'heatmap' | 'choropleth' | 'none'
+  const [activeLayer, setActiveLayer] = useState('heatmap'); // 'heatmap' | 'choropleth' | 'atmospheric' | 'none'
   const [heatmapMetric, setHeatmapMetric] = useState('aqi');
   const [showSensors, setShowSensors] = useState(true);
+
+  // Estados del Modo Atmosférico
+  const [activeAtmosphericLayer, setActiveAtmosphericLayer] = useState('temperatura');
+  const [atmosphericDate, setAtmosphericDate] = useState(getRoundedPresentDate);
+  const [timelineAnchorDate, setTimelineAnchorDate] = useState(getRoundedPresentDate);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // Estados del Buscador / Geocoder
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +102,48 @@ export default function MobileMapView() {
   const mapStyle = theme === 'dark'
     ? 'mapbox://styles/mapbox/dark-v11'
     : 'mapbox://styles/mapbox/light-v11';
+
+  // Playback timer para los mapas atmosféricos
+  useEffect(() => {
+    if (!isPlaying || activeLayer !== 'atmospheric') return;
+    const timer = setInterval(() => {
+      setAtmosphericDate(prev => {
+        const stepHours = (activeAtmosphericLayer === 'evaporacion' || activeAtmosphericLayer === 'visibilidad') ? 6 : 1;
+        const nextDate = new Date(prev);
+        nextDate.setUTCHours(nextDate.getUTCHours() + stepHours);
+
+        const minTime = new Date(MIN_DATE + 'T00:00:00Z').getTime();
+        const maxTime = new Date(MAX_DATE + 'T23:00:00Z').getTime();
+
+        let resultDate = nextDate;
+        if (nextDate.getTime() > maxTime) resultDate = new Date(minTime);
+        else if (nextDate.getTime() < minTime) resultDate = new Date(maxTime);
+        
+        setTimelineAnchorDate(resultDate);
+        return resultDate;
+      });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [isPlaying, activeLayer, activeAtmosphericLayer]);
+
+  // Generador de Ticks para el Timeline (±10 días)
+  const timelineTicks = useMemo(() => {
+    if (activeLayer !== 'atmospheric') return [];
+    const ticks = [];
+    const INTERVAL_THRESHOLD = new Date(Date.UTC(2026, 5, 28, 6, 0, 0)).getTime();
+    const VENTANA_10_DIAS_MS = 864000000;
+    
+    const windowStart = Math.max(ABSOLUTE_FLOOR_DATE.getTime(), timelineAnchorDate.getTime() - VENTANA_10_DIAS_MS);
+    const windowEnd = Math.min(ABSOLUTE_CEILING_DATE.getTime(), timelineAnchorDate.getTime() + VENTANA_10_DIAS_MS);
+
+    let currentTickTime = windowStart;
+    while (currentTickTime <= windowEnd) {
+      ticks.push(new Date(currentTickTime));
+      if (currentTickTime < INTERVAL_THRESHOLD) currentTickTime += 1 * 60 * 60 * 1000;
+      else currentTickTime += 3 * 60 * 60 * 1000;
+    }
+    return ticks;
+  }, [activeLayer, timelineAnchorDate]);
 
   // Manejo de clic fuera del buscador
   useEffect(() => {
@@ -171,6 +245,14 @@ export default function MobileMapView() {
     return { formatted, val, color, label, severidad };
   };
 
+  const getAtmosphericDateStr = () => {
+    const yyyy = atmosphericDate.getUTCFullYear();
+    const mm = String(atmosphericDate.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(atmosphericDate.getUTCDate()).padStart(2, '0');
+    const hh = String(atmosphericDate.getUTCHours()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}_${hh}00`;
+  };
+
   return (
     <div className="mobile-map-view">
       {/* ─── MAPA PRINCIPAL ─── */}
@@ -209,7 +291,14 @@ export default function MobileMapView() {
             />
           )}
 
-          {showSensors && (
+          {activeLayer === 'atmospheric' && (
+            <MobileAtmosphericLayer 
+              dateStr={getAtmosphericDateStr()} 
+              metric={activeAtmosphericLayer} 
+            />
+          )}
+
+          {showSensors && activeLayer !== 'atmospheric' && (
             <MarkersLayer
               cities={citiesData}
               metrica={heatmapMetric}
@@ -294,13 +383,13 @@ export default function MobileMapView() {
             >
               <svg width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Mapa de Calor
             </button>
+
             <button 
-              className={activeLayer === 'choropleth' ? 'active' : ''} 
-              onClick={() => setActiveLayer('choropleth')}
+              className={activeLayer === 'atmospheric' ? 'active' : ''} 
+              onClick={() => setActiveLayer('atmospheric')}
             >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg> Coropletas
-            </button>
-            <button 
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Atmosféricos
+            </button>            <button 
               className={activeLayer === 'none' ? 'active' : ''} 
               onClick={() => setActiveLayer('none')}
             >
@@ -325,18 +414,32 @@ export default function MobileMapView() {
         {/* 3. Selector de Métrica Activa */}
         <div className="control-group">
           <label className="group-label">Métrica de Representación</label>
-          <div className="metrics-pill-selector">
-            {METRICAS.map(m => (
-              <button 
-                key={m.key} 
-                className={`metric-pill ${heatmapMetric === m.key ? 'active' : ''}`}
-                onClick={() => setHeatmapMetric(m.key)}
-              >
-                <span className="metric-pill-icon">{m.icon}</span>
-                <span className="metric-pill-label">{m.label}</span>
-              </button>
-            ))}
-          </div>
+          {activeLayer === 'atmospheric' ? (
+            <div className="metrics-pill-selector atmospheric-wrap">
+              {METRICAS_ATMOSFERICAS.map(m => (
+                <button 
+                  key={m.key} 
+                  className={`metric-pill ${activeAtmosphericLayer === m.key ? 'active' : ''}`}
+                  onClick={() => setActiveAtmosphericLayer(m.key)}
+                >
+                  <span className="metric-pill-label">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="metrics-pill-selector">
+              {METRICAS.map(m => (
+                <button 
+                  key={m.key} 
+                  className={`metric-pill ${heatmapMetric === m.key ? 'active' : ''}`}
+                  onClick={() => setHeatmapMetric(m.key)}
+                >
+                  <span className="metric-pill-icon">{m.icon}</span>
+                  <span className="metric-pill-label">{m.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -384,6 +487,24 @@ export default function MobileMapView() {
             })}
           </div>
         </div>
+      )}
+      {/* ─── TIMELINE (Solo para mapas atmosféricos) ─── */}
+      {activeLayer === 'atmospheric' && (
+        <MobileTimeline 
+          date={atmosphericDate}
+          setDate={(d) => {
+            setAtmosphericDate(d);
+            setTimelineAnchorDate(prevAnchor => {
+              const diffHours = Math.abs(d.getTime() - prevAnchor.getTime()) / (1000 * 60 * 60);
+              return diffHours > 240 ? d : prevAnchor;
+            });
+          }}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          timelineTicks={timelineTicks}
+          minDate={MIN_DATE}
+          maxDate={MAX_DATE}
+        />
       )}
     </div>
   );

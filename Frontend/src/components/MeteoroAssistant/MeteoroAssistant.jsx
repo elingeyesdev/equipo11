@@ -6,11 +6,11 @@ import './MeteoroAssistant.css';
 import Draggable from '../Draggable/Draggable';
 import meteoroAvatar from '../../assets/meteoro.png';
 
-export default function MeteoroAssistant({ 
-  cityContext = 'Bolivia', 
-  dataContext = [], 
-  onSimulatedData = null, 
-  globalMode = false 
+export default function MeteoroAssistant({
+  cityContext = 'Bolivia',
+  dataContext = [],
+  onSimulatedData = null,
+  globalMode = false
 }) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -18,10 +18,10 @@ export default function MeteoroAssistant({
   const [meteoroMessage, setMeteoroMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(!globalMode);
   const { addToast } = useToast();
-  
+
   // Extraer estado del mapa para enviar contexto
   const mapVisuals = useMapVisuals();
-  
+
   const mapContextString = useMemo(() => {
     let ctx = "Estado actual del Mapa interactivo: ";
     if (mapVisuals.isHistoricalMode) {
@@ -29,7 +29,7 @@ export default function MeteoroAssistant({
     } else {
       ctx += `[Modo Tiempo Real] mostrando datos actuales. `;
     }
-    
+
     if (mapVisuals.isHeatmapActive) {
       ctx += `Capa activa: Mapa de Calor (${mapVisuals.heatmapMetric}). `;
     } else if (mapVisuals.isChoroplethActive) {
@@ -39,10 +39,10 @@ export default function MeteoroAssistant({
     }
     return ctx.trim();
   }, [
-    mapVisuals.isHistoricalMode, 
-    mapVisuals.historicalDate, 
-    mapVisuals.isHeatmapActive, 
-    mapVisuals.heatmapMetric, 
+    mapVisuals.isHistoricalMode,
+    mapVisuals.historicalDate,
+    mapVisuals.isHeatmapActive,
+    mapVisuals.heatmapMetric,
     mapVisuals.isChoroplethActive
   ]);
 
@@ -71,7 +71,7 @@ export default function MeteoroAssistant({
           console.error('Speech recognition error', event.error);
         }
         setIsListening(false);
-        if(event.error === 'network') {
+        if (event.error === 'network') {
           addToast('Reconocimiento de voz bloqueado por tu navegador. Usa el teclado.', 'error');
         } else if (event.error !== 'no-speech') {
           addToast('Error al capturar audio', 'error');
@@ -85,7 +85,7 @@ export default function MeteoroAssistant({
     } else {
       addToast('Tu navegador no soporta reconocimiento de voz', 'error');
     }
-    
+
     return () => {
       if (recognitionRef.current) recognitionRef.current.abort();
       synthRef.cancel();
@@ -115,15 +115,15 @@ export default function MeteoroAssistant({
     if (!synthRef) return;
     synthRef.cancel();
     const utterance = new SpeechSynthesisUtterance(texto);
-    
+
     // Configurar voz femenina y natural si está disponible
     const voices = synthRef.getVoices();
     const spanishVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Microsoft Sabina')));
     if (spanishVoice) utterance.voice = spanishVoice;
-    
+
     utterance.rate = 1.05;
     utterance.pitch = 1.1; // Un poco más agudo/amigable
-    
+
     synthRef.speak(utterance);
   };
 
@@ -131,7 +131,7 @@ export default function MeteoroAssistant({
     setIsProcessing(true);
     setMeteoroMessage('Pensando...');
     setIsExpanded(true); // Auto expand to show status
-    
+
     try {
       const payload = {
         ciudad: cityContext,
@@ -139,13 +139,13 @@ export default function MeteoroAssistant({
         datosContexto: dataContext,
         mapContext: mapContextString
       };
-      
+
       const response = await httpClient.post('/reportes/meteoro', payload);
       const { mensaje_voz, datos_simulados, acciones_ui } = response.data.data; // El response utils devuelve data.data
 
       setMeteoroMessage(mensaje_voz);
       hablar(mensaje_voz);
-      
+
       // Control de Interfaz (Agencia)
       if (acciones_ui && Array.isArray(acciones_ui) && acciones_ui.length > 0) {
         // Enrutamiento si pide ir al mapa
@@ -153,7 +153,7 @@ export default function MeteoroAssistant({
         if (pideMapa && window.location.pathname !== '/mapa') {
           // Si tuviéramos useNavigate, lo haríamos, pero como este componente
           // a veces está fuera del enrutador o no lo pasamos, lo forzamos limpiamente:
-          window.location.href = '/mapa'; 
+          window.location.href = '/mapa';
           // Guardar comandos en localStorage temporalmente si cambiamos de página
           localStorage.setItem('pending_meteoro_actions', JSON.stringify(acciones_ui));
         } else {
@@ -164,7 +164,7 @@ export default function MeteoroAssistant({
       if (datos_simulados && onSimulatedData) {
         onSimulatedData(datos_simulados);
       }
-      
+
     } catch (err) {
       console.error(err);
       setMeteoroMessage('Hubo un error al procesar la solicitud.');
@@ -177,7 +177,7 @@ export default function MeteoroAssistant({
 
   if (!isExpanded && globalMode) {
     return (
-      <div 
+      <div
         className="meteoro-assistant-collapsed global-mode"
         onClick={() => setIsExpanded(true)}
         title="Abrir Asistente Meteoro"
@@ -194,17 +194,17 @@ export default function MeteoroAssistant({
     <>
       {/* Header label (global mode only) */}
       {globalMode && (
-        <div style={{ 
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
-          width: '100%', marginBottom: '8px', paddingBottom: '8px', 
-          borderBottom: '1px solid var(--border-color)' 
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          width: '100%', marginBottom: '8px', paddingBottom: '8px',
+          borderBottom: '1px solid var(--border-color)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ display: 'flex', alignItems: 'center' }}>
               <img src={meteoroAvatar} alt="Meteoro" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
             </span>
-            <span style={{ 
-              fontFamily: 'var(--font-sans)', fontWeight: 700, 
+            <span style={{
+              fontFamily: 'var(--font-sans)', fontWeight: 700,
               fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.01em'
             }}>Meteoro <span style={{ color: 'var(--accent)', fontWeight: 600 }}>IA</span></span>
             <span style={{
@@ -214,8 +214,8 @@ export default function MeteoroAssistant({
               textTransform: 'uppercase'
             }}>Asistente</span>
           </div>
-          <button 
-            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }} 
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
             className="meteoro-close-btn"
             style={{ position: 'static', fontSize: '11px', padding: '2px 5px' }}
             title="Colapsar"
@@ -238,9 +238,9 @@ export default function MeteoroAssistant({
           ) : isProcessing ? (
             <p className="processing-text">⏳ Analizando escenario...</p>
           ) : meteoroMessage ? (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
-               <p className="response-text">{meteoroMessage}</p>
-               <button onClick={() => setMeteoroMessage('')} style={{background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)'}}>Descartar ×</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <p className="response-text">{meteoroMessage}</p>
+              <button onClick={() => setMeteoroMessage('')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '11px', textAlign: 'left', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)' }}>Descartar ×</button>
             </div>
           ) : (
             <form onSubmit={(e) => {
@@ -249,10 +249,10 @@ export default function MeteoroAssistant({
                 procesarComandoVoz(transcript);
               }
             }}>
-              <input 
-                type="text" 
-                className="prompt-input" 
-                placeholder="Pregunta sobre el clima, zonas, alertas..." 
+              <input
+                type="text"
+                className="prompt-input"
+                placeholder="Pregunta sobre el clima, zonas, alertas..."
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 disabled={isProcessing}
@@ -260,9 +260,9 @@ export default function MeteoroAssistant({
             </form>
           )}
         </div>
-        
+
         {!isListening && !isProcessing && transcript.length > 0 && !meteoroMessage && (
-          <button 
+          <button
             className="send-button"
             onClick={() => procesarComandoVoz(transcript)}
             title="Enviar"
@@ -271,8 +271,8 @@ export default function MeteoroAssistant({
           </button>
         )}
 
-        <button 
-          className={`mic-button ${isListening ? 'listening' : ''}`} 
+        <button
+          className={`mic-button ${isListening ? 'listening' : ''}`}
           onClick={toggleListening}
           disabled={isProcessing}
           title={isListening ? 'Detener' : 'Usar micrófono'}

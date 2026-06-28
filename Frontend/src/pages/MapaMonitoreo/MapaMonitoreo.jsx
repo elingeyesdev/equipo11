@@ -28,22 +28,23 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { useTheme } from '../../context/ThemeContext';
 import './MapaMonitoreo.css';
 import HistoricalWindParticles from '../../components/MapaMonitoreo/HistoricalWindParticles';
+import AtmosphericDatePicker from '../../components/UI/AtmosphericDatePicker';
 import useFronteras from '../../hooks/useFronteras';
 import { getWeatherAtLocation, getAqiAtLocation, getPlaceName } from '../../utils/weatherApi';
 
 // =======================================================
 // BUSCADOR ESPACIAL INTERNO (Reemplazo de Geocoder)
 // =======================================================
-function BuscadorEspacial({ 
-  mapRef, 
-  isHistoricalMode, 
-  date, 
-  activeLayer, 
-  syncTime, 
-  setDate1, 
-  setDate2, 
-  setTimelineAnchorDate1, 
-  setTimelineAnchorDate2, 
+function BuscadorEspacial({
+  mapRef,
+  isHistoricalMode,
+  date,
+  activeLayer,
+  syncTime,
+  setDate1,
+  setDate2,
+  setTimelineAnchorDate1,
+  setTimelineAnchorDate2,
   isMap2,
   MIN_DATE,
   MAX_DATE,
@@ -91,7 +92,7 @@ function BuscadorEspacial({
     <div className="buscador-espacial">
       <div className="buscador-header">
         <span className="buscador-header-icon">
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
         </span>
         <span className="buscador-header-text">Navegación</span>
       </div>
@@ -120,21 +121,19 @@ function BuscadorEspacial({
           <div style={{ margin: '8px 0', borderTop: '1px dashed var(--line-soft)' }} />
           <div className="buscador-header">
             <span className="buscador-header-icon">
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
             </span>
             <span className="buscador-header-text">Fecha Histórica</span>
           </div>
-          <input 
-            type="date"
-            className="map-overlay-select"
-            style={{ cursor: 'pointer', fontWeight: 600 }}
-            min={MIN_DATE} max={MAX_DATE}
-            value={date.toISOString().split('T')[0]}
-            onChange={e => {
-              const newDate = new Date(e.target.value + 'T00:00:00Z');
+          <AtmosphericDatePicker
+            availableRange={{ min: ABSOLUTE_FLOOR_DATE, max: ABSOLUTE_CEILING_DATE }}
+            selectedDate={date}
+            metric={activeLayer}
+            onChange={(newDateStr) => {
+              const newDate = new Date(newDateStr + 'T00:00:00Z');
               newDate.setUTCHours(date.getUTCHours());
-              const snapped = snapToValidHour(newDate, activeLayer);
-              
+              const snapped = snapToValidHour(newDate);
+
               if (syncTime) {
                 setDate1(snapped);
                 setDate2(snapped);
@@ -508,10 +507,10 @@ const MIN_DATE = '2024-01-01';
 const MAX_DATE = '2026-07-08';
 const BASE_DATA_URL = (import.meta.env.VITE_MAP_DATA_URL || 'http://localhost:8080').replace(/\/+$/, '');
 
-const checkNeedsOffset = (d) => {
-  if (!d) return false;
-  return d.getTime() >= new Date('2026-06-02T00:00:00Z').getTime();
-};
+// Auto-detección de offset de longitud por resolución de imagen:
+// PNGs 360x181 (baja res) → longitud empieza en 0° → necesita offset +0.5
+// PNGs 1440x721 (alta res) → longitud empieza en -180° → NO necesita offset
+const imageNeedsOffset = (img) => img.width <= 720;
 
 const createHistoricalLayer = (id, activeLayerRefInner) => ({
   id: id,
@@ -653,6 +652,18 @@ const updateManualResult = (points, isZ2, customName) => {
   };
 };
 
+
+// Sincronización horaria absoluta con el tiempo presente
+const getRoundedPresentDate = () => {
+  const now = new Date();
+  now.setMinutes(0, 0, 0); // Fija estrictamente en la hora en punto
+  return now;
+};
+
+// Topes absolutos inmutables del servidor de teselas ráster
+const ABSOLUTE_FLOOR_DATE = new Date(2024, 0, 1, 0, 0, 0);   // 1 de Enero, 2024
+const ABSOLUTE_CEILING_DATE = new Date(2026, 6, 5, 23, 59, 59); // 5 de Julio, 2026
+
 function MapaMonitoreo() {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -660,10 +671,10 @@ function MapaMonitoreo() {
 
 
   // --- MIGRATION CONTEXTS ---
-  const { 
-    isSimMode, 
-    setIsSimMode, 
-    fronterasSeleccionadas, 
+  const {
+    isSimMode,
+    setIsSimMode,
+    fronterasSeleccionadas,
     setFronterasSeleccionadas,
     isComparing,
     setIsComparing,
@@ -675,11 +686,11 @@ function MapaMonitoreo() {
     setZona2Cfg
   } = useSimulacion();
   const { zonaSimActiva, iniciarZona, detenerZona, zonaSimZonas, zonaSimUnidad, zonaSimEscNombre, zonaSimMetrica, zonaSimProgreso, zonaSimTiempo, zonaSimSesionId, zonaSimTotalLecturas } = useZonaSim();
-  const { 
-    isParticlesActive, setIsParticlesActive, 
-    particleFilters, setParticleFilters, 
-    showSensors, setShowSensors, 
-    isHeatmapActive, setIsHeatmapActive, 
+  const {
+    isParticlesActive, setIsParticlesActive,
+    particleFilters, setParticleFilters,
+    showSensors, setShowSensors,
+    isHeatmapActive, setIsHeatmapActive,
     isChoroplethActive, setIsChoroplethActive,
     heatmapMetric, setHeatmapMetric,
     isHistoricalMode: _isHistoricalMode, setIsHistoricalMode,
@@ -716,7 +727,7 @@ function MapaMonitoreo() {
   const [compareCity, setCompareCity] = useState(null);
 
   const { citiesData: baseCitiesData } = useSensors({ scannedGrid: null, simulatedCities: [], isParticlesActive: true, particleFilters, trigger: sensorTrigger });
-  
+
   const [meteoroOverrides, setMeteoroOverrides] = useState(null);
 
   const citiesData = useMemo(() => {
@@ -834,9 +845,9 @@ function MapaMonitoreo() {
     setFronterasSeleccionadas(arr);
   }, [setFronterasSeleccionadas]);
   const globalIsDraggingRef = useRef(false);
-  const [date1, setDate1] = useState(new Date('2024-01-01T00:00:00Z'));
-  const [date2, setDate2] = useState(new Date('2024-01-01T00:00:00Z'));
-  const [_timelineAnchorDate, setTimelineAnchorDate] = useState(new Date('2024-01-01T00:00:00Z'));
+    const [date1, setDate1] = useState(getRoundedPresentDate);
+  const [date2, setDate2] = useState(getRoundedPresentDate);
+  const [_timelineAnchorDate, setTimelineAnchorDate] = useState(getRoundedPresentDate);
   const [isPlaying2, setIsPlaying2] = useState(false);
 
   useEffect(() => {
@@ -885,25 +896,11 @@ function MapaMonitoreo() {
   const layerMap2Ref = useRef(null);
   const map2InstanceRef = useRef(null);
 
-  const isOffset1 = checkNeedsOffset(date1);
-  const isOffset2 = checkNeedsOffset(date2);
+  // El offset de longitud se detecta automáticamente en img.onload
+  // basándose en la resolución de cada PNG individual.
 
-  useEffect(() => {
-    if (layerMap1Ref.current) {
-      layerMap1Ref.current._extraLonOffset = isOffset1 ? 0.5 : 0.0;
-      if (map1InstanceRef.current) map1InstanceRef.current.triggerRepaint();
-    }
-  }, [isOffset1]);
-
-  useEffect(() => {
-    if (layerMap2Ref.current) {
-      layerMap2Ref.current._extraLonOffset = isOffset2 ? 0.5 : 0.0;
-      if (map2InstanceRef.current) map2InstanceRef.current.triggerRepaint();
-    }
-  }, [isOffset2]);
-
-  const [timelineAnchorDate1, setTimelineAnchorDate1] = useState(new Date('2024-01-01T00:00:00Z'));
-  const [timelineAnchorDate2, setTimelineAnchorDate2] = useState(new Date('2024-01-01T00:00:00Z'));
+  const [timelineAnchorDate1, setTimelineAnchorDate1] = useState(getRoundedPresentDate);
+  const [timelineAnchorDate2, setTimelineAnchorDate2] = useState(getRoundedPresentDate);
 
   // ─── Event Bus para Comandos de IA (Meteoro) ───
   useEffect(() => {
@@ -979,7 +976,7 @@ function MapaMonitoreo() {
     };
 
     window.addEventListener('meteoro_action', handleMeteoroAction);
-    
+
     const pendingActions = localStorage.getItem('pending_meteoro_actions');
     if (pendingActions) {
       try {
@@ -993,8 +990,8 @@ function MapaMonitoreo() {
 
     return () => window.removeEventListener('meteoro_action', handleMeteoroAction);
   }, [
-    setIsHistoricalMode, setIsDynamicHistoricalMode, setIsPlaying, 
-    setActiveLayer, setIsComparing, setDate1, setDate2, 
+    setIsHistoricalMode, setIsDynamicHistoricalMode, setIsPlaying,
+    setActiveLayer, setIsComparing, setDate1, setDate2,
     setTimelineAnchorDate1, setTimelineAnchorDate, setIsHeatmapActive, setHeatmapMetric
   ]);
   // -------------------------
@@ -1107,53 +1104,45 @@ function MapaMonitoreo() {
     return 1;
   }, []);
 
-  const snapToValidHour = useCallback((date, layer) => {
-    const step = getLayerStepHours(layer);
-    if (step <= 1) return date;
+  const snapToValidHour = useCallback((date) => {
+    const INTERVAL_THRESHOLD = new Date(Date.UTC(2026, 5, 28, 6, 0, 0)).getTime();
     const snapped = new Date(date);
-    const hour = snapped.getUTCHours();
-    const remainder = hour % step;
-    if (remainder !== 0) {
-      // Redondear al múltiplo más cercano
-      const down = hour - remainder;
-      const up = down + step;
-      snapped.setUTCHours(up - hour <= remainder ? Math.min(up, 23) : down);
+    snapped.setUTCMinutes(0, 0, 0); // Redondear a la hora en punto
+    
+    if (snapped.getTime() >= INTERVAL_THRESHOLD) {
+      const hour = snapped.getUTCHours();
+      const remainder = hour % 3;
+      if (remainder !== 0) {
+        const down = hour - remainder;
+        const up = down + 3;
+        snapped.setUTCHours(up - hour <= remainder ? Math.min(up, 23) : down);
+      }
     }
     return snapped;
-  }, [getLayerStepHours]);
+  }, []);
 
-  // ─── Auto-Snap al cambiar de capa ───
-  useEffect(() => {
-    const step = getLayerStepHours(activeLayer);
-    if (step > 1) {
-      const snapped1 = snapToValidHour(date1, activeLayer);
-      if (snapped1.getTime() !== date1.getTime()) {
-        setDate1(snapped1);
-        setTimelineAnchorDate1(snapped1);
-      }
-      const snapped2 = snapToValidHour(date2, activeLayer);
-      if (snapped2.getTime() !== date2.getTime()) {
-        setDate2(snapped2);
-        setTimelineAnchorDate2(snapped2);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLayer]);
+
 
   // ─── Lógica de Renderizado de Timeline ───
   const renderTimeline = (date, setDate, anchorDate, setAnchorDate, isLeftMap) => {
     const ticks = [];
-    const minTimeGlobal = new Date(MIN_DATE + 'T00:00:00Z').getTime();
-    const maxTimeGlobal = new Date(MAX_DATE + 'T23:00:00Z').getTime();
-    const stepHours = getLayerStepHours(activeLayer);
+    const minTimeGlobal = ABSOLUTE_FLOOR_DATE.getTime();
+    const maxTimeGlobal = ABSOLUTE_CEILING_DATE.getTime();
+    const INTERVAL_THRESHOLD = new Date(Date.UTC(2026, 5, 28, 6, 0, 0)).getTime(); // 28 de Junio, 06:00 UTC
 
-    // Rango dinámico: ±15 días en el paso de la variable activa
-    const anchorSnapped = snapToValidHour(anchorDate, activeLayer);
-    const maxTicks = Math.floor(360 / stepHours);
-    for (let i = -maxTicks; i <= maxTicks; i++) {
-      const tickTime = anchorSnapped.getTime() + (i * stepHours * 1000 * 60 * 60);
-      if (tickTime >= minTimeGlobal && tickTime <= maxTimeGlobal) {
-        ticks.push(new Date(tickTime));
+    // Reducción quirúrgica de array: ±10 días en milisegundos
+    const VENTANA_10_DIAS_MS = 864000000;
+    
+    const windowStart = Math.max(ABSOLUTE_FLOOR_DATE.getTime(), anchorDate.getTime() - VENTANA_10_DIAS_MS);
+    const windowEnd = Math.min(ABSOLUTE_CEILING_DATE.getTime(), anchorDate.getTime() + VENTANA_10_DIAS_MS);
+
+    let currentTickTime = windowStart;
+    while (currentTickTime <= windowEnd) {
+      ticks.push(new Date(currentTickTime));
+      if (currentTickTime < INTERVAL_THRESHOLD) {
+        currentTickTime += 1 * 60 * 60 * 1000; // +1 hora
+      } else {
+        currentTickTime += 3 * 60 * 60 * 1000; // +3 horas
       }
     }
 
@@ -1215,7 +1204,7 @@ function MapaMonitoreo() {
       }
     }, 1500);
     return () => clearInterval(timer);
-  }, [isPlaying, activeLayer, syncTime, showSplitMap, getLayerStepHours]);
+  }, [isPlaying, activeLayer, syncTime, showSplitMap]);
 
   // ─── MAPA 1: Cargar imagen PNG o JSON puntual ───
   useEffect(() => {
@@ -1278,6 +1267,8 @@ function MapaMonitoreo() {
       }
 
       if (layerMap1Ref.current && layerMap1Ref.current._gl) {
+        // Auto-detectar offset basado en resolución del PNG cargado
+        layerMap1Ref.current._extraLonOffset = imageNeedsOffset(img) ? 0.5 : 0.0;
         const gl = layerMap1Ref.current._gl;
         gl.bindTexture(gl.TEXTURE_2D, layerMap1Ref.current._dataTex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
@@ -1333,6 +1324,8 @@ function MapaMonitoreo() {
       }
 
       if (layerMap2Ref.current && layerMap2Ref.current._gl) {
+        // Auto-detectar offset basado en resolución del PNG cargado
+        layerMap2Ref.current._extraLonOffset = imageNeedsOffset(img) ? 0.5 : 0.0;
         const gl = layerMap2Ref.current._gl;
         gl.bindTexture(gl.TEXTURE_2D, layerMap2Ref.current._dataTex);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
@@ -1416,7 +1409,7 @@ function MapaMonitoreo() {
       const preImg = new Image();
       preImg.src = nextImageUrl;
     }
-  }, [date1, activeLayer, isPlaying, getLayerStepHours, formatBackendDate]);
+  }, [date1, activeLayer, isPlaying, formatBackendDate]);
 
   useEffect(() => {
     if (!popupInfo || !_isHistoricalMode || popupInfo.layer === 'aqi') return;
@@ -1431,10 +1424,11 @@ function MapaMonitoreo() {
     const normLng = ((lng % 360) + 540) % 360 - 180;
     const normLat = Math.max(-90, Math.min(90, lat));
 
-    const currentIsOffset = isMap2 ? checkNeedsOffset(date2) : checkNeedsOffset(date1);
+    const currentLayer = isMap2 ? layerMap2Ref.current : layerMap1Ref.current;
     const shiftLayers = ['evaporacion'];
     const isShifted = shiftLayers.includes(activeLayer);
-    const shiftAmount = (isShifted || currentIsOffset) ? 0.5 : 0.0;
+    const extraOffset = currentLayer ? (currentLayer._extraLonOffset || 0.0) : 0.0;
+    const shiftAmount = (isShifted || extraOffset > 0) ? 0.5 : 0.0;
 
     let u = ((normLng + 180) / 360) + shiftAmount;
     u = u - Math.floor(u);
@@ -1585,18 +1579,18 @@ function MapaMonitoreo() {
       const isZ2 = activeDrawingZone === 'z2';
       const currentCfg = isZ2 ? zona2Cfg : zona1Cfg;
       const setCfg = isZ2 ? setZona2Cfg : setZona1Cfg;
-      
+
       const newPoints = [...currentCfg.manualPoints, [lng, lat]];
       const newResult = updateManualResult(newPoints, isZ2, currentCfg.manualName);
-      
+
       const nextZ = {
         ...currentCfg,
         manualPoints: newPoints,
         result: newResult
       };
-      
+
       setCfg(nextZ);
-      
+
       // Actualizar fronterasSeleccionadas para que se visualicen inmediatamente
       const otherCfg = isZ2 ? zona1Cfg : zona2Cfg;
       const z1 = isZ2 ? otherCfg : nextZ;
@@ -1605,7 +1599,7 @@ function MapaMonitoreo() {
       if (z1.result) arr.push(z1.result);
       if (isComparing && z2.result) arr.push(z2.result);
       setFronterasSeleccionadas(arr);
-      
+
       return;
     }
 
@@ -1696,7 +1690,7 @@ function MapaMonitoreo() {
 
     setPopupInfo({ lng, lat, value: '...', unit: '', layer: activeLayer, isMap2 });
   }, [
-    activeDrawingZone, zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg, 
+    activeDrawingZone, zona1Cfg, setZona1Cfg, zona2Cfg, setZona2Cfg,
     isComparing, setFronterasSeleccionadas, activeLayer, getConvertedValueAndUnit, _isHistoricalMode,
     isComparingCities, setCompareCity, setSelectedCity
   ]);
@@ -1778,10 +1772,10 @@ function MapaMonitoreo() {
   // };
 
   const renderFloatingControls = (isMap2) => (
-    <div style={{ 
-      position: 'absolute', 
-      top: 'calc(var(--navbar-height, 56px) + 12px)', 
-      left: '50%', 
+    <div style={{
+      position: 'absolute',
+      top: 'calc(var(--navbar-height, 56px) + 12px)',
+      left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 50,
       display: 'flex',
@@ -1791,7 +1785,7 @@ function MapaMonitoreo() {
       transition: 'left 0.3s ease, transform 0.3s ease'
     }}>
       <div style={{ pointerEvents: 'auto' }}>
-        <BuscadorEspacial 
+        <BuscadorEspacial
           mapRef={isMap2 ? map2InstanceRef : map1InstanceRef}
           isHistoricalMode={_isHistoricalMode}
           date={isMap2 ? date2 : date1}
@@ -2099,12 +2093,12 @@ function MapaMonitoreo() {
         />
 
         {activeCityDetails && (
-          <WeatherWidgetContainer 
+          <WeatherWidgetContainer
             city={{
               nombre: activeCityDetails.nombre,
               lat: activeCityDetails.latitud || activeCityDetails.lat,
               lon: activeCityDetails.longitud || activeCityDetails.lon
-            }} 
+            }}
             onClose={() => setSelectedCity(null)}
           />
         )}
@@ -2153,7 +2147,7 @@ function MapaMonitoreo() {
                 📊 Ir a Reportes
               </button>
             </div>
-            
+
             {showSplitMap && (
               <div className="mh-sync-options">
                 <label>
@@ -2197,9 +2191,9 @@ function MapaMonitoreo() {
             <div className="timeline-date-display">
               {finalFormattedText}
             </div>
-            
+
             <div className="timeline-controls-row">
-              <button 
+              <button
                 onClick={() => setIsPlaying(!isPlaying)}
                 className={`timeline-play-btn ${isPlaying ? 'paused' : 'active'}`}
               >

@@ -481,7 +481,7 @@ FROM metricas m,
         (2, 'Moderado',               51,  100, '#ffff00', 'informativa'),
         (3, 'Dañino (sensibles)',     101, 150, '#ff7e00', 'advertencia'),
         (4, 'No saludable',           151, 200, '#ff0000', 'critica'),
-        (5, 'Muy no saludable',       201, 300, '#8f3f97', 'critica'),
+        (5, 'Muy Insalubre',       201, 300, '#8f3f97', 'critica'),
         (6, 'Peligroso',              301, 500, '#7e0023', 'emergencia')
      ) AS v(nivel, label, vmin, vmax, color, sev)
 WHERE m.clave = 'aqi'
