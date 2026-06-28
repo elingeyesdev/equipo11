@@ -71,6 +71,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      - CI=true
+    tty: true
+    stdin_open: true
     # Sincroniza tu código local con el contenedor (hot-reload)
     volumes:
       - ./Frontend:/app

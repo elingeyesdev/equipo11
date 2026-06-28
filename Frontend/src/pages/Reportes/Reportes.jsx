@@ -440,7 +440,7 @@ function TabSimulador() {
             className="rep-rango-btn"
             style={{ border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', color: '#fff' }}
           >
-            {isAnalyzing ? 'Analizando con DeepSeek...' : '✨ Solicitar Análisis IA'}
+            {isAnalyzing ? 'Analizando con DeepSeek...' : 'Solicitar Análisis IA'}
           </button>
         </div>
       </div>
@@ -700,10 +700,10 @@ function TabHistorial() {
     <div className="bi-dashboard-container" style={{ marginTop: '20px' }}>
       {/* KPI Cards */}
       <div className="rep-kpi-grid">
-        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" icon="🌡" stats={stats.temperatura} />
-        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" icon="🌫" stats={stats.aqi} />
-        <KpiCard label="Humedad" sufijo="%" colorVar="river" icon="💧" stats={stats.humedad} />
-        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" icon="🔊" stats={stats.ruido} />
+        <KpiCard label="Temperatura" sufijo="°C" colorVar="violet" stats={stats.temperatura} />
+        <KpiCard label="Calidad del Aire" sufijo=" AQI" colorVar="rust" stats={stats.aqi} />
+        <KpiCard label="Humedad" sufijo="%" colorVar="river" stats={stats.humedad} />
+        <KpiCard label="Ruido" sufijo=" dB" colorVar="amber" stats={stats.ruido} />
       </div>
 
       {/* Filtros */}
@@ -929,19 +929,19 @@ export default function Reportes() {
           className={`bi-tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
-          📊 Dashboard Global
+           Dashboard Global
         </button>
         <button 
           className={`bi-tab-btn ${activeTab === 'simulador' ? 'active' : ''}`}
           onClick={() => setActiveTab('simulador')}
         >
-          🔮 Simulador 96h e IA
+           Simulador 96h e IA
         </button>
         <button 
           className={`bi-tab-btn ${activeTab === 'historial' ? 'active' : ''}`}
           onClick={() => setActiveTab('historial')}
         >
-          📈 Historial y Simulaciones
+           Historial y Simulaciones
         </button>
       </div>
 

@@ -265,7 +265,7 @@ export default function ModalIoT({ isOpen, onClose, onSensorChange }) {
                     >
                       {latitud !== null && longitud !== null && (
                         <Marker latitude={latitud} longitude={longitud} anchor="bottom">
-                          <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>📍</div>
+                          <div style={{ fontSize: '26px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}></div>
                         </Marker>
                       )}
                     </Map>

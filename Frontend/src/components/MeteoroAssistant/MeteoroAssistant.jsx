@@ -4,6 +4,7 @@ import { useMapVisuals } from '../../context/MapVisualsContext';
 import { useToast } from '../Toast/Toast';
 import './MeteoroAssistant.css';
 import Draggable from '../Draggable/Draggable';
+import meteoroAvatar from '../../assets/meteoro.png';
 
 export default function MeteoroAssistant({ 
   cityContext = 'Bolivia', 
@@ -181,7 +182,9 @@ export default function MeteoroAssistant({
         onClick={() => setIsExpanded(true)}
         title="Abrir Asistente Meteoro"
       >
-        <div className="meteoro-avatar">🌦️</div>
+        <div className="meteoro-avatar">
+          <img src={meteoroAvatar} alt="Meteoro" />
+        </div>
         <span className="meteoro-tooltip-badge">Meteoro IA</span>
       </div>
     );
@@ -197,7 +200,9 @@ export default function MeteoroAssistant({
           borderBottom: '1px solid var(--border-color)' 
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '16px' }}>🌦️</span>
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <img src={meteoroAvatar} alt="Meteoro" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} />
+            </span>
             <span style={{ 
               fontFamily: 'var(--font-sans)', fontWeight: 700, 
               fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '0.01em'
@@ -224,7 +229,7 @@ export default function MeteoroAssistant({
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
         {!globalMode && (
           <div className="meteoro-avatar">
-            🌦️
+            <img src={meteoroAvatar} alt="Meteoro" />
           </div>
         )}
         <div className="meteoro-dialogue">

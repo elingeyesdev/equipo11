@@ -1815,7 +1815,7 @@ input:checked+.slider:before {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 14px;
-  display: flex;
+  display: center;
   flex-direction: column;
   gap: 8px;
   width: 210px;
@@ -2198,4 +2198,4 @@ input:checked+.slider:before {
 .timeline-tick.inactive:hover {
   background: var(--bg-hover);
   border-color: var(--accent);
-}
+}

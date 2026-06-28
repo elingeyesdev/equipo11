@@ -112,7 +112,7 @@ function BuscadorEspacial({
         </select>
       )}
       <button onClick={handleFly} disabled={!pais || loading} className="map-overlay-btn-primary">
-        {loading ? '⏳ Buscando...' : '📍 Ir a destino'}
+        {loading ? 'Buscando...' : 'Ir a destino'}
       </button>
 
       {isHistoricalMode && (
