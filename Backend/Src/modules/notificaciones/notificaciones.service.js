@@ -87,11 +87,11 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
       // Actualizar cooldown
       ultimoUserNotifyTime.set(cooldownKey, ahora);
 
-      const messageHTML = `🚨 <b>Alerta Ambiental en tu Zona</b><br/><br/>` +
-                      `Origen: <b>${source}</b><br/>` +
-                      `Coordenadas: <b>${numericLat.toFixed(4)}, ${numericLng.toFixed(4)}</b><br/>` +
-                      `Indicador: <b>${metrica.toUpperCase()}</b><br/>` +
-                      `Valor: <b>${valor}</b><br/>` +
+      const messageHTML = `🚨 <b>Alerta Ambiental en tu Zona</b>\n\n` +
+                      `Origen: <b>${source}</b>\n` +
+                      `Coordenadas: <b>${numericLat.toFixed(4)}, ${numericLng.toFixed(4)}</b>\n` +
+                      `Indicador: <b>${metrica.toUpperCase()}</b>\n` +
+                      `Valor: <b>${valor}</b>\n` +
                       `Nivel: <b>${label}</b> (${severidad})`;
 
       const messageText = `🚨 *Alerta Ambiental en tu Zona*\n\n` +
@@ -131,8 +131,12 @@ const notifyAlertByCoordinates = async ({ lat, lng, metrica, valor, label, sever
       // Canal Telegram
       if (u.notif_telegram && u.telegram_destino) {
         try {
-          await sendTelegramMessage(u.telegram_destino, messageHTML);
-          logger.info(`[Notificaciones] Telegram enviado a ${u.telegram_destino}`);
+          const sent = await sendTelegramMessage(u.telegram_destino, messageHTML);
+          if (sent) {
+            logger.info(`[Notificaciones] Telegram enviado a ${u.telegram_destino}`);
+          } else {
+            logger.error(`[Notificaciones] Falló el envío de Telegram a ${u.telegram_destino}`);
+          }
         } catch (tgErr) {
           logger.error(`[Notificaciones] Error enviando Telegram a ${u.telegram_destino}:`, tgErr.message);
         }

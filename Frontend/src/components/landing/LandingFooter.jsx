@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 /**
- * LandingFooter — Pie de página de MeteoroAdvanced.
+ * LandingFooter — Pie de página de EnviroSense.
  */
 const LandingFooter = () => {
   const year = new Date().getFullYear();
@@ -28,7 +28,7 @@ const LandingFooter = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img
             src="/MeteoAdvance.png"
-            alt="MeteoAdvanced"
+            alt="EnviroSense"
             style={{ height: '32px', width: 'auto', objectFit: 'contain', opacity: 0.85 }}
             onError={e => { e.target.style.display = 'none'; }}
           />
@@ -39,7 +39,7 @@ const LandingFooter = () => {
               fontSize: '1rem',
               color: '#FFFFFF',
             }}>
-              Meteo<span style={{ color: '#5BC0BE' }}>Advanced</span>
+              Enviro<span style={{ color: '#5BC0BE' }}>Sense</span>
             </div>
             <div style={{
               fontFamily: "'Space Grotesk', sans-serif",

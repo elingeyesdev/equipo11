@@ -15,6 +15,7 @@
 /* Negación del padding del layout-content para que el mapa llene */
 .layout-content:has(.mapa-page-container) {
   padding: 0;
+  overflow: hidden;
 }
 
 /* Banner de token faltante */
@@ -1815,7 +1816,7 @@ input:checked+.slider:before {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 14px;
-  display: center;
+  display: flex;
   flex-direction: column;
   gap: 8px;
   width: 210px;

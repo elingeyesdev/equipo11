@@ -51,7 +51,7 @@ const LandingHeader = () => {
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
           <img
             src="/MeteoAdvance.png"
-            alt="MeteoAdvanced Logo"
+            alt="EnviroSense Logo"
             style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
             onError={(e) => { e.target.style.display = 'none'; }}
           />
@@ -62,7 +62,7 @@ const LandingHeader = () => {
             color: '#FFFFFF',
             letterSpacing: '-0.02em',
           }}>
-            Meteo<span style={{ color: '#5BC0BE' }}>Advanced</span>
+            Enviro<span style={{ color: '#5BC0BE' }}>Sense</span>
           </span>
         </Link>
 

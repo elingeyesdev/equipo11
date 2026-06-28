@@ -743,8 +743,11 @@ function MapaMonitoreo() {
     if (active) {
       setSelectedCity(null);
       setIsHistoricalMode(false);
+    } else {
+      setActiveDrawingZone(null);
+      setFronterasSeleccionadas([]);
     }
-  }, [setIsSimMode, setIsHistoricalMode]);
+  }, [setIsSimMode, setIsHistoricalMode, setActiveDrawingZone, setFronterasSeleccionadas]);
 
   const handleToggleHistoricalMode = useCallback((active) => {
     setIsHistoricalMode(active);
@@ -839,6 +842,13 @@ function MapaMonitoreo() {
   useEffect(() => {
     setHistoricalDate(date1);
   }, [date1, setHistoricalDate]);
+
+  useEffect(() => {
+    return () => {
+      setActiveDrawingZone(null);
+      setIsSimMode(false);
+    };
+  }, [setActiveDrawingZone, setIsSimMode]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
@@ -1771,8 +1781,8 @@ function MapaMonitoreo() {
     <div style={{ 
       position: 'absolute', 
       top: 'calc(var(--navbar-height, 56px) + 12px)', 
-      left: isMap2 ? '25%' : 'calc(var(--sidebar-width, 232px) + 16px)', 
-      transform: isMap2 ? 'translateX(-50%)' : 'none',
+      left: '50%', 
+      transform: 'translateX(-50%)',
       zIndex: 50,
       display: 'flex',
       gap: '10px',
