@@ -30,7 +30,7 @@ export default function AiWeatherAnalysis({ ciudad, lat, lon }) {
     return (
       <div className="ai-weather-prompt">
         <button className="btn-ia-analyze" onClick={solicitarAnalisis}>
-          ✨ Solicitar Análisis IA
+            Solicitar Análisis IA
         </button>
       </div>
     );

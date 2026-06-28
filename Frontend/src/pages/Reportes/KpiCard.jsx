@@ -3,10 +3,12 @@ export default function KpiCard({ label, sufijo, colorVar, icon, stats }) {
   return (
     <div className="rep-kpi">
       <div className="rep-kpi-head">
-        <span className="rep-kpi-icon" style={{
-          background: `var(--${colorVar}-soft)`,
-          color: `var(--${colorVar})`,
-        }}>{icon}</span>
+        {icon && (
+          <span className="rep-kpi-icon" style={{
+            background: `var(--${colorVar}-soft)`,
+            color: `var(--${colorVar})`,
+          }}>{icon}</span>
+        )}
         <span className="rep-kpi-label">{label}</span>
       </div>
       <div className="rep-kpi-value">
