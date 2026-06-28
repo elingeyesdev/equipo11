@@ -328,12 +328,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.atmospheric-wrap {
-  flex-wrap: wrap;
-  overflow-x: visible;
-  scroll-snap-type: none;
-}
-
 .metric-pill {
   scroll-snap-align: start;
   flex-shrink: 0;
